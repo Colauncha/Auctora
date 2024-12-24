@@ -61,7 +61,7 @@ const Footer = () => {
                       <li key={idx}>
                         <a
                           href={link.url}
-                          className="text-[#9f3247] hover:underline underline-offset-2"
+                          className="text-[#9f3247] text-[12px] lg:text-[14px] hover:underline underline-offset-2"
                         >
                           {link.name}
                         </a>

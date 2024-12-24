@@ -1,7 +1,12 @@
 import Stopwatch from "./Stopwatch";
 import Button from "./Button";
+import { useNavigate } from "react-router-dom";
 
 const CountDown = () => {
+  const navigate = useNavigate();
+  const bidApp = () => {
+    navigate("/bid");
+  };
   return (
     <div className="mt-[40px] lg:py-[80px] flex flex-col gap-[32px]">
       <h1 className="w-full md:w-[500px] text-[48px] leading-[45px] md:text-[64px] font-[700] h-[174px] md:leading-[64px] text-[#9F3247] ">
@@ -15,8 +20,9 @@ const CountDown = () => {
         <Stopwatch days={5} hours={4} minutes={55} seconds={35} />
         <div className="w-full">
           <Button
+            onClick={bidApp}
             label="Bid Now"
-            className="bg-gradient-to-r from-[#7B2334] to-[#9F3247] w-full lg:w-[200px]"
+            className="bg-gradient-to-r from-[#7B2334] to-[#9F3247] w-full lg:w-[200px] shadow-lg"
           />
         </div>
       </div>

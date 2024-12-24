@@ -28,10 +28,10 @@ const Card = ({
             </p>
           </div>
           <div className="flex gap-2 items-center">
-            <p className="flex gap-1 text-[10px] text-slate-400">
+            <span className="flex gap-1 text-[10px] text-slate-400">
               <p>Seller:</p>
               {sellerName}
-            </p>
+            </span>
             {/* <p className="text-[12px] text-slate-400">{bidTimes}</p> */}
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
+<<<<<<< Updated upstream
 
 import Search from "../../Components/Search";
 import { likee, logo, search_glass, user } from "../../Constants";
@@ -35,6 +36,49 @@ const Nav = () => {
   // Search bar handler
   const handleSearch = () => {
     console.log("searching...");
+=======
+import { useNavigate } from "react-router-dom";
+import Search from "../../Components/Search";
+import { likee, logo, search_glass, user } from "../../Constants";
+import { useEffect, useState } from "react";
+import { LuAlignJustify } from "react-icons/lu";
+import { RiCloseLargeFill } from "react-icons/ri";
+import { menuArr } from "../../Constants";
+import useScreenModeStore from "../../Store/Store";
+import useSearchStore from "../../Store/Search";
+
+const Nav = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isMobile, setMode } = useScreenModeStore();
+  const { setSearchTerms } = useSearchStore();
+
+  // Handler to update the mode based on screen size
+  useEffect(() => {
+    // Handler to update the mode based on screen size
+    const handleResize = () => {
+      const isMobileScreen = window.innerWidth <= 768;
+      setMode(isMobileScreen);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [setMode]);
+  // Handler to toggle the mobilemenu
+  const toggleMenu = () => {
+    setIsMenuOpen((prev) => !prev);
+  };
+  // Navigate to sign-in page
+  const navigate = useNavigate();
+  const signIn = () => {
+    navigate("/sign-in");
+  };
+  // Handler to search for products
+  const handleSearch = (e) => {
+    setSearchTerms(e.target.value);
+>>>>>>> Stashed changes
   };
 
   return (
@@ -60,6 +104,7 @@ const Nav = () => {
               <img src={logo} alt="logo" className="w-[130px]" />
             </Link>
           </div>
+<<<<<<< Updated upstream
           <nav className="text-[16px] absolute z-10 text-white bg-gradient-to-r from-[#7B2334] to-[#9F3247] left-0 top-0 w-full p-10">
             <ul className="flex flex-col gap-8 pb-10 m-auto">
               {menuArr.map((item) => (
@@ -81,6 +126,32 @@ const Nav = () => {
               />
             </div>
           </nav>
+=======
+          {isMenuOpen && (
+            <nav className="text-[16px] absolute z-10 text-white bg-gradient-to-r from-[#7B2334] to-[#9F3247] left-0 top-0 w-full p-10">
+              <ul className="flex flex-col gap-8 pb-10 m-auto">
+                {menuArr.map((item) => (
+                  <NavLink key={item._id} to={item.link} onClick={toggleMenu}>
+                    {item.label}
+                  </NavLink>
+                ))}
+              </ul>
+              <div className="flex gap-4 mr-auto">
+                <Search
+                  img={search_glass}
+                  className={` text-black`}
+                  placeholder={`Search for Products`}
+                  onChange={handleSearch}
+                />
+                <RiCloseLargeFill
+                  size={40}
+                  className="cursor-pointer"
+                  onClick={toggleMenu}
+                />
+              </div>
+            </nav>
+          )}
+>>>>>>> Stashed changes
           <div className="flex gap-4">
             <img src={search_glass} alt="" className="h-4 w-4 cursor-pointer" />
             <img src={likee} alt="" className="h-4 w-4 cursor-pointer" />
@@ -105,7 +176,7 @@ const Nav = () => {
           <Search
             className={`sm:w-[250px] xl:w-[700px]`}
             img={search_glass}
-            onClick={handleSearch}
+            onChange={handleSearch}
             placeholder={`Search for products...`}
           />
           <div className="flex gap-4">

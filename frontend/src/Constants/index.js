@@ -30,17 +30,12 @@ export {
   twitter,
 };
 
-// const buildArr = {
-
-//     imgUrl: String;
-//     itemName: String;
-//     sellerName: String;
-//     bid:Number;
-//     bidTimes:Number;
-//     price:Number;
-//     countDown:Number;
-// }
-
+export const menuArr = [
+  { _id: 1, label: "Home", link: "/" },
+  { _id: 2, label: "Auctlist", link: "/list" },
+  { _id: 3, label: "About Us", link: "/about-us" },
+];
+// Product List Array
 export const productListArr = [
   {
     _id: 1,
