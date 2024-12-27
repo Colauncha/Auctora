@@ -1,3 +1,4 @@
+import cloudinary
 from server.config.app_configs import app_configs
 from server.config.database import Base, engine, RedisStorage, get_db
 
@@ -8,7 +9,15 @@ __all__ = [
     'init_db',
     'sync_redis',
     'redis_store',
+    'cloudinary',
 ]
+
+
+cloudinary = cloudinary.config(
+    cloud_name=app_configs.cloudinary.CLOUD_NAME,
+    api_key=app_configs.cloudinary.API_KEY,
+    api_secret=app_configs.cloudinary.API_SECRET,
+)
 
 
 def init_db():

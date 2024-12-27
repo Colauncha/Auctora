@@ -41,6 +41,13 @@ class TestUser(BaseSettings):
     PASSWORD: str
 
 
+class CloudinaryConfig(BaseSettings):
+    CLOUD_NAME: str
+    API_KEY: str
+    API_SECRET: str
+    model_config = {'env_prefix': 'CLOUDINARY_'}
+
+
 class AppConfig(BaseSettings):
     APP_NAME: str
     URI_PREFIX: str = '/api'
@@ -49,6 +56,7 @@ class AppConfig(BaseSettings):
     test_user: TestUser = TestUser()
     security: JWTSettings= JWTSettings()
     email_settings: EmailSettiings = EmailSettiings()
+    cloudinary: CloudinaryConfig = CloudinaryConfig()
     ENV: str
     DEBUG: bool = True if ENV in ["dev", "test"] else False
     CORS_ALLOWED: list[str] | str = "*"
