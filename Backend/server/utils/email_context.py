@@ -35,8 +35,7 @@ class Emailer:
         self.server = None
         self.message: EmailMessage = EmailMessage()
 
-
-    async def __aenter__(self):
+    async def enter(self):
         self.server: SMTP = smtplib.SMTP(self.SERVER, self.PORT)
         self.server.starttls()
         self.server.login(self.email, self.password)
@@ -47,9 +46,18 @@ class Emailer:
             self.template.render(**self.kwargs), subtype='html'
         )
         return self
-    
+
+    async def close(self):
+        self.message.clear_content()
+        self.server.quit()
+
+    async def __aenter__(self):
+        await self.enter()
+        return self
+
     async def send_message(self):
         self.server.send_message(self.message)
+        await self.close()
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         try:

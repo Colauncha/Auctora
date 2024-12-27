@@ -1,14 +1,14 @@
 from datetime import datetime, timezone, timedelta
 from typing import Annotated
-from fastapi import Depends, BackgroundTasks
+from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import ExpiredSignatureError, jwt
 from jose.exceptions import JWTError, JWTClaimsError
 from passlib.context import CryptContext
 from server.config import app_configs, get_db, redis_store
 from server.schemas import (
-    ServiceResultModel,
-    GetUserSchema,
+    ServiceResultModel, VerifyOtpSchema,
+    GetUserSchema, UpdateUserSchema,
     LoginSchema,
     LoginToken,
 )
@@ -131,6 +131,39 @@ class UserServices:
                 message="Unable to create User",
                 status_code=400,
                 detail=str(e)
+            )
+        
+    async def verify_otp(self, data: VerifyOtpSchema):
+        try:
+            async_redis = await redis_store.get_async_redis()
+            stored_otp = await async_redis.get(f'otp:{data.email}')
+            user = await self.repo.get_by_email(data.email)
+            if stored_otp == data.otp:
+                _ = await self.repo.save(user, {'email_verified': True})
+                return {'message': 'email verified'}
+            return {'message': 'Invalid otp or email'}
+        except Exception as e:
+            raise ExcRaiser(
+                status_code=400,
+                message='Unable to verify email',
+                detail=e.__repr__()
+            )
+
+    async def update_user(self, user: GetUserSchema, data: UpdateUserSchema):
+        try:
+            if not user:
+                raise HTTPException(
+                    status_code=400, detail="Not authenticated"
+                )
+            _data = data.model_dump(exclude_unset=True, exclude_none=True)
+            result = await self.repo.update(user, _data)
+            if result:
+                return True
+        except (HTTPException, Exception) as exc:
+            raise ExcRaiser(
+                status_code=getattr(exc, 'status_code', 400),
+                message="Update not successful",
+                detail=exc.__repr__()
             )
 
     @staticmethod

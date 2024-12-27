@@ -65,6 +65,14 @@ class CreateUserSchema(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class UpdateUserSchema(BaseModel):
+    model_config = {"from_attributes": True}
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone_number: Optional[str] = None
+
+
 class LoginSchema(BaseModel):
     model_config = {"from_attributes": True}
     identifier: str = Field(
@@ -81,3 +89,8 @@ class LoginToken(BaseModel):
     model_config = {"from_attributes": True}
     token: str
     token_type: str = Field(default='Bearer')
+
+
+class VerifyOtpSchema(BaseModel):
+    otp: str
+    email: str

@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, BackgroundTasks
 from server.config import get_db, redis_store
 from server.middlewares.exception_handler import ExcRaiser
 from server.schemas import (
-    CreateUserSchema,
-    APIResponse,
+    CreateUserSchema, VerifyOtpSchema,
+    APIResponse, UpdateUserSchema,
     GetUserSchema,
     LoginSchema,
     LoginToken,
@@ -34,17 +34,20 @@ def get_users(user: current_user) -> APIResponse[GetUserSchema]:
     )
 async def register(
     data: CreateUserSchema,
+    background_task: BackgroundTasks,
     db: Session = Depends(get_db)
 ) -> APIResponse:
     result = await UserServices(db).create_user(data.model_dump())
-
-    # async with Emailer(
-    #     subject="Email verification",
-    #     to=result.get('email'),
-    #     template_name="otp_template.html",
-    #     otp=result.get('otp')
-    # ) as emailer:
-    #     await emailer.send_message()
+    emailer = Emailer(
+        subject="Email verification",
+        to=result.get('email'),
+        template_name="otp_template.html",
+        otp=result.get('otp')
+    )
+    emailer = await emailer.enter()
+    background_task.add_task(
+        emailer.send_message
+    )
 
     return APIResponse(
         data={
@@ -52,6 +55,15 @@ async def register(
             'User registered successfully, OTP sent to mail for verification',
         }
     )
+
+
+@route.post('/verify_otp')
+async def verify_otp(
+    data: VerifyOtpSchema,
+    db: Session = Depends(get_db)
+) -> APIResponse[dict[str, str]]:
+    response = await UserServices(db).verify_otp(data)
+    return APIResponse(data=response)
 
 
 @route.post(
@@ -66,3 +78,14 @@ async def login(
 ) -> APIResponse[LoginToken]:
     token = await UserServices(db).authenticate(credentials)
     return APIResponse(data=token)
+
+
+@route.put('/update')
+async def update_user(
+    user: current_user,
+    data: UpdateUserSchema,
+    db: Session = Depends(get_db)
+) -> APIResponse[bool]:
+    valid_user = GetUserSchema.model_validate(user)
+    result = await UserServices(db).update_user(valid_user, data)
+    return APIResponse(data=result)

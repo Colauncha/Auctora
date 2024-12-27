@@ -2,6 +2,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 from server.models.base import BaseModel
 from server.models.users import Users
+from server.schemas import GetUserSchema
 
 
 class Repository:
@@ -52,6 +53,23 @@ class Repository:
                 return entity.first()
             return None
         except Exception as e:
+            raise e
+        
+    async def update(
+            self,
+            entity: GetUserSchema | Any,
+            data: dict = None
+        ) -> GetUserSchema | Any:
+        """Updates entity"""
+        try:
+            entity_to_update = self.db.query(self._Model).filter_by(id=entity.id)
+            if entity_to_update is None:
+                return None
+            entity_to_update.update(data, synchronize_session="evaluate")
+            self.db.commit()
+            return entity_to_update.all()
+        except Exception as e:
+            self.db.rollback()
             raise e
 
     async def delete(self, entity: BaseModel) -> bool:
