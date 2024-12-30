@@ -1,5 +1,6 @@
 from server.models.base import BaseModel
 from sqlalchemy import Boolean, Column, String
+from sqlalchemy.orm import relationship
 from passlib.context import CryptContext
 
 
@@ -14,6 +15,9 @@ class Users(BaseModel):
     hash_password = Column(String, nullable=False)
     email = Column(String, index=True, unique=True, nullable=False)
     email_verified = Column(Boolean, default=False)
+
+    # Add relationships
+    items_sold = relationship("Items", back_populates="seller")
 
     def __init__(
             self,
@@ -34,3 +38,6 @@ class Users(BaseModel):
     def _hash_password(self, password: str) -> str:
         context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         return context.hash(password)
+    
+    def __str__(self):
+        return f'Name: {self.name}, Email: {self.email}'
