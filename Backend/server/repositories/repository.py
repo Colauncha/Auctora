@@ -46,11 +46,13 @@ class Repository:
         except Exception as e:
             raise e
         
-    async def get_by_attr(self, attr: dict[str, str | Any]):
+    async def get_by_attr(self, attr: dict[str, str | Any], many: bool = False):
         try:
             entity = self.db.query(self._Model).filter_by(**attr)
-            if entity:
+            if entity and not many:
                 return entity.first()
+            elif entity and many:
+                return entity.all()
             return None
         except Exception as e:
             raise e
@@ -83,3 +85,9 @@ class Repository:
     async def exists(self, filter: dict) -> bool:
         entity = self.db.query(self._Model).filter_by(**filter).first()
         return True if entity else False
+
+    def all(self):
+        try:
+            return self.db.query(self._Model).all()
+        except Exception as e:
+            raise e

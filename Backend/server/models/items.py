@@ -2,17 +2,13 @@ from uuid import uuid4
 from sqlalchemy import (
     JSON, UUID, Column,
     Float, ForeignKey,
-    String, Integer,
+    String
 )
 from sqlalchemy.orm import relationship
 from server.models.base import BaseModel
-
-
-class ItemsCategories(BaseModel):
-    __tablename__ = 'items_categories'
-
-    item_id = Column(UUID(as_uuid=True), ForeignKey('items.id'), primary_key=True)
-    category_id = Column(UUID(as_uuid=True), ForeignKey('categories.id'), primary_key=True)
+from server.utils.helpers import (
+    category_id_generator, sub_category_id_generator
+)
 
 
 class Items(BaseModel):
@@ -29,13 +25,12 @@ class Items(BaseModel):
     image_link_3 = Column(JSON, nullable=True)
     image_link_4 = Column(JSON, nullable=True)
     image_link_5 = Column(JSON, nullable=True)
+    category_id = Column(String, ForeignKey('categories.id'), nullable=False)
+    sub_category_id = Column(String, ForeignKey('subcategories.id'), nullable=False)
 
     seller = relationship("Users", back_populates="items_sold")
-    categories = relationship(
-        "Categories",
-        secondary="items_categories",
-        back_populates="items"
-    )
+    category = relationship("Categories", back_populates="items")
+    sub_categories = relationship("Subcategory", back_populates="items")
 
     def __init__(
             self,
@@ -67,38 +62,29 @@ class Items(BaseModel):
 
 class Categories(BaseModel):
     __tablename__ = 'categories'
+    __mapper_args__ = {'polymorphic_identity': 'categories'}
 
+    id = Column(String, primary_key=True, default=category_id_generator)
     name = Column(String, nullable=False, unique=True)
     description = Column(String, nullable=True)
 
-    __mapper_args__ = {
-        'polymorphic_identity': 'categories'
-    }
-
-    items = relationship(
-        "Items",
-        secondary="items_categories",
-        back_populates="categories"
-    )
-    # Relationship to subcategories
-    subcategories = relationship("Subcategory", back_populates="category")
+    sub_categories = relationship("Subcategory", back_populates="parent")
+    items = relationship("Items", back_populates="category")
 
     def __str__(self):
-        return f'Name: {self.name}'
+        return f'Name: {self.name} - id: {self.id}'
 
 
-class Subcategory(Categories):
+class Subcategory(BaseModel):
     __tablename__ = 'subcategories'
     __mapper_args__ = {'polymorphic_identity': 'subcategory'}
 
-    parent_category_id = Column(Integer, ForeignKey('categories.id'), nullable=False)
-    sub_name = Column(String, nullable=False, unique=True)
+    id = Column(String, primary_key=True, default=sub_category_id_generator)
+    name = Column(String, nullable=False, index=True)
+    parent_id = Column(String, ForeignKey('categories.id'), nullable=False)
 
-    # Relationships
-    category = relationship(
-        "Categories", back_populates="subcategories",
-        foreign_keys=[parent_category_id]
-    )
+    parent = relationship("Categories", back_populates="sub_categories")
+    items = relationship("Items", back_populates="sub_categories")
 
     def __str__(self):
-        return f'{self.name}, {self.sub_name}'
+        return f'Name: {self.name} - P_id: {self.parent_id} - id: {self.id}'

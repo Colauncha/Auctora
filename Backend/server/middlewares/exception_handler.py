@@ -12,6 +12,21 @@ class ExcRaiser(Exception):
         self.detail = detail
 
 
+class ExcRaiser404(ExcRaiser):
+    default_detail = 'Resource not found'
+    def __init__(self, message: str, detail: str | Any = None):
+        super().__init__(
+            404, message,
+            self.default_detail if detail is None else detail
+        )
+
+
+class ExcRaiser500(ExcRaiser):
+    default_detail = 'Internal server error'
+    def __init__(self):
+        super().__init__(500, 'Internal server error', None)
+
+
 async def exception_handler(request: Request, exc: ExcRaiser):
     return JSONResponse(
         status_code=exc.status_code,

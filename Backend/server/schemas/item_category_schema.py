@@ -1,7 +1,9 @@
 from typing import Optional, Dict
 from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
-
+from server.utils.helpers import (
+    category_id_generator, sub_category_id_generator
+)
 
 class GetItemCategorySchema(BaseModel):
     id: UUID = Field(
@@ -75,11 +77,11 @@ class CreateItemSchema(BaseModel):
         examples=["https://www.example.com/image5.jpg"]
     )
 
-    @model_validator
-    def set_current_price(cls, values):
-        if values.get("current_price") is None:
-            values["current_price"] = values["starting_price"]
-        return values
+    @model_validator(mode='after')
+    def set_current_price(self):
+        if self.current_price is None:
+            self.current_price = self.starting_price
+        return self
 
     model_config = {"from_attributes": True}
 
@@ -101,20 +103,54 @@ class CreateCategorySchema(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class CreateSubCategorySchema(CreateCategorySchema):
-    parent_category_id: UUID = Field(
+class CreateSubCategorySchema(BaseModel):
+    parent_id: str = Field(
         description="ID of the Parent Category",
-        examples=["84hgdf-dmeu-fvtre-wectb-yyrrv4254"]
+        examples=['CAT001']
     )
-    sub_name: str = Field(
+    name: str = Field(
         description="Name of the Subcategory",
         examples=["Smartphones"]
     )
+    model_config = {"from_attributes": True}
 
 
 class GetCategorySchema(CreateCategorySchema):
-    id: UUID
+    id: str = Field(
+        description="ID of the Parent Category",
+        examples=['CAT001']
+    )
+    subcategories: Optional[list] = Field(
+        description="List of Subcategories",
+        examples=[[{"id": "SUBCAT001", "name": "Smartphones"}]], default=None
+    )
+
+    def set_subcategories(self, subcategories: list):
+        self.subcategories = subcategories
+        return self
+
+
+# class GetAllCategoriesSchema(BaseModel):
+#     categories: Dict[str, str] = Field(
+#         description="List of all Categories",
+#         examples=[{"id": "CAT001", "name": "Electronics"}]
+#     )
 
 
 class GetSubCategorySchema(CreateSubCategorySchema):
-    id: UUID
+    id: str = Field(
+        description="ID of the Parent Category",
+        examples=['SUBCAT0001']
+    )
+    parent_name: Optional[str] = Field(
+        description="Name of the Parent Category",
+        examples=["Electronics"], default=None
+    )
+    parent_description: Optional[str] = Field(
+        description="Description of the Parent Category",
+        examples=["Devices and gadgets."], default=None
+    )
+    def set_parent_details(self, parent_name: str, parent_description: str):
+        self.parent_name = parent_name
+        self.parent_description = parent_description
+        return self
