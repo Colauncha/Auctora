@@ -1,7 +1,9 @@
 from server.models.base import BaseModel
-from sqlalchemy import Boolean, Column, String
+from server.enums.user_enums import UserRoles
+from sqlalchemy import Boolean, Column, String, Enum
 from sqlalchemy.orm import relationship
 from passlib.context import CryptContext
+from sqlalchemy.dialects.postgresql import ENUM
 
 
 class Users(BaseModel):
@@ -15,6 +17,10 @@ class Users(BaseModel):
     hash_password = Column(String, nullable=False)
     email = Column(String, index=True, unique=True, nullable=False)
     email_verified = Column(Boolean, default=False)
+    role = Column(
+        ENUM(UserRoles, name='userroles', create_type=True, schema='auctora_dev'), 
+        nullable=False, default=UserRoles.CLIENT
+    )
 
     # Add relationships
     items_sold = relationship("Items", back_populates="seller")
@@ -27,6 +33,7 @@ class Users(BaseModel):
             password: str,
             first_name: str = None,
             last_name: str = None,
+            role: UserRoles = UserRoles.CLIENT
         ):
         self.username = username
         self.email = email
@@ -34,6 +41,7 @@ class Users(BaseModel):
         self.hash_password = self._hash_password(password)
         self.first_name = first_name
         self.last_name = last_name
+        self.role = role
 
     def _hash_password(self, password: str) -> str:
         context = CryptContext(schemes=["bcrypt"], deprecated="auto")

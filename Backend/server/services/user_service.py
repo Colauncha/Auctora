@@ -14,7 +14,7 @@ from server.schemas import (
 )
 from server.repositories import DBAdaptor
 from server.models.users import Users
-from server.middlewares.exception_handler import ExcRaiser
+from server.middlewares.exception_handler import ExcRaiser, ExcRaiser404
 from server.utils import is_valid_email, otp_generator, Emailer
 from sqlalchemy.orm import Session
 
@@ -37,6 +37,7 @@ class UserServices:
         claims = {
             "id": str(user.id),
             "email": user.email,
+            "role": user.role.value,
             "exp": expires_at,
         }
 
@@ -132,7 +133,23 @@ class UserServices:
                 status_code=400,
                 detail=str(e)
             )
-        
+    
+    async def retrieve_user(self, id) -> GetUserSchema:
+        try:
+            user = await self.repo.get_by_attr({'id': id})
+            if user:
+                valid_user = GetUserSchema.model_validate(user)
+                return valid_user
+            raise ExcRaiser404(message='User not found')
+        except Exception as e:
+            if issubclass(type(e), ExcRaiser):
+                raise e
+            raise ExcRaiser(
+                message="Unable to Fetch User",
+                status_code=400,
+                detail=str(e)
+            )
+
     async def verify_otp(self, data: VerifyOtpSchema):
         try:
             async_redis = await redis_store.get_async_redis()

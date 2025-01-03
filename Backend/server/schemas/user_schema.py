@@ -4,6 +4,7 @@ from fastapi import Query
 from pydantic import BaseModel, Field, ConfigDict
 from server.models.users import Users
 from server.config import app_configs
+from server.enums.user_enums import UserRoles
 
 
 class GetUserSchema(BaseModel):
@@ -32,6 +33,10 @@ class GetUserSchema(BaseModel):
         examples=[app_configs.test_user.EMAIL]
     )
     email_verified: Optional[bool] = Field(default=False)
+    role: Optional[UserRoles] = Field(
+        description='User roles',
+        examples=[UserRoles.CLIENT]
+    )
 
     model_config = {"from_attributes": True}
 
@@ -60,6 +65,10 @@ class CreateUserSchema(BaseModel):
     phone_number: str = Field(
         description="User's phone number",
         examples=[app_configs.test_user.PHONENUMBER]
+    )
+    role: Optional[UserRoles] = Field(
+        description='User roles',
+        examples=[UserRoles.CLIENT], default=UserRoles.CLIENT
     )
 
     model_config = {"from_attributes": True}

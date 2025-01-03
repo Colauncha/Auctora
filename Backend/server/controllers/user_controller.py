@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, BackgroundTasks
 from server.config import get_db, redis_store
+from server.enums.user_enums import Permissions
 from server.middlewares.exception_handler import ExcRaiser
+from server.middlewares.auth import permissions
 from server.schemas import (
     CreateUserSchema, VerifyOtpSchema,
     APIResponse, UpdateUserSchema,
@@ -18,11 +20,22 @@ route = APIRouter(prefix='/users', tags=['users'])
 db = Depends(get_db)
 
 
-@route.get('/')
-def get_users(user: current_user) -> APIResponse[GetUserSchema]:
+@route.get('/profile')
+async def get_user(user: current_user) -> APIResponse[GetUserSchema]:
+    return APIResponse(data=user)
+
+
+@permissions(permission_level=Permissions.AUTHENTICATED)
+@route.get('/retrieve/{id}')
+async def retrieve_users(
+    user: current_user,
+    id: str,
+    db: Session = Depends(get_db)
+) -> APIResponse[GetUserSchema]:
     """
-    Get all users
+    Get user
     """
+    user = await UserServices(db).retrieve_user(id)
     return APIResponse(data=user)
 
 
@@ -37,7 +50,7 @@ async def register(
     background_task: BackgroundTasks,
     db: Session = Depends(get_db)
 ) -> APIResponse:
-    result = await UserServices(db).create_user(data.model_dump())
+    result = await UserServices(db).create_user(data.model_dump(exclude_unset=True))
     emailer = Emailer(
         subject="Email verification",
         to=result.get('email'),
@@ -80,6 +93,7 @@ async def login(
     return APIResponse(data=token)
 
 
+@permissions
 @route.put('/update')
 async def update_user(
     user: current_user,

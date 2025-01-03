@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from typing import AsyncGenerator, Iterator, Any
+from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy import create_engine, schema
 from sqlalchemy.orm import (
     declarative_base,
@@ -8,6 +9,7 @@ from sqlalchemy.orm import (
     Session,
 )
 from server.config.app_configs import app_configs
+from server.enums.user_enums import UserRoles
 from redis import Redis as SyncRedis
 from redis.asyncio import Redis
 from dotenv import load_dotenv
