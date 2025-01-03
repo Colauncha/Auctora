@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
-from server import create_app
+from server import create_app, create_admin
 import uvicorn
+import sys
+
 
 app = create_app()
 
 
 if __name__ == '__main__':
-    config = uvicorn.Config(app, port=5000, log_level='info')
-    server = uvicorn.Server(config)
-    server.run()
+    try:
+        if len(sys.argv) > 1 and sys.argv[1] == 'createadmin':
+            admin = create_admin()
+            print(admin)
+        config = uvicorn.Config(app, port=8000, log_level='info', reload=True)
+        server = uvicorn.Server(config)
+        server.run()
+    except KeyboardInterrupt:
+        exit()
     

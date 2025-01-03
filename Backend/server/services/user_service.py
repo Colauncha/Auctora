@@ -133,7 +133,16 @@ class UserServices:
                 status_code=400,
                 detail=str(e)
             )
-    
+
+    # async def create_admin(self, data: dict):
+    #     try:
+    #         ex_uname = await self.repo.get_by_username(data.get('username'))
+    #         ex_email = await self.repo.get_by_username(data.get('email'))
+    #         if ex_email or ex_uname:
+    #             raise Exception()
+    #     except Exception as e:
+    #         ...
+
     async def retrieve_user(self, id) -> GetUserSchema:
         try:
             user = await self.repo.get_by_attr({'id': id})

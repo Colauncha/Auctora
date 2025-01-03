@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, BackgroundTasks
 from server.config import get_db, redis_store
-from server.enums.user_enums import Permissions
+from server.enums.user_enums import Permissions, UserRoles
 from server.middlewares.exception_handler import ExcRaiser
 from server.middlewares.auth import permissions
 from server.schemas import (
@@ -35,8 +35,14 @@ async def retrieve_users(
     """
     Get user
     """
-    user = await UserServices(db).retrieve_user(id)
-    return APIResponse(data=user)
+    retrieved_user = await UserServices(db).retrieve_user(id)
+    if retrieved_user.role == UserRoles.ADMIN and user.role != UserRoles.ADMIN:
+        raise ExcRaiser(
+            status_code=403,
+            message='Unauthorized',
+            detail='You do not have the permission to access this endpoint'
+        )
+    return APIResponse(data=retrieved_user)
 
 
 @route.post(
@@ -66,6 +72,36 @@ async def register(
         data={
             'message':
             'User registered successfully, OTP sent to mail for verification',
+        }
+    )
+
+
+@route.post('/register_admin')
+@permissions(permission_level=Permissions.ADMIN)
+async def register_admin(
+    user: current_user,
+    data: CreateUserSchema,
+    background_task: BackgroundTasks,
+    db: Session = Depends(get_db)
+) -> APIResponse:
+    data = data.model_dump(exclude_unset=True)
+    data['role'] = UserRoles.ADMIN
+    result = await UserServices(db).create_user(data)
+    emailer = Emailer(
+        subject="Email verification",
+        to=result.get('email'),
+        template_name="otp_template.html",
+        otp=result.get('otp')
+    )
+    emailer = await emailer.enter()
+    background_task.add_task(
+        emailer.send_message
+    )
+
+    return APIResponse(
+        data={
+            'message':
+            'Admin registered successfully, OTP sent to mail for verification',
         }
     )
 

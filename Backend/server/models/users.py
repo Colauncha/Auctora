@@ -48,4 +48,4 @@ class Users(BaseModel):
         return context.hash(password)
     
     def __str__(self):
-        return f'Name: {self.name}, Email: {self.email}'
+        return f'Name: {self.username}, Email: {self.email}'
