@@ -1,21 +1,25 @@
 from fastapi import APIRouter, Depends
 from server.config import get_db
+from server.enums.user_enums import Permissions
+from server.middlewares.auth import permissions
 from server.schemas import (
     CreateCategorySchema, CreateSubCategorySchema,
     GetCategorySchema, GetSubCategorySchema,
     APIResponse
 )
+from server.services.user_service import current_user
 from server.services.category_service import CategoryServices
 from sqlalchemy.orm import Session
 
 
 route = APIRouter(prefix='/categories', tags=['categories'])
 sub_route = APIRouter(prefix='/subcategories', tags=['subcategories'])
-# route.include_router(sub_route)
 
 
 @route.post('/')
+@permissions(permission_level=Permissions.ADMIN)
 async def create_category(
+    user: current_user,
     category: CreateCategorySchema,
     db: Session = Depends(get_db)
 ) -> APIResponse[GetCategorySchema]:
@@ -43,7 +47,9 @@ async def list_categories(
 
 # Subcategory Routes
 @sub_route.post('/')
+@permissions(permission_level=Permissions.ADMIN)
 async def create_sub_category(
+    user: current_user,
     sub_cat: CreateSubCategorySchema,
     db: Session = Depends(get_db)
 ) -> APIResponse[GetSubCategorySchema]:

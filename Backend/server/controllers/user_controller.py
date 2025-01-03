@@ -25,8 +25,8 @@ async def get_user(user: current_user) -> APIResponse[GetUserSchema]:
     return APIResponse(data=user)
 
 
-@permissions(permission_level=Permissions.AUTHENTICATED)
 @route.get('/retrieve/{id}')
+@permissions(permission_level=Permissions.AUTHENTICATED)
 async def retrieve_users(
     user: current_user,
     id: str,
@@ -93,13 +93,16 @@ async def login(
     return APIResponse(data=token)
 
 
-@permissions
 @route.put('/update')
+@permissions
 async def update_user(
     user: current_user,
     data: UpdateUserSchema,
+    id: str = None,
     db: Session = Depends(get_db)
 ) -> APIResponse[bool]:
-    valid_user = GetUserSchema.model_validate(user)
+    id = user.id if id is None else id
+    user_ = await UserServices(db).retrieve_user(id)
+    valid_user = GetUserSchema.model_validate(user_)
     result = await UserServices(db).update_user(valid_user, data)
     return APIResponse(data=result)
