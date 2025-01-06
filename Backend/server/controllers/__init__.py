@@ -3,10 +3,12 @@ from server.config import app_configs
 from server.controllers.user_controller import route as user_route
 from server.controllers.category_controller import route as cat_route
 from server.controllers.category_controller import sub_route
+from server.controllers.items_controller import route as item_route
 
 
-router = APIRouter(prefix=app_configs.URI_PREFIX)
+routes = APIRouter(prefix=app_configs.URI_PREFIX)
 
-router.include_router(user_route)
-router.include_router(cat_route)
-router.include_router(sub_route)
+routes.include_router(user_route)
+routes.include_router(cat_route)
+routes.include_router(sub_route)
+routes.include_router(item_route)

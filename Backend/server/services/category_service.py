@@ -4,8 +4,11 @@ from server.repositories import DBAdaptor
 from server.schemas import (
     CreateCategorySchema, GetCategorySchema,
     CreateSubCategorySchema, GetSubCategorySchema,
+    UpdateCategorySchema, UpdateSubCategorySchema,
 )
-from server.middlewares.exception_handler import ExcRaiser, ExcRaiser404
+from server.middlewares.exception_handler import (
+    ExcRaiser, ExcRaiser404, ExcRaiser500
+)
 
 
 class CategoryServices:
@@ -71,6 +74,23 @@ class CategoryServices:
                 message="Unable to get categories",
                 detail=repr(e)
             )
+        
+    async def update_category(self, id: str, data: UpdateCategorySchema):
+        try:
+            cat = await self.cat_repo.get_by_attr({'id': id})
+            _data = data.model_dump(exclude_unset=True)
+            if cat:
+                response = await self.cat_repo.update(cat, _data)
+            else:
+                raise ExcRaiser404(message='Category not found')
+            if response:
+                return True
+        except Exception as e:
+            raise ExcRaiser(
+                status_code=400,
+                message='Unable to Update Category',
+                detail=repr(e)
+            )
 
     # Sub Category services
     async def create_sub_category(
@@ -126,5 +146,22 @@ class CategoryServices:
             raise ExcRaiser(
                 status_code=400,
                 message="Unable to get sub categories",
+                detail=repr(e)
+            )
+
+    async def update_sub_category(self, id: str, data: UpdateSubCategorySchema):
+        try:
+            sub_cat = await self.sub_cat_repo.get_by_attr({'id': id})
+            _data = data.model_dump(exclude_unset=True)
+            if sub_cat:
+                response = await self.sub_cat_repo.update(sub_cat, _data)
+            else:
+                raise ExcRaiser404(message='Subcategory not found')
+            if response:
+                return True
+        except Exception as e:
+            raise ExcRaiser(
+                status_code=400,
+                message="Unable to update subcategory",
                 detail=repr(e)
             )

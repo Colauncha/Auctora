@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from server.config import app_configs, init_db, get_db
-from server.controllers import router
+from server.controllers import routes
 from server.middlewares.exception_handler import (
     ExcRaiser,
     RequestValidationError,
@@ -48,7 +48,7 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
         RequestValidationError: request_validation_error_handler,
         HTTPException: HTTP_error_handler
     }
-    app.include_router(router)
+    app.include_router(routes)
     init_db()
     return app
 

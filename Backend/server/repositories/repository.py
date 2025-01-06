@@ -1,8 +1,18 @@
-from typing import Any
+from typing import Any, Type, Union
 from sqlalchemy.orm import Session
 from server.models.base import BaseModel
 from server.models.users import Users
-from server.schemas import GetUserSchema
+from server.schemas import (
+    GetUserSchema, GetCategorySchema,
+    GetSubCategorySchema, GetItemSchema
+)
+
+
+T = Union[
+    GetUserSchema, GetCategorySchema,
+    GetItemSchema, GetSubCategorySchema,
+
+]
 
 
 class Repository:
@@ -59,7 +69,7 @@ class Repository:
         
     async def update(
             self,
-            entity: GetUserSchema | Any,
+            entity: T,
             data: dict = None
         ) -> GetUserSchema | Any:
         """Updates entity"""

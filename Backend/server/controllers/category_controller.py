@@ -5,7 +5,8 @@ from server.middlewares.auth import permissions
 from server.schemas import (
     CreateCategorySchema, CreateSubCategorySchema,
     GetCategorySchema, GetSubCategorySchema,
-    APIResponse
+    APIResponse, UpdateCategorySchema,
+    UpdateSubCategorySchema
 )
 from server.services.user_service import current_user
 from server.services.category_service import CategoryServices
@@ -45,6 +46,18 @@ async def list_categories(
     return APIResponse(data=categories)
 
 
+@route.put('/')
+@permissions(permission_level=Permissions.ADMIN)
+async def update(
+    user: current_user,
+    id: str,
+    data: UpdateCategorySchema,
+    db: Session = Depends(get_db)
+) -> APIResponse[bool]:
+    response = await CategoryServices(db).update_category(id.upper(), data)
+    return APIResponse(data=response)
+
+
 # Subcategory Routes
 @sub_route.post('/')
 @permissions(permission_level=Permissions.ADMIN)
@@ -73,3 +86,15 @@ async def list_sub_categories(
 ) -> APIResponse[list[GetSubCategorySchema]]:
     sub_categories = await CategoryServices(db).list_sub_categories()
     return APIResponse(data=sub_categories)
+
+
+@sub_route.put('/')
+@permissions(permission_level=Permissions.ADMIN)
+async def update(
+    user: current_user,
+    id: str,
+    data: UpdateSubCategorySchema,
+    db: Session = Depends(get_db)
+):
+    response = await CategoryServices(db).update_sub_category(id.upper(), data)
+    return APIResponse(data=response)

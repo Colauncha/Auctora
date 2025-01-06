@@ -1,25 +1,6 @@
 from typing import Optional, Dict
 from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
-from server.utils.helpers import (
-    category_id_generator, sub_category_id_generator
-)
-
-class GetItemCategorySchema(BaseModel):
-    id: UUID = Field(
-        description="ID of the Item Category",
-        examples=["84hgdf-dmeu-fvtre-wectb-yyrrv4254"]
-    )
-    item_id: UUID = Field(
-        description="ID of the Item",
-        examples=["84hgdf-dmeu-fvtre-wectb-yyrrv4254"]
-    )
-    category_id: UUID = Field(
-        description="ID of the Category",
-        examples=["84hgdf-dmeu-fvtre-wectb-yyrrv4254"]
-    )
-
-    model_config = {"from_attributes": True}
 
 
 class ImageLinkObj(BaseModel):
@@ -35,14 +16,6 @@ class ImageLinkObj(BaseModel):
 
 
 class CreateItemSchema(BaseModel):
-    id: Optional[UUID] = Field(
-        description="ID of the Item",
-        examples=["84hgdf-dmeu-fvtre-wectb-yyrrv4254"]
-    )
-    sellers_id: UUID = Field(
-        description="ID of the Seller",
-        examples=["84hgdf-dmeu-fvtre-wectb-yyrrv4254"]
-    )
     name: str = Field(
         description="Name of the Item",
         examples=["Example Item"]
@@ -55,11 +28,24 @@ class CreateItemSchema(BaseModel):
         description="Starting price of the Item",
         examples=[10.0]
     )
-    current_price: Optional[float] = Field(
-        description="Current price of the Item",
-        examples=[10.0]
+    quantity: Optional[int] = Field(
+        description="Quantity of the Item",
+        examples=[10], default=1
     )
-    image_link: ImageLinkObj # Watch for errors
+    category_id: str = Field(
+        description="ID of the Category",
+        examples=["CAT001"]
+    )
+    sub_category_id: str = Field(
+        description="ID of the Subcategory",
+        examples=["SUBCAT001"]
+    )
+
+    model_config = {"from_attributes": True}
+
+
+class UpdateItemSchema(CreateItemSchema):
+    image_link: Optional[ImageLinkObj] # Watch for errors
     image_link_2: Optional[ImageLinkObj] = Field(
         description="Second image link of the Item",
         examples=["https://www.example.com/image2.jpg"]
@@ -76,18 +62,37 @@ class CreateItemSchema(BaseModel):
         description="Fifth image link of the Item",
         examples=["https://www.example.com/image5.jpg"]
     )
+    current_price: Optional[float] = Field(
+        description="Current price of the Item",
+        examples=[10.0]
+    )
+    quantity: Optional[int] = Field(
+        description="Quantity of the Item",
+        examples=[10], default=1
+    )
+    weight: Optional[float] = Field(
+        description="Weight of the Item",
+        examples=[1.0]
+    )
+    height: Optional[float] = Field(
+        description="Height of the Item",
+        examples=[1.0]
+    )
+    width: Optional[float] = Field(
+        description="Width of the Item",
+        examples=[1.0]
+    )
+    length: Optional[float] = Field(
+        description="Length of the Item",
+        examples=[1.0]
+    )
 
-    @model_validator(mode='after')
-    def set_current_price(self):
-        if self.current_price is None:
-            self.current_price = self.starting_price
-        return self
-
-    model_config = {"from_attributes": True}
-
-
-class GetItemSchema(CreateItemSchema):
+class GetItemSchema(UpdateItemSchema):
     id: UUID
+    sellers_id: UUID = Field(
+        description="ID of the Seller",
+        examples=["84hgdf-dmeu-fvtre-wectb-yyrrv4254"]
+    )
 
 
 class CreateCategorySchema(BaseModel):
@@ -103,6 +108,10 @@ class CreateCategorySchema(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class UpdateCategorySchema(CreateCategorySchema):
+    pass
+
+
 class CreateSubCategorySchema(BaseModel):
     parent_id: str = Field(
         description="ID of the Parent Category",
@@ -113,6 +122,10 @@ class CreateSubCategorySchema(BaseModel):
         examples=["Smartphones"]
     )
     model_config = {"from_attributes": True}
+
+
+class UpdateSubCategorySchema(CreateSubCategorySchema):
+    pass
 
 
 class GetCategorySchema(CreateCategorySchema):
@@ -128,13 +141,6 @@ class GetCategorySchema(CreateCategorySchema):
     def set_subcategories(self, subcategories: list):
         self.subcategories = subcategories
         return self
-
-
-# class GetAllCategoriesSchema(BaseModel):
-#     categories: Dict[str, str] = Field(
-#         description="List of all Categories",
-#         examples=[{"id": "CAT001", "name": "Electronics"}]
-#     )
 
 
 class GetSubCategorySchema(CreateSubCategorySchema):
