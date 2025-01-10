@@ -4,11 +4,11 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class ImageLinkObj(BaseModel):
-    link: str = Field(
+    link: Optional[str] = Field(
         description="Image link of the Item",
         examples=["https://www.example.com/image1.jpg"]
     )
-    public_id: str = Field(
+    public_id: Optional[str] = Field(
         description="Asset ID",
         examples=["rfe45g"]
     )
@@ -46,22 +46,10 @@ class CreateItemSchema(BaseModel):
 
 class UpdateItemSchema(CreateItemSchema):
     image_link: Optional[ImageLinkObj] # Watch for errors
-    image_link_2: Optional[ImageLinkObj] = Field(
-        description="Second image link of the Item",
-        examples=["https://www.example.com/image2.jpg"]
-    )
-    image_link_3: Optional[ImageLinkObj] = Field(
-        description="Third image link of the Item",
-        examples=["https://www.example.com/image3.jpg"]
-    )
-    image_link_4: Optional[ImageLinkObj] = Field(
-        description="Fourth image link of the Item",
-        examples=["https://www.example.com/image4.jpg"]
-    )
-    image_link_5: Optional[ImageLinkObj] = Field(
-        description="Fifth image link of the Item",
-        examples=["https://www.example.com/image5.jpg"]
-    )
+    image_link_2: Optional[ImageLinkObj]
+    image_link_3: Optional[ImageLinkObj]
+    image_link_4: Optional[ImageLinkObj]
+    image_link_5: Optional[ImageLinkObj]
     current_price: Optional[float] = Field(
         description="Current price of the Item",
         examples=[10.0]
@@ -89,7 +77,7 @@ class UpdateItemSchema(CreateItemSchema):
 
 class GetItemSchema(UpdateItemSchema):
     id: UUID
-    sellers_id: UUID = Field(
+    users_id: UUID = Field(
         description="ID of the Seller",
         examples=["84hgdf-dmeu-fvtre-wectb-yyrrv4254"]
     )

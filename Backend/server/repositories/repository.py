@@ -6,7 +6,7 @@ from server.schemas import (
     GetUserSchema, GetCategorySchema,
     GetSubCategorySchema, GetItemSchema
 )
-
+from server.middlewares.exception_handler import ExcRaiser, ExcRaiser404
 
 T = Union[
     GetUserSchema, GetCategorySchema,
@@ -49,7 +49,7 @@ class Repository:
 
     async def get_by_id(self, id: str):
         try:
-            entity = self.db.query(self._Model).filter(self._Model == id)
+            entity = self.db.query(self._Model).filter(self._Model == id).order_by(self._Model.id)
             if entity:
                 return entity.first()
             return None
@@ -71,12 +71,12 @@ class Repository:
             self,
             entity: T,
             data: dict = None
-        ) -> GetUserSchema | Any:
+        ) -> T:
         """Updates entity"""
         try:
             entity_to_update = self.db.query(self._Model).filter_by(id=entity.id)
             if entity_to_update is None:
-                return None
+                raise ExcRaiser404(message='Entity not found')
             entity_to_update.update(data, synchronize_session="evaluate")
             self.db.commit()
             return entity_to_update.all()
@@ -98,6 +98,6 @@ class Repository:
 
     def all(self):
         try:
-            return self.db.query(self._Model).all()
+            return self.db.query(self._Model).order_by(self._Model.id).all()
         except Exception as e:
             raise e

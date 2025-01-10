@@ -9,7 +9,6 @@ from sqlalchemy.orm import (
     Session,
 )
 from server.config.app_configs import app_configs
-from server.enums.user_enums import UserRoles
 from redis import Redis as SyncRedis
 from redis.asyncio import Redis
 from dotenv import load_dotenv

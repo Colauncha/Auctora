@@ -13,7 +13,7 @@ __all__ = [
 ]
 
 
-cloudinary = cloudinary.config(
+cloudinary_init = cloudinary.config(
     cloud_name=app_configs.cloudinary.CLOUD_NAME,
     api_key=app_configs.cloudinary.API_KEY,
     api_secret=app_configs.cloudinary.API_SECRET,

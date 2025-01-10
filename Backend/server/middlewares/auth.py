@@ -1,17 +1,33 @@
 from functools import wraps
+from typing import Union
 from fastapi import HTTPException
 from server.services import current_user
 from server.schemas import GetUserSchema
+from server.enums import ServiceKeys
 from server.enums.user_enums import UserRoles, Permissions
-from server.middlewares.exception_handler import ExcRaiser500
+from server.middlewares.exception_handler import ExcRaiser500, ExcRaiser404
+from enum import Enum
 
 
 # Permissions decorator
-def permissions(_func=None, *, permission_level: list[str] = Permissions.CLIENT):
+def permissions(
+        _func=None, *, permission_level: list[str] = Permissions.CLIENT,
+        service: ServiceKeys = None
+    ):
     def decorator(f):
         @wraps(f)
         async def decorated_function(*args, **kwargs):
             user = kwargs.get('user')
+            if service != None:
+                entity_id = kwargs.get(service.id)
+                if not entity_id:
+                    raise ExcRaiser404("Entity ID not found")
+                entity = await service.service(kwargs.get('db')).retrieve(entity_id)
+                if entity.users_id != user.id:
+                    raise HTTPException(
+                        status_code=403,
+                        detail='Unauthorized'
+                    )
             if not user:
                 raise HTTPException(
                     status_code=401,

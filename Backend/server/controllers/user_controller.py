@@ -35,7 +35,7 @@ async def retrieve_users(
     """
     Get user
     """
-    retrieved_user = await UserServices(db).retrieve_user(id)
+    retrieved_user = await UserServices(db).retrieve(id)
     if retrieved_user.role == UserRoles.ADMIN and user.role != UserRoles.ADMIN:
         raise ExcRaiser(
             status_code=403,
@@ -137,8 +137,8 @@ async def update_user(
     id: str = None,
     db: Session = Depends(get_db)
 ) -> APIResponse[bool]:
-    id = user.id if id is None else id
-    user_ = await UserServices(db).retrieve_user(id)
+    id = id if user.role == UserRoles.ADMIN else user.id
+    user_ = await UserServices(db).retrieve(id)
     valid_user = GetUserSchema.model_validate(user_)
     result = await UserServices(db).update_user(valid_user, data)
     return APIResponse(data=result)

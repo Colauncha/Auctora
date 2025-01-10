@@ -165,3 +165,15 @@ class CategoryServices:
                 message="Unable to update subcategory",
                 detail=repr(e)
             )
+        
+    async def retrieve(self, id: str):
+        try:
+            if id.startswith('SUB'):
+                return await self.get_subcat_by_id(id)
+            return await self.get_cat_by_id(id)
+        except Exception as e:
+            raise ExcRaiser(
+                status_code=400,
+                message="Unable to fetch category/subcategory",
+                detail=repr(e)
+            )

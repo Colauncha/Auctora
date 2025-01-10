@@ -15,7 +15,7 @@ class Items(BaseModel):
     __tablename__ = 'items'
     __mapper_args__ = {'polymorphic_identity': 'items'}
 
-    sellers_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    users_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False) # change to users_id
     name = Column(String, nullable=False)
     description = Column(String, nullable=False)
     starting_price = Column(Float, nullable=False)
@@ -25,7 +25,7 @@ class Items(BaseModel):
     image_link_3 = Column(JSON, nullable=True)
     image_link_4 = Column(JSON, nullable=True)
     image_link_5 = Column(JSON, nullable=True)
-    quantity = Column(Integer, nullable=False, default=1)
+    quantity = Column(Integer, nullable=False, default=1) # remove
     weight = Column(Float, nullable=True)
     height = Column(Float, nullable=True)
     width = Column(Float, nullable=True)
@@ -39,7 +39,7 @@ class Items(BaseModel):
 
     def __init__(
             self,
-            sellers_id: UUID,
+            users_id: UUID,
             name: str,
             description: str,
             starting_price: float,
@@ -48,7 +48,7 @@ class Items(BaseModel):
             sub_category_id: str,
         ):
         self.id = uuid4()
-        self.sellers_id = sellers_id
+        self.users_id = users_id
         self.name = name
         self.description = description
         self.starting_price = starting_price
@@ -60,7 +60,7 @@ class Items(BaseModel):
     def __str__(self):
         return f'\
         Name: {self.name}\n\
-        Seller: {self.sellers_id}\n\
+        Seller: {self.users_id}\n\
         Price: {self.current_price}\
         quantity: {self.quantity}\
         '

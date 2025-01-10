@@ -1,6 +1,5 @@
 from enum import Enum
 
-
 class UserRoles(Enum):
     CLIENT = 'client'
     ADMIN = 'admin'
@@ -11,3 +10,4 @@ class Permissions(Enum):
     CLIENT = ['admin', 'client']
     AUTHENTICATED = ['admin', 'client', 'authenticated']
     ALL = ['*']
+

@@ -5,7 +5,8 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import ExpiredSignatureError, jwt
 from jose.exceptions import JWTError, JWTClaimsError
 from passlib.context import CryptContext
-from server.config import app_configs, get_db, redis_store
+from server.config import app_configs, redis_store
+from server.config.database import get_db
 from server.schemas import (
     ServiceResultModel, VerifyOtpSchema,
     GetUserSchema, UpdateUserSchema,
@@ -143,7 +144,7 @@ class UserServices:
     #     except Exception as e:
     #         ...
 
-    async def retrieve_user(self, id) -> GetUserSchema:
+    async def retrieve(self, id) -> GetUserSchema:
         try:
             user = await self.repo.get_by_attr({'id': id})
             if user:

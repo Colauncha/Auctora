@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from typing import Optional
+from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
+from server.middlewares.exception_handler import ExcRaiser, ExcRaiser404
 from server.config import get_db
 from server.services.user_service import current_user
 from server.middlewares.auth import permissions, Permissions
@@ -8,6 +10,8 @@ from server.schemas import (
     CreateItemSchema, GetItemSchema,
     UpdateItemSchema
 )
+from server.enums import ServiceKeys
+from server.enums.user_enums import UserRoles
 from sqlalchemy.orm import Session
 
 
@@ -22,7 +26,7 @@ async def create(
     db: Session = Depends(get_db) 
 ) -> APIResponse[GetItemSchema]:
     _data = CreateItemSchema.model_dump(data, exclude_unset=True)
-    _data["sellers_id"] = user.id
+    _data["users_id"] = user.id
     result = await ItemServices(db).create(_data)
     return APIResponse(data=result)
 
@@ -44,6 +48,34 @@ async def get_items(
     db: Session = Depends(get_db)
 ) -> APIResponse[GetItemSchema]:
     result = await ItemServices(db).retrieve(id)
+    return APIResponse(data=result)
+
+
+@route.put('/upload_images')
+@permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.ITEM)
+async def upload_images(
+    user: current_user,
+    item_id: str,
+    image1: Optional[UploadFile] = File(None),
+    image2: Optional[UploadFile] = File(None),
+    image3: Optional[UploadFile] = File(None),
+    image4: Optional[UploadFile] = File(None),
+    image5: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db)
+) -> APIResponse[GetItemSchema]:
+    
+    item = await ItemServices(db).repo.get_by_attr({'id': item_id})
+
+    images = [image1, image2, image3, image4, image5]
+    content_type = ["image/jpeg", "image/png"]
+
+    uploads = [
+        image.file
+        if image and image.content_type in content_type else None 
+        for image in images
+    ]
+
+    result = await ItemServices(db).upload_images(item, uploads)
     return APIResponse(data=result)
 
 

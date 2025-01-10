@@ -14,7 +14,7 @@ class ItemRepository(Repository):
     async def get_by_seller_id(
             self, id: str|UUID, schema_mode: bool = False
         ) -> GetItemSchema | Items:
-        items = await self.get_by_attr({'seller_id': id}, many=True)
+        items = await self.get_by_attr({'users_id': id}, many=True)
         if items and schema_mode:
             _items = [GetItemSchema.model_validate(item) for item in items]
             return _items
