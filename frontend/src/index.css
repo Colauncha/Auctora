@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+.formatter {
+  width: 87%;
+  margin: 0 auto;
+}
+.active {
+  background-color: #9f3247;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+/* Resp breaskpoints */
+
+  .mobile {
+    width: 390px;
+  }
