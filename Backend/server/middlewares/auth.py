@@ -18,16 +18,6 @@ def permissions(
         @wraps(f)
         async def decorated_function(*args, **kwargs):
             user = kwargs.get('user')
-            if service != None:
-                entity_id = kwargs.get(service.id)
-                if not entity_id:
-                    raise ExcRaiser404("Entity ID not found")
-                entity = await service.service(kwargs.get('db')).retrieve(entity_id)
-                if entity.users_id != user.id or entity.id != user.id:
-                    raise HTTPException(
-                        status_code=403,
-                        detail='Unauthorized'
-                    )
             if not user:
                 raise HTTPException(
                     status_code=401,
@@ -36,6 +26,16 @@ def permissions(
             elif permission_level == Permissions.ADMIN and user.role == UserRoles.ADMIN:
                 return await f(*args, **kwargs)
             elif permission_level == Permissions.CLIENT and (user.role == UserRoles.ADMIN or user.role == UserRoles.CLIENT):
+                if service:
+                    entity_id = kwargs.get(service.id)
+                    if not entity_id:
+                        raise ExcRaiser404("Entity ID not found")
+                    entity = await service.service(kwargs.get('db')).retrieve(entity_id)
+                    if entity.users_id != user.id or entity.id != user.id:
+                        raise HTTPException(
+                            status_code=403,
+                            detail='Unauthorized'
+                        )
                 return await f(*args, **kwargs)
             elif permission_level == Permissions.AUTHENTICATED and user:
                 return await f(*args, **kwargs)
