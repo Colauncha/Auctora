@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import Search from "../../Components/Search";
 import { likee, logo, search_glass, user } from "../../Constants";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { LuAlignJustify } from "react-icons/lu";
 import { RiCloseLargeFill } from "react-icons/ri";
 import useModeStore from "../../Store/Store";
@@ -15,24 +15,25 @@ const Nav = () => {
     { _id: 3, label: "About Us", link: "/about-us" },
   ];
 
-  const {} = useModeStore();
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isMobile, setModeBasedOnScreenSize } = useModeStore();
 
-  const updateIsMobile = useCallback(() => {
-    setIsMobile(window.innerWidth <= 768);
-  }, []);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
     setIsMenuOpen((prev) => !prev);
   };
-
   useEffect(() => {
-    window.addEventListener("resize", updateIsMobile);
-    return () => {
-      window.removeEventListener("resize", updateIsMobile);
+    const handleResize = () => {
+      setModeBasedOnScreenSize();
     };
-  }, [updateIsMobile]);
+
+    window.addEventListener("resize", handleResize);
+    setModeBasedOnScreenSize(); // Set initial mode
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [setModeBasedOnScreenSize]);
 
   const navigate = useNavigate();
   const signIn = () => {

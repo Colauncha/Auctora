@@ -17,6 +17,13 @@ import insta_auth from "../assets/icons/insta.png";
 import google_auth from "../assets/icons/google_auth.png";
 import filter_icom from "../assets/icons/filter_icon.png";
 
+import headphone from "../assets/svg/headphone.svg";
+import cellphone from "../assets/svg/CellPhone.svg";
+import computer from "../assets/svg/Computer.svg";
+import camera from "../assets/svg/Camera.svg";
+import gamepad from "../assets/svg/Gamepad.svg";
+import smartwatch from "../assets/svg/SmartWatch.svg";
+
 export {
   logo,
   search_glass,
@@ -36,6 +43,12 @@ export {
   google_auth,
   insta_auth,
   filter_icom,
+  headphone,
+  cellphone,
+  computer,
+  camera,
+  gamepad,
+  smartwatch,
 };
 
 // const buildArr = {

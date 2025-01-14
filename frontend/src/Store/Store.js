@@ -1,15 +1,14 @@
 // useModeStore.js
 import { create } from "zustand";
-
 const useModeStore = create((set) => ({
-  isMobile: window.innerWidth <= 768, // Initial mode based on window size
+  isMobile: false, // Default value
   toggleMode: () =>
     set((state) => ({
       isMobile: !state.isMobile,
     })),
   setModeBasedOnScreenSize: () =>
     set(() => ({
-      isMobile: window.innerWidth <= 768,
+      isMobile: typeof window !== "undefined" && window.innerWidth <= 768,
     })),
 }));
 

@@ -1,13 +1,22 @@
-import { LuCrosshair } from "react-icons/lu";
+// import { LuCrosshair } from "react-icons/lu";
+import { NavLink } from "react-router-dom";
 import CategoryCard from "../../Components/CategoryCard";
+import {
+  headphone,
+  smartwatch,
+  cellphone,
+  computer,
+  gamepad,
+  camera,
+} from "../../Constants";
 
 const CategoryItemArr = [
-  { _id: 1, icon: <LuCrosshair />, title: "headPhones" },
-  { _id: 2, icon: <LuCrosshair />, title: "gaming" },
-  { _id: 3, icon: <LuCrosshair />, title: "computers" },
-  { _id: 4, icon: <LuCrosshair />, title: "phones" },
-  { _id: 5, icon: <LuCrosshair />, title: "cameras" },
-  { _id: 6, icon: <LuCrosshair />, title: "appliances" },
+  { _id: 1, icon: headphone, title: "headPhones", to: "/" },
+  { _id: 2, icon: gamepad, title: "gaming", to: "/" },
+  { _id: 3, icon: computer, title: "computers", to: "/" },
+  { _id: 4, icon: cellphone, title: "phones", to: "/" },
+  { _id: 5, icon: camera, title: "cameras", to: "/" },
+  { _id: 6, icon: smartwatch, title: "appliances", to: "/" },
 ];
 
 const Category = () => {
