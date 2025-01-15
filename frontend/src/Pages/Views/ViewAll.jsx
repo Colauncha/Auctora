@@ -45,12 +45,6 @@ const ViewAll = () => {
               </div>}
             </div>
             <AuctionListing />
-            {/* {sliderModal && <div className="inset-0 bg-slate-900 h-full w-full z-10">
-              <div className="absolute top-52 left-20 z-15">
-              <Slider/>
-              </div>
-              </div>} */}
-
               <Modal isOpen={modalOpen} onClose={closeModal}>
                 <Slider/>
               </Modal>

@@ -43,6 +43,7 @@ const AuctionListing = () => {
               sellerName={item.sellerName}
               price={item.price}
               countDown={item.countDown}
+              to={`/detail/${item._id}`}
             />
           );
         })}

@@ -8,6 +8,8 @@ import Footer from "./Pages/Home/Footer";
 import SignUp from "./Pages/Auth/SignUp";
 import SignIn from "./Pages/Auth/SignIn";
 import ViewAll from "./Pages/Views/ViewAll";
+import CategoryResult from "./Pages/Category/CategoryResult";
+import Detail from "./Pages/Detail/Detail";
 
 const App = () => {
   return (
@@ -19,6 +21,8 @@ const App = () => {
         <Route path="/list" element={<ViewAll />} />
         <Route path="/about-us" element={<AboutUs />} />
         <Route path="/Ongoing-Auction" element={<ViewAll />} />
+        <Route path="/category" element={<CategoryResult />} />
+        <Route path="/detail/:id" element={<Detail />} />
         <Route path="/sign-up" element={<SignUp />} />
         <Route path="/sign-in" element={<SignIn />} />
       </Routes>
