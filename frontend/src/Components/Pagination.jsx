@@ -36,9 +36,9 @@ const Pagination = ({ totalPages, currentPage, onPageChange }) => {
       <button
         onClick={() => handlePageClick(currentPage - 1)}
         disabled={currentPage === 1}
-        className={`flex items-center justify-center px-4 py-2 border rounded-md text-pink-500 border-pink-300 ${currentPage === 1
+        className={`flex items-center justify-center px-4 py-2 border rounded-md text-[#7B2334] border-[#7B2334] ${currentPage === 1
           ? 'opacity-50 cursor-not-allowed'
-          : 'hover:bg-pink-50'
+          : 'hover:bg-[#7B2334] hover:text-white'
         }`}
       >
         &larr; Previous
@@ -51,8 +51,8 @@ const Pagination = ({ totalPages, currentPage, onPageChange }) => {
             key={index}
             onClick={() => handlePageClick(page)}
             className={`px-4 py-2 rounded-md ${page === currentPage
-              ? 'bg-pink-100 text-pink-500'
-              : 'text-pink-500 border border-pink-300 hover:bg-pink-50'
+              ? 'bg-[#7B2334] text-white'
+              : 'text-[#7B2334] border border-[#7B2334] hover:bg-[#7B2334] hover:text-white'
             }`}
           >
             {page}
@@ -66,9 +66,9 @@ const Pagination = ({ totalPages, currentPage, onPageChange }) => {
       <button
         onClick={() => handlePageClick(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className={`flex items-center justify-center px-4 py-2 border rounded-md text-pink-500 border-pink-300 ${currentPage === totalPages
+        className={`flex items-center justify-center px-4 py-2 border rounded-md text-[#7B2334] border-[#7B2334] ${currentPage === totalPages
           ? 'opacity-50 cursor-not-allowed'
-          : 'hover:bg-pink-50'
+          : 'hover:bg-[#7B2334] hover:text-white'
         }`}
       >
         Next &rarr;
