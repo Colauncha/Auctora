@@ -3,18 +3,26 @@ import AuctionListing from "../Home/AuctionListing";
 import Breadcrumbs from "../../Components/Breadcrumbs";
 import Pagination from "../../Components/Pagination";
 import { useState } from "react";
+import useModeStore from "../../Store/Store";
 import { FaAngleDown } from "react-icons/fa";
+import { filter_icom } from "../../Constants";
+import Modal from "../../Components/Modal";
+
+
+
 
 const ViewAll = () => {
-  const [sliderModal, setSliderModal] = useState();
-  const toggleModal = () => {
-    setSliderModal((prev) => !prev);
-  };
+  const {isMobile} = useModeStore()
+  const [modalOpen, setModalOpen] = useState(false);
+  const openModal = () => setModalOpen(true);
+  const closeModal = () => setModalOpen(false);
+  // pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = 10; // Set the total number of pages
 
-  const select = ()=>{
-    console.log("open sought");
-    
-  }
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
   return (
     <div className="formatter">
       <Breadcrumbs />
@@ -24,26 +32,37 @@ const ViewAll = () => {
             <Slider />
           </div>
           <div className="w-full lg:w-[70%]">
-            <div className="flex items-center justify-between">
-              <h1 className="text-start text-[#9f3248] font-[700] text-[28px] pb-5">
+            <div className="flex items-center justify-between pb-4">
+             <h1 className="text-start text-[#9f3248] font-[700] text-[28px]">
                 Ongoing Auctions
               </h1>
-              <div className="flex place-items-center">
+              {isMobile? <img src={filter_icom} onClick={openModal} className="cursor-pointer"/>
+              :<div className="flex place-items-center">
                 <div className="text-slate-400 text-sm">
                   Sorted by
                 </div>: 
-                  <span className="font-bold pl-2 text-sm flex gap-1 place-items-center cursor-pointer" onClick={select}>Most Popular <FaAngleDown /></span>
-              </div>
-              {sliderModal && (
-                <div className="cursor-pointer z-10" onClick={toggleModal}>
-                  <Slider />
-                </div>
-              )}
+                  <span className="font-bold pl-2 text-sm flex gap-1 place-items-center cursor-pointer">Most Popular <FaAngleDown /></span>
+              </div>}
             </div>
             <AuctionListing />
+            {/* {sliderModal && <div className="inset-0 bg-slate-900 h-full w-full z-10">
+              <div className="absolute top-52 left-20 z-15">
+              <Slider/>
+              </div>
+              </div>} */}
+
+              <Modal isOpen={modalOpen} onClose={closeModal}>
+                <Slider/>
+              </Modal>
           </div>
         </div>
-        <Pagination />
+        <>
+        <Pagination
+        totalPages={totalPages}
+        currentPage={currentPage}
+        onPageChange={handlePageChange}
+      />
+        </>
       </div>
     </div>
   );

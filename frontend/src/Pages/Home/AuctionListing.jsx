@@ -7,7 +7,7 @@ import useModeStore from "../../Store/Store";
 
 const AuctionListing = () => {
   const {isMobile} = useModeStore()
-  const [visibleCards, setVisibleCards] = useState(2);
+  const [visibleCards, setVisibleCards] = useState(4);
   const isDesktop = window.innerWidth >= 768;
 
   const loadMore = () => {
