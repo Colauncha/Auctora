@@ -4,6 +4,7 @@ import typing as t
 from typing import Any, Union
 from server.schemas.user_schema import *
 from server.schemas.item_category_schema import *
+from server.schemas.auction_schema import *
 
 
 T = t.TypeVar("T")

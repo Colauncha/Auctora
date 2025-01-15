@@ -24,14 +24,6 @@ class CreateItemSchema(BaseModel):
         description="Description of the Item",
         examples=["This is a test item."]
     )
-    starting_price: float = Field(
-        description="Starting price of the Item",
-        examples=[10.0]
-    )
-    quantity: Optional[int] = Field(
-        description="Quantity of the Item",
-        examples=[10], default=1
-    )
     category_id: str = Field(
         description="ID of the Category",
         examples=["CAT001"]
@@ -50,14 +42,6 @@ class UpdateItemSchema(CreateItemSchema):
     image_link_3: Optional[ImageLinkObj]
     image_link_4: Optional[ImageLinkObj]
     image_link_5: Optional[ImageLinkObj]
-    current_price: Optional[float] = Field(
-        description="Current price of the Item",
-        examples=[10.0]
-    )
-    quantity: Optional[int] = Field(
-        description="Quantity of the Item",
-        examples=[10], default=1
-    )
     weight: Optional[float] = Field(
         description="Weight of the Item",
         examples=[1.0]
