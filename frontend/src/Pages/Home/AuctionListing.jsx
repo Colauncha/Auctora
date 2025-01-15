@@ -3,8 +3,10 @@ import Card from "../../Components/Card";
 import { useState } from "react";
 import Button from "../../Components/Button";
 import { useNavigate, useLocation } from "react-router-dom";
+import useModeStore from "../../Store/Store";
 
 const AuctionListing = () => {
+  const {isMobile} = useModeStore()
   const [visibleCards, setVisibleCards] = useState(2);
   const isDesktop = window.innerWidth >= 768;
 
@@ -22,13 +24,13 @@ const AuctionListing = () => {
   };
 
   const location = useLocation();
-  const cardRows = location.pathname === "/" ? 4 : 4;
   const isHomePath = location.pathname === "/" ? true : false;
-
+  const mobile = '';
+  const desktop= 'flex justify-center'
   return (
-    <div className="">
+    <div className={`${isHomePath? `formatter`: ``}`}>
       <div
-        className={`grid place-items-center grid-cols-2 gap-2 lg:gap-x-4 lg:grid-cols-3 xl:grid-cols-${cardRows}`}
+        className={`${isHomePath? `grid place-items-center grid-cols-2 md:grid-cols-3 lg:grid-cols-4`: `grid place-items-center grid-cols-2 lg:grid-cols-3 space-x-10`}`}
       >
         {displayedCards.map((item, idx) => {
           return (
@@ -46,16 +48,15 @@ const AuctionListing = () => {
         })}
       </div>
       {/* Button to view all */}
-      <div className="formatter flex justify-center">
-        <div className="w-full mt-5 ">
-          {isHomePath ? (
-            <Button
-              label={`View All`}
-              onClick={viewAll}
-              className={`md:w-[200px]`}
-            />
-          ) : null}
-        </div>
+      <div className="formatter">
+        
+       <div className={`${isMobile ? mobile: desktop }`}>
+         { isHomePath?<Button
+            label="View All"
+            onClick={viewAll}
+            className="bg-gradient-to-r from-[#7B2334] to-[#9F3247] w-full lg:w-[200px]"
+          />: null}
+       </div>
       </div>
     </div>
   );

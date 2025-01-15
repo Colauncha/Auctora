@@ -18,11 +18,19 @@ import google_auth from "../assets/icons/google_auth.png";
 import filter_icom from "../assets/icons/filter_icon.png";
 
 import headphone from "../assets/svg/headphone.svg";
-import cellphone from "../assets/svg/CellPhone.svg";
-import computer from "../assets/svg/Computer.svg";
-import camera from "../assets/svg/Camera.svg";
-import gamepad from "../assets/svg/Gamepad.svg";
-import smartwatch from "../assets/svg/SmartWatch.svg";
+import cellphone from "../assets/svg/phones.svg";
+import computer from "../assets/svg/computers.svg";
+import camera from "../assets/svg/camera.svg";
+import gamepad from "../assets/svg/gaming.svg";
+import smartwatch from "../assets/svg/smartWatch.svg";
+
+// desktops
+import dheadphone from "../assets/svg/dheadphone.svg";
+import dphone from "../assets/svg/dphone.svg";
+import dcamera from "../assets/svg/dcamera.svg";
+import dgaming from "../assets/svg/dgaming.svg";
+import dsmartwatch from "../assets/svg/dsmartwatch.svg";
+import dcomputer from "../assets/svg/dcomputer.svg";
 
 export {
   logo,
@@ -49,6 +57,13 @@ export {
   camera,
   gamepad,
   smartwatch,
+  dcamera,
+  dcomputer,
+  dgaming,
+  dheadphone,
+  dphone,
+  dsmartwatch,
+  
 };
 
 // const buildArr = {
