@@ -14,7 +14,7 @@ class Auctions(BaseModel):
     __tablename__ = 'auctions'
     __mapper_args__ = {'polymorphic_identity': 'auctions'}
 
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), index=True)
+    users_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), index=True)
     item_id = Column(UUID(as_uuid=True), ForeignKey('items.id'), index=True)
     private = Column(Boolean, nullable=False, default=False)
     start_price = Column(Float, nullable=False, default=0.0)

@@ -45,6 +45,17 @@ class AuctionServices:
             if issubclass(type(e), ExcRaiser):
                 raise e
             raise e
+        
+    async def update(self, id: str, data: dict):
+        try:
+            print(data)
+            result = await self.repo.get_by_id(id)
+            updated = await self.repo.update(result, data)
+            return GetAuctionSchema.model_validate(updated)
+        except Exception as e:
+            if issubclass(type(e), ExcRaiser):
+                raise e
+            raise e
 
     # Auction participants
     async def create_participants(

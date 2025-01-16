@@ -1,9 +1,9 @@
 from fastapi import Query
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from server.enums.auction_enums import AuctionStatus
-from server.schemas import GetItemSchema, PagedQuery
+from server.schemas import GetItemSchema
 from uuid import UUID
 
 
@@ -36,6 +36,22 @@ class CreateAuctionSchema(BaseModel):
         examples=[['example@gmail.com', 'email@example.com']],
         description="List of allowed participants if private is True"
     )
+
+    model_config = {
+        'from_attributes': True
+    }
+
+
+class UpdateAuctionSchema(BaseModel):
+    private: Optional[bool] = Field(default=None)
+    # start_date: Optional[datetime] = Field(default=None)
+    end_date: Optional[datetime] = Field(default=None)
+    status: Optional[str] = Field(default=None)
+    start_price: Optional[float] = Field(default=None)
+    current_price: Optional[float] = Field(default=None)
+    buy_now: Optional[bool] = Field(default=None)
+    buy_now_price: Optional[float] = Field(default=None)
+    participants: Optional[list[str]] = Field(default=None)
 
     model_config = {
         'from_attributes': True
