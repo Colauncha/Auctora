@@ -22,7 +22,7 @@ import cellphone from "../assets/svg/phones.svg";
 import computer from "../assets/svg/computers.svg";
 import camera from "../assets/svg/Camera.svg";
 import gamepad from "../assets/svg/gaming.svg";
-import smartwatch from "../assets/svg/smartWatch.svg";
+import smartwatch from "../assets/svg/SmartWatch.svg";
 
 // desktops
 import dheadphone from "../assets/svg/dheadphone.svg";
