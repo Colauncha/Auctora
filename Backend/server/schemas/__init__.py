@@ -40,3 +40,16 @@ class ErrorResponse(pyd.BaseModel):
     status_code: int
     detail: str | Any
     model_config = {"from_attributes": True}
+
+
+class PagedResponse(APIResponse):
+    pages: int = 1
+    page_number: int = 1
+    count: int = 0
+    total: int = 0
+    per_page: int = 0
+
+
+class PagedQuery(pyd.BaseModel):
+    page: int = Query(1, ge=1)
+    per_page: int = Query(10, ge=1, le=100)

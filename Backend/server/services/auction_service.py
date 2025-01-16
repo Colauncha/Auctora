@@ -15,26 +15,36 @@ class AuctionServices:
     # Auction services
     async def create(self, data: dict):
         try:
+            participants = data.pop('participants')
             result = await self.repo.add(data)
             if result.private == True:
-                participants = data.get('participants')
                 for p in participants:
                     await self.create_participants(
                         {'auction_id': result.id, 'participant_email': p}
                     )
-            return result
+            return GetAuctionSchema.model_validate(result)
         except Exception as e:
             if issubclass(type(e), ExcRaiser):
                 raise e
             raise e # Edit line
 
-    async def retrieve(self,):
+    async def retrieve(self, id: str):
         try:
-            ...
+            result = await self.repo.get_by_id(id)
+            return GetAuctionSchema.model_validate(result)
         except Exception as e:
             if issubclass(type(e), ExcRaiser):
                 raise e
-            ...
+            raise e
+
+    async def list(self):
+        try:
+            result = await self.repo.get_all()
+            # return GetAuctionSchema.model_validate(result)
+        except Exception as e:
+            if issubclass(type(e), ExcRaiser):
+                raise e
+            raise e
 
     # Auction participants
     async def create_participants(
@@ -42,7 +52,8 @@ class AuctionServices:
             data: CreateAuctionParticipantsSchema
     ):
         try:
-            result = await self.participant_repo(data)
+            print(data)
+            result = await self.participant_repo.add(data)
         except Exception as e:
             if issubclass(type(e), ExcRaiser):
                 raise e

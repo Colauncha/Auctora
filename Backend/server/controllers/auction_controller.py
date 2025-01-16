@@ -9,7 +9,7 @@ from server.services.auction_service import AuctionServices
 from server.middlewares.auth import permissions, Permissions, current_user
 
 
-route = APIRouter(prefix='/auction', tags=['auction'])
+route = APIRouter(prefix='/auctions', tags=['auction'])
 
 
 @route.post('/')
@@ -20,6 +20,25 @@ async def create(
     db: Session = Depends(get_db)
 ) -> APIResponse[GetAuctionSchema]:
     data = data.model_dump(exclude_unset=True)
-    data.user_id = user.id
-    result = AuctionServices(db).create(data)
+    data["user_id"] = user.id
+    result = await AuctionServices(db).create(data)
+    return APIResponse(data=result)
+
+
+@route.get('/')
+async def list(
+    db: Session = Depends(get_db)
+) -> APIResponse[GetAuctionSchema]:
+    result = await AuctionServices(db).list()
+    return APIResponse(data=result)
+
+
+@route.get('/{id}')
+@permissions(permission_level=Permissions.CLIENT)
+async def retrieve(
+    user: current_user,
+    id: str,
+    db: Session = Depends(get_db)
+) -> APIResponse[GetAuctionSchema]:
+    result = await AuctionServices(db).retrieve(id)
     return APIResponse(data=result)

@@ -59,3 +59,17 @@ def sub_category_id_generator() -> str:
         return f'{prefix}0001'
     num = int(prev_id[6:]) + 1
     return f'{prefix}{num:04}'
+
+
+def paginator(page: int, item_per_page: int) -> int:
+    """
+    Paginates the query results.
+    
+    Parameters:
+        page (int): The page number.
+        item_per_page (int): The number of items per page.
+        
+    Returns:
+        int: The offset value.
+    """
+    return (page - 1) * item_per_page if page > 1 else 0

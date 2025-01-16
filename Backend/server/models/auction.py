@@ -36,6 +36,9 @@ class Auctions(BaseModel):
     items = relationship('Items', back_populates='auctions')
     participants = relationship('AuctionParticipants', back_populates='auctions')
 
+    def __str__(self):
+        return f'id: {self.id} - items: {self.items}'
+
 
 class AuctionParticipants(BaseModel):
     __tablename__ = 'auction_participants'
