@@ -20,7 +20,7 @@ import filter_icom from "../assets/icons/filter_icon.png";
 import headphone from "../assets/svg/headphone.svg";
 import cellphone from "../assets/svg/phones.svg";
 import computer from "../assets/svg/computers.svg";
-import camera from "../assets/svg/camera.svg";
+import camera from "../assets/svg/Camera.svg";
 import gamepad from "../assets/svg/gaming.svg";
 import smartwatch from "../assets/svg/smartWatch.svg";
 
