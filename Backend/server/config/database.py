@@ -9,8 +9,8 @@ from sqlalchemy.orm import (
     Session,
 )
 from server.config.app_configs import app_configs
-from redis import Redis as SyncRedis
-from redis.asyncio import Redis
+from redis import StrictRedis as SyncRedis
+from redis.asyncio import StrictRedis as AsyncRedis
 from dotenv import load_dotenv
 import os
 
@@ -56,30 +56,22 @@ def get_db() -> Iterator[Session]:
 
 
 class RedisStorage:
-    REDIS_HOST = app_configs.DB.REDIS_HOST
-    REDIS_PORT = int(app_configs.DB.REDIS_PORT)
-    REDIS_DB = int(app_configs.DB.REDIS_DB)
+    REDIS_URL = app_configs.DB.REDIS_URL
     def __init__(self) -> None:
         self.redis = self.get_redis()
         self.async_redis = None
 
     def get_redis(self) -> SyncRedis:
         """Get a synchronous Redis connection."""
-        redis = SyncRedis(
-            host=self.REDIS_HOST,
-            port=self.REDIS_PORT,
-            db=self.REDIS_DB,
-            decode_responses=True,
+        redis = SyncRedis.from_url(
+            url=self.REDIS_URL, decode_responses=True
         )
         return redis
 
-    async def get_async_redis(self) -> Redis:
+    async def get_async_redis(self) -> AsyncRedis:
         """Get an asynchronous Redis connection."""
         if self.async_redis is None:
-            self.async_redis = Redis(
-                host=self.REDIS_HOST,
-                port=self.REDIS_PORT,
-                db=self.REDIS_DB,
-                decode_responses=True,
+            self.async_redis = await AsyncRedis.from_url(
+                url=self.REDIS_URL, decode_responses=True
             )
         return self.async_redis
