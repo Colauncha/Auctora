@@ -4,7 +4,7 @@ import Star from './Star'
 
 const ItemReview = ({reviewText, reviewerName, reviewImg}) => {
   return (
-    <div className='border-[1px] rounded-md p-2 flex gap-6'>
+    <div className='flex flex-col lg:flex-row border-[1px] rounded-md my-5 p-2 flex gap-6'>
       <div className='flex flex-col'>
       <div className='flex gap-4 items-center'>
           <img src={reviewImg} className='w-10 h-10 rounded-full border-[1px]' />

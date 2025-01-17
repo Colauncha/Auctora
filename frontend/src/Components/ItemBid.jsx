@@ -11,7 +11,7 @@ const ItemBid = ({title,bid, price, desc}) => {
     const openModal = () => setModalOpen(true);
     const closeModal = () => setModalOpen(false);
   return (
-    <div className='w-[400px] h-[450px]  rounded-md flex flex-col gap-4 p-10'>
+    <div className=' w-full py-8 my-3 px-5 lg:w-[400px] h-[450px] border-[1px] lg:border-none rounded-md flex flex-col gap-4 lg:p-10'>
       <div className='text-[15px] font-bold text-[#9f3247]'>
         {title}
       </div>
@@ -27,9 +27,12 @@ const ItemBid = ({title,bid, price, desc}) => {
       <div>
        { desc}
       </div>
-     <div className='flex items-center  gap-4'>
-     <Button label={`Bid Now`} onClick={openModal} className={`rounded-md w-[250px]`}/>
-     <Button label={<FaHeart color='#9f3247'/>} className={`w-10 rounded-md border-[1px] bg-white`}/>
+     <div className='flex flex-1 items-center justify-center gap-2 w-[400px]'>
+     <Button label={`Bid Now`} onClick={openModal} className={`rounded-md w-[330px]`}/>
+     <Button label={<FaHeart color='#9f3247'/>} className={`w-[50px] rounded-md border-[1px] bg-white`}/>
+     
+     </div>
+     <div>
      <Modal isOpen={modalOpen} onClose={closeModal}>
       <BidModal/>
      </Modal>

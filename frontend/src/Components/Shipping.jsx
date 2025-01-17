@@ -3,9 +3,9 @@ import { delivery, shipping } from '../Constants'
 
 const Shipping = () => {
   return (
-    <div className='flex fle lg:flex-col items-center justify-center lg:items-start'>
+    <div className='flex flex-row lg:flex-col items-center justify-center lg:items-start'>
         <div className='border-[1px] w-[50%] lg:w-full h-[130px] lg:h-[100px]'>
-          <div className='flex items-center gap-3 p-3'>
+          <div className='flex items-center justify-center lg:justify-start gap-3 p-3'>
             <img src={shipping} alt="" />
             <div className='flex flex-col'>
                 <h4 className='font-bold'>Shipping</h4>
@@ -14,7 +14,7 @@ const Shipping = () => {
           </div>
         </div>
         <div className='border-[1px] w-[50%] lg:w-full h-[130px] lg:h-[100px]'>
-        <div className='flex items-center gap-3 p-3'>
+        <div className='flex items-start justify-center gap-3 p-3'>
             <img src={delivery} alt="" />
             <div className='flex flex-col'>
                 <h4 className='font-bold'>Delivery</h4>
