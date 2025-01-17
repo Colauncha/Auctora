@@ -1,12 +1,18 @@
+import math
 from typing import Any, Type, Union
 from sqlalchemy.orm import Session
 from server.models.base import BaseModel
 from server.models.users import Users
 from server.schemas import (
     GetUserSchema, GetCategorySchema,
-    GetSubCategorySchema, GetItemSchema
+    GetSubCategorySchema, GetItemSchema,
+    PagedResponse
 )
-from server.middlewares.exception_handler import ExcRaiser, ExcRaiser404
+from server.middlewares.exception_handler import (
+    ExcRaiser, ExcRaiser404
+)
+from server.utils.helpers import paginator
+
 
 T = Union[
     GetUserSchema, GetCategorySchema,
@@ -49,7 +55,7 @@ class Repository:
 
     async def get_by_id(self, id: str):
         try:
-            entity = self.db.query(self._Model).filter(self._Model == id).order_by(self._Model.id)
+            entity = self.db.query(self._Model).filter(self._Model.id == id).order_by(self._Model.id)
             if entity:
                 return entity.first()
             return None
@@ -101,3 +107,32 @@ class Repository:
             return self.db.query(self._Model).order_by(self._Model.id).all()
         except Exception as e:
             raise e
+        
+    async def get_all(self, filter: dict = None) -> PagedResponse:
+    
+        page = filter.pop('page') if (filter and filter.get('page')) else 1
+        per_page = filter.pop('per_page') if (filter and filter.get('per_page')) else 10
+        limit = per_page
+        offset = paginator(page, per_page)
+        QueryModel = self._Model
+
+        try:
+            if filter:
+                query = self.db.query(QueryModel).filter_by(**filter)
+                total = query.count()
+            else:
+                query = self.db.query(QueryModel)
+                total = query.count()
+            results = query.limit(limit).offset(offset).all()
+        except Exception as e:
+            raise e
+        count = len(results)
+        pages = math.ceil(total / limit) or 1
+        return PagedResponse(
+            data=results,
+            pages=pages,
+            page_number=page,
+            per_page=limit,
+            count=count,
+            total=total,
+        )

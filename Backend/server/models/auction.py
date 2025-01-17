@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 from sqlalchemy import (
     UUID, Column, ForeignKey,
-    Boolean, DateTime, String
+    Boolean, DateTime, String,
+    Float
 )
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import relationship
@@ -11,11 +12,15 @@ from server.models.base import BaseModel
 
 class Auctions(BaseModel):
     __tablename__ = 'auctions'
-    __mapper_args__ = {'polymorphic_identity': 'items'}
+    __mapper_args__ = {'polymorphic_identity': 'auctions'}
 
-    user_id = Column(UUID(as_uuid=True), ForeignKey('user.id'), index=True)
-    item_id = Column(UUID(as_uuid=True), ForeignKey('item.id'), index=True)
+    users_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), index=True)
+    item_id = Column(UUID(as_uuid=True), ForeignKey('items.id'), index=True)
     private = Column(Boolean, nullable=False, default=False)
+    start_price = Column(Float, nullable=False, default=0.0)
+    current_price = Column(Float, nullable=False, default=0.0)
+    buy_now = Column(Boolean, nullable=False, default=False)
+    buy_now_price = Column(Float, nullable=True)
     start_date = Column(DateTime(timezone=True), default=datetime.now(tz=timezone.utc))
     end_date = Column(DateTime(timezone=True))
     status = Column(
@@ -27,9 +32,12 @@ class Auctions(BaseModel):
     )
 
     # Add relationships
-    user = relationship('User', back_populates='auctions')
-    item = relationship('Item', back_populates='auctions')
-    participants = relationship('AuctionParticipants', back_populates='auction')
+    users = relationship('Users', back_populates='auctions')
+    items = relationship('Items', back_populates='auctions')
+    participants = relationship('AuctionParticipants', back_populates='auctions')
+
+    def __str__(self):
+        return f'id: {self.id} - items: {self.items}'
 
 
 class AuctionParticipants(BaseModel):
@@ -37,11 +45,11 @@ class AuctionParticipants(BaseModel):
     __mapper_args__ = {'polymorphic_identity': 'auction_participants'}
 
     id = Column(String, primary_key=True, index=True)
-    auction_id = Column(UUID(as_uuid=True), ForeignKey('auction.id'), index=True)
+    auction_id = Column(UUID(as_uuid=True), ForeignKey('auctions.id'), index=True)
     participant_email = Column(String, nullable=False)
 
     # Add relationships
-    auction = relationship('Auction', back_populates='participants')
+    auctions = relationship('Auctions', back_populates='participants')
 
     def __init__(self, auction_id: str, participant_email: str):
         self.id = f'{auction_id}:{participant_email}'

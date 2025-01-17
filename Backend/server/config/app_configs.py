@@ -15,6 +15,7 @@ class DataBaseSettings(BaseSettings):
     REDIS_HOST: str
     REDIS_PORT: str
     REDIS_DB: str
+    REDIS_URL: str
     TEST_DATABASE: Optional[str]
 
 

@@ -28,6 +28,7 @@ class ExcRaiser500(ExcRaiser):
 
 
 async def exception_handler(request: Request, exc: ExcRaiser):
+    print(exc)
     return JSONResponse(
         status_code=exc.status_code,
         content={
