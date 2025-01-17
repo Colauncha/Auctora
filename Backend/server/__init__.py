@@ -43,6 +43,10 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
     def redirect():
         return RedirectResponse(url=app_configs.SWAGGER_DOCS_URL, status_code=302)
     
+    @app.get("/status", include_in_schema=False)
+    def status():
+        return {'status': 'running'}
+    
     app.exception_handlers = {
         ExcRaiser: exception_handler,
         RequestValidationError: request_validation_error_handler,
