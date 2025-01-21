@@ -10,6 +10,8 @@ import SignIn from "./Pages/Auth/SignIn";
 import ViewAll from "./Pages/Views/ViewAll";
 import CategoryResult from "./Pages/Category/CategoryResult";
 import DetailPage from "./Pages/Detail/Detail";
+import Otp from "./Pages/Account/Otp";
+import Profile from "./Pages/Dashboard/Profile";
 
 const App = () => {
   return (
@@ -18,7 +20,7 @@ const App = () => {
       <Nav />
       <Routes>
         <Route path="/" element={<Layout />} />
-        <Route path="/list" element={<ViewAll />} />
+        <Route path="/list" element={<Profile />} />
         <Route path="/about-us" element={<AboutUs />} />
         <Route path="/Ongoing-Auction" element={<ViewAll />} />
         <Route path="/category" element={<CategoryResult />} />
