@@ -1,15 +1,17 @@
 from fastapi import APIRouter, Depends, BackgroundTasks
 from server.config import get_db, redis_store
+from server.enums import ServiceKeys
 from server.enums.user_enums import Permissions, UserRoles
 from server.middlewares.exception_handler import ExcRaiser
 from server.middlewares.auth import permissions
 from server.schemas import (
     CreateUserSchema, VerifyOtpSchema,
     APIResponse, UpdateUserSchema,
-    GetUserSchema,
-    LoginSchema,
-    LoginToken,
-    ErrorResponse,
+    GetUserSchema, ResetPasswordSchema,
+    LoginSchema, ChangePasswordSchema,
+    LoginToken, PagedQuery,
+    ErrorResponse, PagedResponse,
+    GetUsers,
 )
 from server.services import UserServices, current_user
 from server.utils import Emailer
@@ -18,6 +20,17 @@ from sqlalchemy.orm import Session
 
 route = APIRouter(prefix='/users', tags=['users'])
 db = Depends(get_db)
+
+
+@route.get('/')
+@permissions(permission_level=Permissions.AUTHENTICATED)
+async def get_users(
+    user: current_user,
+    filter: PagedQuery = Depends(PagedQuery),
+    db: Session = Depends(get_db)
+) -> PagedResponse[list[GetUsers]]:
+    users = await UserServices(db).list(filter)
+    return users
 
 
 @route.get('/profile')
@@ -115,6 +128,16 @@ async def verify_otp(
     return APIResponse(data=response)
 
 
+@route.post('/reset_otp')
+async def reset_otp(
+    email: str,
+    db: Session = Depends(get_db)
+) -> APIResponse[dict[str, str]]:
+    response = await UserServices(db).new_otp(email)
+    return APIResponse(data=response)
+    
+
+
 @route.post(
         '/login',
         responses={
@@ -142,3 +165,32 @@ async def update_user(
     valid_user = GetUserSchema.model_validate(user_)
     result = await UserServices(db).update_user(valid_user, data)
     return APIResponse(data=result)
+
+
+@route.get('/get_reset_token')
+async def get_reset_token(
+    email: str,
+    db: Session = Depends(get_db)
+) -> APIResponse:
+    response = await UserServices(db).get_reset_token(email)
+    return APIResponse(data=response)
+
+
+@route.post('/reset_password')
+async def reset_password(
+    data: ResetPasswordSchema,
+    db: Session = Depends(get_db)
+) -> APIResponse:
+    response = await UserServices(db).reset_password(data)
+    return APIResponse(data=response)
+
+
+@route.post('/update_password')
+@permissions(permission_level=Permissions.CLIENT)
+async def change_password(
+    user: current_user,
+    data: ChangePasswordSchema,
+    db: Session = Depends(get_db)
+) -> APIResponse:
+    response = await UserServices(db).change_password(user, data)
+    return APIResponse(data=response)

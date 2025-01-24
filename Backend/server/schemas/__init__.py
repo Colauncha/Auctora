@@ -53,3 +53,21 @@ class PagedResponse(APIResponse):
 class PagedQuery(pyd.BaseModel):
     page: int = Query(1, ge=1)
     per_page: int = Query(10, ge=1, le=100)
+
+
+class GetUsers(GetUserSchema):
+    model_config = {"from_attributes": True}
+    auctions: Optional[list[GetAuctionSchema]] = Field(default=[])
+
+
+class AuctionQueryVector(PagedQuery):
+    start_price: Optional[float] = Query(default=None, description="Start price")
+    current_price: Optional[float] = Query(default=None, description="Current price")
+    buy_now_price: Optional[float] = Query(default=None, description="Buy now price")
+
+class AuctionQueryScalar(PagedQuery):
+    category_id: Optional[UUID] = Query(default=None, description="Category ID")
+    sub_category_id: Optional[UUID] = Query(default=None, description="Sub category ID")
+    status: Optional[str] = Query(default=None, description="Status")
+    buy_now: Optional[bool] = Query(default=None, description="Buy now")
+    user_id: Optional[UUID] = Query(default=None, description="User ID")

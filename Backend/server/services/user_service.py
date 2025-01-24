@@ -8,16 +8,23 @@ from passlib.context import CryptContext
 from server.config import app_configs, redis_store
 from server.config.database import get_db
 from server.schemas import (
-    ServiceResultModel, VerifyOtpSchema,
+    VerifyOtpSchema, LoginSchema,
     GetUserSchema, UpdateUserSchema,
-    LoginSchema,
-    LoginToken,
+    LoginToken, ResetPasswordSchema,
+    ChangePasswordSchema, PagedResponse,
+    PagedQuery, GetUsers
 )
 from server.repositories import DBAdaptor
 from server.models.users import Users
-from server.middlewares.exception_handler import ExcRaiser, ExcRaiser404
-from server.utils import is_valid_email, otp_generator, Emailer
+from server.middlewares.exception_handler import (
+    ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
+)
+from server.utils import (
+    is_valid_email, otp_generator,
+    publish_otp, publish_reset_token
+)
 from sqlalchemy.orm import Session
+from uuid import uuid4
 
 
 oauth_bearer = OAuth2PasswordBearer(tokenUrl=f"api/users/login")
@@ -159,6 +166,45 @@ class UserServices:
                 status_code=400,
                 detail=str(e)
             )
+        
+    async def list(self, filter: PagedQuery) ->PagedResponse[list[GetUsers]]:
+        try:
+            result = await self.repo.get_all(filter.model_dump(exclude_unset=True))
+            if result:
+                valid_users = [
+                    GetUsers.model_validate(user).model_dump(include={'__all__'})
+                    for user in result.data
+                ]
+                return PagedResponse(
+                    data=valid_users,
+                    page_number=result.page_number,
+                    pages=result.pages,
+                    count=result.count,
+                    total=result.total,
+                    per_page=result.per_page
+                )
+            raise ExcRaiser404(message='No User found')
+        except Exception as e:
+            raise e
+        
+    async def new_otp(self, email: str):
+        try:
+            async_redis = await redis_store.get_async_redis()
+            stored_otp = await async_redis.get(f'otp:{email}')
+            if stored_otp:
+                _ = await async_redis.delete(f'otp:{email}')
+            user = await self.repo.get_by_email(email)
+            if user.email_verified:
+                return {'detail': 'User email already verified'}
+            otp = otp_generator()
+            _ = await async_redis.set(f'otp:{email}', otp, ex=1800)
+            data = {'email': email, 'otp': otp}
+            await publish_otp(data)
+            return {'detail': 'OTP resent to Email'}
+        except Exception as e:
+            if issubclass(type(e), ExcRaiser):
+                raise e
+            raise ExcRaiser500()
 
     async def verify_otp(self, data: VerifyOtpSchema):
         try:
@@ -167,6 +213,7 @@ class UserServices:
             user = await self.repo.get_by_email(data.email)
             if stored_otp == data.otp:
                 _ = await self.repo.save(user, {'email_verified': True})
+                _ = await async_redis.delete(f'otp:{data.email}')
                 return {'message': 'email verified'}
             return {'message': 'Invalid otp or email'}
         except Exception as e:
@@ -192,6 +239,58 @@ class UserServices:
                 message="Update not successful",
                 detail=exc.__repr__()
             )
+        
+    async def get_reset_token(self, email: str):
+        try:
+            user = await self.repo.get_by_email(email)
+            if not user:
+                raise ExcRaiser404("User not found")
+            token = uuid4().hex
+            async_redis = await redis_store.get_async_redis()
+            _ = await async_redis.set(f'reset_password:{email}', token, ex=1800)
+            data = {'email': email, 'token': token}
+            await publish_reset_token(data)
+            return {'detail': 'Reset token sent to email'}
+        except Exception as e:
+            if issubclass(type(e), ExcRaiser):
+                raise e
+            raise e
+
+    async def reset_password(self, data: ResetPasswordSchema):
+        try:
+            async_redis = await redis_store.get_async_redis()
+            stored_token = await async_redis.get(f'reset_password:{data.email}')
+            if stored_token == data.token: 
+                if data.password == data.confirm_password:
+                    user = await self.repo.get_by_email(data.email)
+                    _ = await self.repo.save(
+                        user, {'hash_password': self.pwd_context.hash(data.password)}
+                    )
+                    _ = await async_redis.delete(f'reset_password:{data.email}')
+                    return {'detail': 'Password reset successful'}
+                raise ExcRaiser400(detail='Passwords do not match')
+            raise ExcRaiser400(detail= 'Invalid token or email')
+        except Exception as e:
+            if issubclass(type(e), ExcRaiser):
+                raise e
+            raise ExcRaiser500()
+        
+    async def change_password(self, user: GetUserSchema, data: ChangePasswordSchema):
+        try:
+            user = await self.repo.get_by_email(user.email)
+            if not self.__check_password(data.old_password, user.hash_password):
+                raise ExcRaiser400(detail='Invalid old password')
+            if data.new_password == data.confirm_password:
+                _ = await self.repo.save(
+                    user, {'hash_password': self.pwd_context.hash(data.new_password)}
+                )
+                return {'detail': 'Password change successful'}
+            raise ExcRaiser400(detail='Passwords do not match')
+        except Exception as exc:
+            print(exc)
+            if issubclass(type(exc), ExcRaiser):
+                raise exc
+            raise ExcRaiser500()
 
     @staticmethod
     async def _get_current_user(

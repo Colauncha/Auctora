@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from server.config import get_db
 from server.schemas import (
     APIResponse, UpdateAuctionSchema,
-    GetAuctionSchema, CreateAuctionSchema
+    GetAuctionSchema, CreateAuctionSchema,
+    PagedQuery, PagedResponse,
 )
 from server.services.auction_service import AuctionServices
 from server.middlewares.auth import (
@@ -23,17 +24,20 @@ async def create(
     db: Session = Depends(get_db)
 ) -> APIResponse[GetAuctionSchema]:
     data = data.model_dump(exclude_unset=True)
-    data["user_id"] = user.id
+    data["users_id"] = user.id
     result = await AuctionServices(db).create(data)
     return APIResponse(data=result)
 
 
 @route.get('/')
+@permissions(permission_level=Permissions.AUTHENTICATED)
 async def list(
+    user: current_user,
+    filter: PagedQuery = Depends(PagedQuery),
     db: Session = Depends(get_db)
-) -> APIResponse[GetAuctionSchema]:
-    result = await AuctionServices(db).list()
-    return APIResponse(data=result)
+) -> PagedResponse[list[GetAuctionSchema]]:
+    result = await AuctionServices(db).list(filter)
+    return result
 
 
 @route.get('/{id}')

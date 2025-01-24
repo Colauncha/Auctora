@@ -14,8 +14,7 @@ class Auctions(BaseModel):
     __tablename__ = 'auctions'
     __mapper_args__ = {'polymorphic_identity': 'auctions'}
 
-    users_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), index=True)
-    item_id = Column(UUID(as_uuid=True), ForeignKey('items.id'), index=True)
+    users_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), index=True)
     private = Column(Boolean, nullable=False, default=False)
     start_price = Column(Float, nullable=False, default=0.0)
     current_price = Column(Float, nullable=False, default=0.0)
@@ -32,12 +31,18 @@ class Auctions(BaseModel):
     )
 
     # Add relationships
-    users = relationship('Users', back_populates='auctions')
-    items = relationship('Items', back_populates='auctions')
-    participants = relationship('AuctionParticipants', back_populates='auctions')
+    user = relationship('Users', back_populates='auctions')
+    item = relationship(
+        'Items', back_populates='auction',
+        cascade='all, delete-orphan'
+    )
+    participants = relationship(
+        'AuctionParticipants', back_populates='auction',
+        cascade='all, delete-orphan'
+    )
 
     def __str__(self):
-        return f'id: {self.id} - items: {self.items}'
+        return f'id: {self.id} - {self.status}'
 
 
 class AuctionParticipants(BaseModel):
@@ -45,11 +50,11 @@ class AuctionParticipants(BaseModel):
     __mapper_args__ = {'polymorphic_identity': 'auction_participants'}
 
     id = Column(String, primary_key=True, index=True)
-    auction_id = Column(UUID(as_uuid=True), ForeignKey('auctions.id'), index=True)
+    auction_id = Column(UUID(as_uuid=True), ForeignKey('auctions.id', ondelete='CASCADE'), index=True)
     participant_email = Column(String, nullable=False)
 
     # Add relationships
-    auctions = relationship('Auctions', back_populates='participants')
+    auction = relationship('Auctions', back_populates='participants')
 
     def __init__(self, auction_id: str, participant_email: str):
         self.id = f'{auction_id}:{participant_email}'

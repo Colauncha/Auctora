@@ -16,6 +16,7 @@ class Items(BaseModel):
     __mapper_args__ = {'polymorphic_identity': 'items'}
 
     users_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False) # change to users_id
+    auction_id = Column(UUID(as_uuid=True), ForeignKey('auctions.id', ondelete='CASCADE'), nullable=True)
     name = Column(String, nullable=False)
     description = Column(String, nullable=False)
     image_link = Column(JSON, nullable=True)
@@ -30,10 +31,10 @@ class Items(BaseModel):
     category_id = Column(String, ForeignKey('categories.id'), nullable=False)
     sub_category_id = Column(String, ForeignKey('subcategories.id'), nullable=False)
 
-    users = relationship("Users", back_populates="items_sold")
     category = relationship("Categories", back_populates="items")
     sub_categories = relationship("Subcategory", back_populates="items")
-    auctions = relationship("Auctions", back_populates="items")
+    auction = relationship("Auctions", back_populates="item")
+
 
     def __init__(
             self,
@@ -55,6 +56,9 @@ class Items(BaseModel):
         Name: {self.name}\n\
         Seller: {self.users_id}\n\
         '
+    
+    def to_dict(self):
+        return super().to_dict()
 
 
 class Categories(BaseModel):
@@ -65,8 +69,15 @@ class Categories(BaseModel):
     name = Column(String, nullable=False, unique=True)
     description = Column(String, nullable=True)
 
-    sub_categories = relationship("Subcategory", back_populates="parent")
-    items = relationship("Items", back_populates="category")
+    sub_categories = relationship(
+        "Subcategory",
+        back_populates="parent",
+        cascade='delete'
+    )
+    items = relationship(
+        "Items", back_populates="category",
+        cascade='delete'
+    )
 
     def __str__(self):
         return f'Name: {self.name} - id: {self.id}'
@@ -81,7 +92,10 @@ class Subcategory(BaseModel):
     parent_id = Column(String, ForeignKey('categories.id'), nullable=False)
 
     parent = relationship("Categories", back_populates="sub_categories")
-    items = relationship("Items", back_populates="sub_categories")
+    items = relationship(
+        "Items", back_populates="sub_categories",
+        cascade='delete'
+    )
 
     def __str__(self):
         return f'Name: {self.name} - P_id: {self.parent_id} - id: {self.id}'

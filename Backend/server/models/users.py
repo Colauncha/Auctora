@@ -23,8 +23,11 @@ class Users(BaseModel):
     )
 
     # Add relationships
-    items_sold = relationship("Items", back_populates="users")
-    auctions = relationship("Auctions", back_populates="users")
+    auctions = relationship(
+        "Auctions",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
 
     def __init__(
             self,
