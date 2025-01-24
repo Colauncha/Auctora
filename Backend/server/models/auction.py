@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from sqlalchemy import (
     UUID, Column, ForeignKey,
-    Boolean, DateTime, String,
+    Boolean, DateTime, Index, String,
     Float
 )
 from sqlalchemy.dialects.postgresql import ENUM
@@ -20,14 +20,19 @@ class Auctions(BaseModel):
     current_price = Column(Float, nullable=False, default=0.0)
     buy_now = Column(Boolean, nullable=False, default=False)
     buy_now_price = Column(Float, nullable=True)
-    start_date = Column(DateTime(timezone=True), default=datetime.now(tz=timezone.utc))
-    end_date = Column(DateTime(timezone=True))
+    start_date = Column(DateTime(timezone=True), default=datetime.now(tz=timezone.utc), index=True)
+    end_date = Column(DateTime(timezone=True), index=True)
     status = Column(
         ENUM(
             AuctionStatus, name='auction_status', create_type=True,
             schema='auctora_dev'
         ),
-        nullable=False, default=AuctionStatus.PENDING
+        nullable=False, default=AuctionStatus.PENDING, index=True
+    )
+
+    __table_args__ = (
+        Index('ix_auctions_status_end_date', 'status', 'end_date'),
+        Index('ix_auctions_status_start_date', 'status', 'start_date')
     )
 
     # Add relationships

@@ -19,10 +19,8 @@ from server.models.users import Users
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
 )
-from server.utils import (
-    is_valid_email, otp_generator,
-    publish_otp, publish_reset_token
-)
+from server.events import publish_reset_token, publish_otp, publish_bid_placed
+from server.utils import is_valid_email, otp_generator
 from sqlalchemy.orm import Session
 from uuid import uuid4
 
