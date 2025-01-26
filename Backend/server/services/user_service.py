@@ -43,7 +43,7 @@ class UserServices:
 
     async def __generate_token(self, user: Users) -> LoginToken:
         expires_at = datetime.now(tz=timezone.utc) + timedelta(
-            days=app_configs.security.ACCESS_TOKEN_EXPIRES
+            minutes=app_configs.security.ACCESS_TOKEN_EXPIRES
         )
         claims = {
             "id": str(user.id),
