@@ -165,6 +165,12 @@ async def login(
     return APIResponse(data=token)
 
 
+@route.post('/logout')
+async def logout(response: Response) -> APIResponse[str]:
+    response.delete_cookie(key='access_token')
+    return APIResponse(data='Logout successful')
+
+
 @route.put('/update')
 @permissions
 async def update_user(
