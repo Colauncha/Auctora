@@ -1,5 +1,7 @@
 from server.repositories.repository import Repository
-from server.repositories.user_repository import UserRepository
+from server.repositories.user_repository import (
+    UserRepository, UserNotificationRepository
+)
 from server.repositories.auction_repository import (
     AuctionRepository, AuctionParticipantRepository
 )
@@ -18,3 +20,4 @@ class DBAdaptor:
         self.sub_category_repo = SubCategoryRepository(db)
         self.auction_repo = AuctionRepository(db)
         self.auction_p_repo = AuctionParticipantRepository(db)
+        self.notif_repo = UserNotificationRepository(db)

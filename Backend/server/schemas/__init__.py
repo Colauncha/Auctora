@@ -53,11 +53,16 @@ class PagedResponse(APIResponse):
 class PagedQuery(pyd.BaseModel):
     page: int = Query(1, ge=1)
     per_page: int = Query(10, ge=1, le=100)
+    # attr: Optional[str|int] = Query(default=None, description="Attribute to filter by")
 
 
 class GetUsers(GetUserSchema):
     model_config = {"from_attributes": True}
     auctions: Optional[list[GetAuctionSchema]] = Field(default=[])
+
+
+class NotificationQuery(PagedQuery):
+    user_id: UUID = Query(..., description="User ID")
 
 
 class AuctionQueryVector(PagedQuery):

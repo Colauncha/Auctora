@@ -1,6 +1,6 @@
 from server.models.base import BaseModel
 from server.enums.user_enums import UserRoles
-from sqlalchemy import Boolean, Column, String, Enum
+from sqlalchemy import UUID, Boolean, Column, ForeignKey, String, Enum
 from sqlalchemy.orm import relationship
 from passlib.context import CryptContext
 from sqlalchemy.dialects.postgresql import ENUM
@@ -25,6 +25,11 @@ class Users(BaseModel):
     # Add relationships
     auctions = relationship(
         "Auctions",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    notifications = relationship(
+        "Notifications",
         back_populates="user",
         cascade="all, delete-orphan"
     )
@@ -53,3 +58,19 @@ class Users(BaseModel):
     
     def __str__(self):
         return f'Name: {self.username}, Email: {self.email}'
+    
+
+class Notifications(BaseModel):
+    __tablename__ = 'notifications'
+    __mapper_args__ = {'polymorphic_identity': 'notifications'}
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), index=True)
+    title = Column(String, nullable=False)
+    message = Column(String, nullable=False)
+    read = Column(Boolean, default=False)
+
+    # Add relationships
+    user = relationship('Users', back_populates='notifications')
+
+    def __str__(self):
+        return f'{self.message} - {self.read}'

@@ -1,5 +1,5 @@
 from server.repositories.repository import Repository
-from server.models.users import Users
+from server.models.users import Users, Notifications
 from server.schemas.user_schema import GetUserSchema
 
 
@@ -28,3 +28,8 @@ class UserRepository(Repository):
         elif user and not schema_mode:
             return user
         return None
+    
+
+class UserNotificationRepository(Repository):
+    def __init__(self, db):
+        super().__init__(db, Notifications)

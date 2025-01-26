@@ -116,3 +116,20 @@ class ChangePasswordSchema(BaseModel):
     old_password: str = Field(min_length=8, max_length=32)
     new_password: str = Field(min_length=8, max_length=32)
     confirm_password: str = Field(min_length=8, max_length=32)
+
+
+class CreateNotificationSchema(BaseModel):
+    title: str
+    message: str
+    user_id: UUID
+
+    model_config = {"from_attributes": True}
+
+
+class GetNotificationsSchema(CreateNotificationSchema):
+    id: UUID
+    read: bool = False
+
+
+class UpdateNotificationSchema(BaseModel):
+    read: bool = True

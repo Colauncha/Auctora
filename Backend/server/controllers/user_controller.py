@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, Depends, BackgroundTasks, Response
 from server.config import get_db, redis_store
 from server.enums import ServiceKeys
 from server.enums.user_enums import Permissions, UserRoles
@@ -11,16 +11,22 @@ from server.schemas import (
     LoginSchema, ChangePasswordSchema,
     LoginToken, PagedQuery,
     ErrorResponse, PagedResponse,
-    GetUsers,
+    GetUsers, GetNotificationsSchema,
+    NotificationQuery,
 )
-from server.services import UserServices, current_user
+from server.services import UserServices, current_user, UserNotificationServices
 from server.utils import Emailer
 from sqlalchemy.orm import Session
 
 
 route = APIRouter(prefix='/users', tags=['users'])
+notif_route = APIRouter(prefix='/notifications', tags=['notifications'])
 db = Depends(get_db)
 
+
+###############################################################################
+################################# User Endpoints ##############################
+###############################################################################
 
 @route.get('/')
 @permissions(permission_level=Permissions.AUTHENTICATED)
@@ -146,9 +152,16 @@ async def reset_otp(
     )
 async def login(
     credentials: LoginSchema,
+    response: Response,
     db: Session = Depends(get_db)
 ) -> APIResponse[LoginToken]:
     token = await UserServices(db).authenticate(credentials)
+    response.set_cookie(
+        key='access_token',
+        value=token.token,
+        httponly=True,
+        max_age=180
+    )
     return APIResponse(data=token)
 
 
@@ -194,3 +207,33 @@ async def change_password(
 ) -> APIResponse:
     response = await UserServices(db).change_password(user, data)
     return APIResponse(data=response)
+
+
+###############################################################################
+############################ Notification Endpoints ###########################
+###############################################################################
+
+@notif_route.get('/')
+@permissions(permission_level=Permissions.CLIENT)
+async def list(
+    user: current_user,
+    filter: PagedQuery = Depends(PagedQuery),
+    db: Session = Depends(get_db)
+) -> PagedResponse[list[GetNotificationsSchema]]:
+    filter = NotificationQuery(**filter.model_dump(), user_id=user.id)
+    notifications = await UserNotificationServices(db).list(filter)
+    return notifications
+
+
+@notif_route.get('/{notification_id}')
+@permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.NOTIFICATION)
+async def retrieve(
+    user: current_user,
+    notification_id: str,
+    db: Session = Depends(get_db)
+) -> APIResponse[GetNotificationsSchema]:
+    notification = await UserNotificationServices(db).retrieve(notification_id)
+    return APIResponse(data=notification)
+
+
+route.include_router(notif_route)

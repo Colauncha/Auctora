@@ -56,6 +56,7 @@ class AuctionServices:
                 valid_auctions = [
                     GetAuctionSchema.model_validate(auction).model_dump()
                     for auction in result.data
+                    if auction.private is False
                 ]
                 result.data = valid_auctions
                 return result

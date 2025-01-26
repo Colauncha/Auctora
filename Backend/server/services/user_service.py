@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta
 from typing import Annotated
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 from jose import ExpiredSignatureError, jwt
 from jose.exceptions import JWTError, JWTClaimsError
@@ -12,10 +12,11 @@ from server.schemas import (
     GetUserSchema, UpdateUserSchema,
     LoginToken, ResetPasswordSchema,
     ChangePasswordSchema, PagedResponse,
-    PagedQuery, GetUsers
+    PagedQuery, GetUsers, GetNotificationsSchema,
+    NotificationQuery,
 )
 from server.repositories import DBAdaptor
-from server.models.users import Users
+from server.models.users import Users, Notifications
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
 )
@@ -27,6 +28,10 @@ from uuid import uuid4
 
 oauth_bearer = OAuth2PasswordBearer(tokenUrl=f"api/users/login")
 
+
+###############################################################################
+################################ User Services ################################
+###############################################################################
 
 class UserServices:
     def __init__(self, db: Session):
@@ -164,7 +169,8 @@ class UserServices:
                 status_code=400,
                 detail=str(e)
             )
-        
+
+    # Not optimal (The auction list should be trauncated)
     async def list(self, filter: PagedQuery) ->PagedResponse[list[GetUsers]]:
         try:
             result = await self.repo.get_all(filter.model_dump(exclude_unset=True))
@@ -289,10 +295,19 @@ class UserServices:
             if issubclass(type(exc), ExcRaiser):
                 raise exc
             raise ExcRaiser500()
+        
+    ###############################################################################
+    ############################## Static Methods #################################
+    ###############################################################################
+
+    @staticmethod
+    def get_from_cookie(request: Request):
+        token = request.cookies.get('access_token', None)
+        return token
 
     @staticmethod
     async def _get_current_user(
-        token: Annotated[str, Depends(oauth_bearer)],
+        token: Annotated[str, (Depends(oauth_bearer) or Depends(get_from_cookie))],
         db: Session = Depends(get_db)
     ) -> GetUserSchema:
         repo = UserServices(db).repo
@@ -335,3 +350,36 @@ class UserServices:
         
 
 current_user = Annotated[GetUserSchema, Depends(UserServices._get_current_user)]
+
+
+###############################################################################
+############################ Notification Services ############################
+###############################################################################
+
+class UserNotificationServices:
+    def __init__(self, db: Session):
+        self.repo = DBAdaptor(db).notif_repo
+
+    async def list(self, notice: NotificationQuery):
+        try:
+            result = await self.repo.get_all(notice.model_dump(exclude_unset=True))
+            if not result:
+                raise ExcRaiser404(message='No Notification found')
+            valid_notices = [
+                GetNotificationsSchema.model_validate(notice).model_dump()
+                for notice in result.data
+            ]
+            result.data = valid_notices
+            return result
+        except Exception as e:
+            raise e
+        
+    async def retrieve(self, id: str):
+        try:
+            notice = await self.repo.get_by_id(id)
+            if notice:
+                valid_notice = GetNotificationsSchema.model_validate(notice)
+                return valid_notice
+            raise ExcRaiser404(message='Notification not found')
+        except Exception as e:
+            raise e

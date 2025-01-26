@@ -31,7 +31,7 @@ def permissions(
                     if not entity_id:
                         raise ExcRaiser404("Entity ID not found")
                     entity = await service.service(kwargs.get('db')).retrieve(entity_id)
-                    if entity.users_id != user.id or entity.id != user.id:
+                    if (entity.users_id != user.id) or (entity.user_id != user.id) or (entity.id != user.id):
                         raise HTTPException(
                             status_code=403,
                             detail='Unauthorized'
