@@ -13,7 +13,7 @@ from server.schemas import (
     LoginToken, ResetPasswordSchema,
     ChangePasswordSchema, PagedResponse,
     PagedQuery, GetUsers, GetNotificationsSchema,
-    NotificationQuery,
+    NotificationQuery, CreateNotificationSchema
 )
 from server.repositories import DBAdaptor
 from server.models.users import Users, Notifications
@@ -381,5 +381,14 @@ class UserNotificationServices:
                 valid_notice = GetNotificationsSchema.model_validate(notice)
                 return valid_notice
             raise ExcRaiser404(message='Notification not found')
+        except Exception as e:
+            raise e
+        
+    async def create(self, data: CreateNotificationSchema):
+        try:
+            result = await self.repo.add(data.model_dump())
+            if result:
+                return GetNotificationsSchema.model_validate(result)
+            raise ExcRaiser400(message='Unable to create Notification')
         except Exception as e:
             raise e
