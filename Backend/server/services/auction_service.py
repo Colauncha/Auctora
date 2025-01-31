@@ -106,7 +106,10 @@ class AuctionServices:
             _ = await self.participant_repo.add(data)
         except Exception as e:
             raise e
-        
+
+    async def delete(self, id: str):
+        ...
+
     # Notifications
     async def notify(self, user_id: str, title: str, message: str):
         try:

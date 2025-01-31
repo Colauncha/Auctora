@@ -1,6 +1,9 @@
 from server.models.base import BaseModel
-from server.enums.user_enums import UserRoles
-from sqlalchemy import UUID, Boolean, Column, ForeignKey, String, Enum
+from server.enums.user_enums import (
+    UserRoles, TransactionStatus,
+    TransactionTypes,
+)
+from sqlalchemy import UUID, Boolean, Column, Float, ForeignKey, String, Enum
 from sqlalchemy.orm import relationship
 from passlib.context import CryptContext
 from sqlalchemy.dialects.postgresql import ENUM
@@ -17,6 +20,9 @@ class Users(BaseModel):
     hash_password = Column(String, nullable=False)
     email = Column(String, index=True, unique=True, nullable=False)
     email_verified = Column(Boolean, default=False)
+    wallet = Column(Float, nullable=True, default=0.00)
+    available_balance = Column(Float, nullable=True, default=0.00)
+    auctioned_amount = Column(Float, nullable=True, default=0.00)
     role = Column(
         ENUM(UserRoles, name='userroles', create_type=True, schema='auctora_dev'), 
         nullable=False, default=UserRoles.CLIENT
@@ -32,6 +38,16 @@ class Users(BaseModel):
         "Notifications",
         back_populates="user",
         cascade="all, delete-orphan"
+    )
+    bids = relationship(
+        'Bids',
+        back_populates='user',
+        cascade='all, delete-orphan'
+    )
+    transactions = relationship(
+        'WalletTransactions',
+        back_populates='user',
+        cascade='all, delete-orphan'
     )
 
     def __init__(
@@ -51,6 +67,9 @@ class Users(BaseModel):
         self.first_name = first_name
         self.last_name = last_name
         self.role = role
+        # To be removed
+        self.wallet = 100.00
+        self.available_balance = 100.00
 
     def _hash_password(self, password: str) -> str:
         context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -74,3 +93,22 @@ class Notifications(BaseModel):
 
     def __str__(self):
         return f'{self.message} - {self.read}'
+    
+
+class WalletTransactions(BaseModel):
+    __tablename__ = 'wallet_transactions'
+    __mapper_args__ = {'polymorphic_identity': 'wallet_transactions'}
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), index=True)
+    amount = Column(Float, nullable=False, default=0.00)
+    description = Column(String, nullable=True)
+    transaction_type = Column(
+        ENUM(TransactionTypes, name='transaction_types', create_type=True, schema='auctora_dev'), 
+        nullable=False, default=TransactionTypes.FUNDING
+    )
+    status = Column(
+        ENUM(TransactionStatus, name='transaction_status', create_type=True, schema='auctora_dev'), 
+        nullable=False, default=TransactionStatus.PENDING
+    )
+
+    # relationship
+    user = relationship('Users', back_populates='transactions')

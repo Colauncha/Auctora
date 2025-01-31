@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import relationship
 from server.enums.auction_enums import AuctionStatus
 from server.models.base import BaseModel
+from server.models.bids import Bids
 
 
 class Auctions(BaseModel):
@@ -44,6 +45,11 @@ class Auctions(BaseModel):
     participants = relationship(
         'AuctionParticipants', back_populates='auction',
         cascade='all, delete-orphan'
+    )
+    bids = relationship(
+        'Bids', back_populates='auction',
+        cascade='all, delete-orphan',
+        order_by=Bids.amount
     )
 
     def __str__(self):

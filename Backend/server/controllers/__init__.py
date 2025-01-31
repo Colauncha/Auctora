@@ -5,9 +5,12 @@ from server.controllers.category_controller import route as cat_route
 from server.controllers.category_controller import sub_route
 from server.controllers.items_controller import route as item_route
 from server.controllers.auction_controller import route as auction_route
+from server.controllers.bid_controller import route as bid_route
 
 
 routes = APIRouter(prefix=app_configs.URI_PREFIX)
+
+auction_route.include_router(bid_route)
 
 routes.include_router(user_route)
 routes.include_router(cat_route)

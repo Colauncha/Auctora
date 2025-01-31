@@ -5,6 +5,7 @@ from typing import Any, Union
 from server.schemas.user_schema import *
 from server.schemas.item_category_schema import *
 from server.schemas.auction_schema import *
+from server.schemas.bid_schema import *
 
 
 T = t.TypeVar("T")
@@ -62,7 +63,7 @@ class GetUsers(GetUserSchema):
 
 
 class NotificationQuery(PagedQuery):
-    user_id: UUID = Query(..., description="User ID")
+    user_id: Optional[UUID] = Query(default=None, description="User ID")
 
 
 class AuctionQueryVector(PagedQuery):
@@ -70,9 +71,14 @@ class AuctionQueryVector(PagedQuery):
     current_price: Optional[float] = Query(default=None, description="Current price")
     buy_now_price: Optional[float] = Query(default=None, description="Buy now price")
 
+
 class AuctionQueryScalar(PagedQuery):
     category_id: Optional[UUID] = Query(default=None, description="Category ID")
     sub_category_id: Optional[UUID] = Query(default=None, description="Sub category ID")
     status: Optional[str] = Query(default=None, description="Status")
     buy_now: Optional[bool] = Query(default=None, description="Buy now")
     user_id: Optional[UUID] = Query(default=None, description="User ID")
+
+
+class BidQuery(PagedQuery):
+    auction_id: Optional[UUID] = Query(default=None, description="Auction ID")

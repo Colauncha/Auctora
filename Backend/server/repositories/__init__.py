@@ -1,4 +1,5 @@
 from server.repositories.repository import Repository
+from server.repositories.bid_repository import BidRepository
 from server.repositories.user_repository import (
     UserRepository, UserNotificationRepository
 )
@@ -12,6 +13,7 @@ from server.repositories.item_repository import (
 from sqlalchemy.orm import Session
 
 
+
 class DBAdaptor:
     def __init__(self, db: Session):
         self.user_repo = UserRepository(db)
@@ -21,3 +23,4 @@ class DBAdaptor:
         self.auction_repo = AuctionRepository(db)
         self.auction_p_repo = AuctionParticipantRepository(db)
         self.notif_repo = UserNotificationRepository(db)
+        self.bid_repo = BidRepository(db)

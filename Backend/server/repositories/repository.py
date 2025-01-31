@@ -6,7 +6,8 @@ from server.models.users import Users
 from server.schemas import (
     GetUserSchema, GetCategorySchema,
     GetSubCategorySchema, GetItemSchema,
-    PagedResponse, GetAuctionSchema
+    PagedResponse, GetAuctionSchema,
+    GetBidSchema
 )
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404
@@ -17,7 +18,7 @@ from server.utils.helpers import paginator
 T = Union[
     GetUserSchema, GetCategorySchema,
     GetItemSchema, GetSubCategorySchema,
-    GetAuctionSchema,
+    GetAuctionSchema, GetBidSchema
 
 ]
 

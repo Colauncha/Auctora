@@ -4,7 +4,9 @@ from fastapi import Query
 from pydantic import BaseModel, Field, ConfigDict
 from server.models.users import Users
 from server.config import app_configs
-from server.enums.user_enums import UserRoles
+from server.enums.user_enums import (
+    UserRoles, TransactionTypes, TransactionStatus
+)
 
 
 class GetUserSchema(BaseModel):
@@ -133,3 +135,12 @@ class GetNotificationsSchema(CreateNotificationSchema):
 
 class UpdateNotificationSchema(BaseModel):
     read: bool = True
+
+
+class WalletTransactionSchema(BaseModel):
+    model_config = {"from_attributes": True}
+    user_id: str
+    amount: float
+    description: str
+    transaction_type: TransactionTypes
+    status: TransactionStatus

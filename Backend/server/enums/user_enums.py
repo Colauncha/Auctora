@@ -11,3 +11,15 @@ class Permissions(Enum):
     AUTHENTICATED = ['admin', 'client', 'authenticated']
     ALL = ['*']
 
+
+class TransactionTypes(Enum):
+    FUNDING = 'funding'
+    WITHDRAWAL = 'withdrawal'
+    CREDIT = 'credit'
+    DEBIT = 'debit'
+
+
+class TransactionStatus(Enum):
+    PENDING = 'pending'
+    COMPLETED = 'completed'
+    FAILED = 'failed'

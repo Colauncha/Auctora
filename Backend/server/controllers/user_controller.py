@@ -12,7 +12,7 @@ from server.schemas import (
     LoginToken, PagedQuery,
     ErrorResponse, PagedResponse,
     GetUsers, GetNotificationsSchema,
-    NotificationQuery,
+    NotificationQuery, UpdateNotificationSchema
 )
 from server.services import UserServices, current_user, UserNotificationServices
 from server.utils import Emailer
@@ -240,6 +240,18 @@ async def retrieve(
 ) -> APIResponse[GetNotificationsSchema]:
     notification = await UserNotificationServices(db).retrieve(notification_id)
     return APIResponse(data=notification)
+
+
+@notif_route.put('/{notification_id}')
+@permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.NOTIFICATION)
+async def update(
+    user: current_user,
+    notification_id: str,
+    data: UpdateNotificationSchema,
+    db: Session = Depends(get_db)
+) -> APIResponse:
+    result = await UserNotificationServices(db).update(notification_id, data.read)
+    return APIResponse(data=result)
 
 
 route.include_router(notif_route)

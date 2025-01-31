@@ -30,6 +30,59 @@ oauth_bearer = OAuth2PasswordBearer(tokenUrl=f"api/users/login")
 
 
 ###############################################################################
+############################ Notification Services ############################
+###############################################################################
+
+class UserNotificationServices:
+    def __init__(self, db: Session):
+        self.repo = DBAdaptor(db).notif_repo
+
+    async def list(self, notice: NotificationQuery):
+        try:
+            result = await self.repo.get_all(notice.model_dump(exclude_unset=True))
+            if not result:
+                raise ExcRaiser404(message='No Notification found')
+            valid_notices = [
+                GetNotificationsSchema.model_validate(notice).model_dump()
+                for notice in result.data
+            ]
+            result.data = valid_notices
+            return result
+        except Exception as e:
+            raise e
+        
+    async def retrieve(self, id: str):
+        try:
+            notice = await self.repo.get_by_id(id)
+            if notice:
+                valid_notice = GetNotificationsSchema.model_validate(notice)
+                return valid_notice
+            raise ExcRaiser404(message='Notification not found')
+        except Exception as e:
+            raise e
+        
+    async def create(self, data: CreateNotificationSchema):
+        try:
+            result = await self.repo.add(data.model_dump())
+            if result:
+                return GetNotificationsSchema.model_validate(result)
+            raise ExcRaiser400(message='Unable to create Notification')
+        except Exception as e:
+            raise e
+        
+    async def update(self, id: str, read: bool):
+        try:
+            notice = await self.repo.get_by_id(id)
+            if notice:
+                result = await self.repo.save(notice, {'read': read})
+                if result:
+                    return True
+            raise ExcRaiser404(message='Notification not found')
+        except Exception as e:
+            raise e
+
+
+###############################################################################
 ################################ User Services ################################
 ###############################################################################
 
@@ -37,6 +90,7 @@ class UserServices:
     def __init__(self, db: Session):
         self.repo = DBAdaptor(db).user_repo
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        self.notification = UserNotificationServices(db)
 
     def __check_password(self, password, hashed_password) -> bool:
         return self.pwd_context.verify(password, hashed_password)
@@ -92,6 +146,11 @@ class UserServices:
 
     async def create_user(self, data: dict) -> dict[str, str]:
         try:
+            NOTIF_TITLE = "Welcome to Auctora"
+            NOTIF_MESSAGE = (
+                "Thank you for signing up with Auctora. "
+                "We are glad to have you on board"
+            )
             # Check if email already exist
             exist_user_email = await self.repo.get_by_email(
                 data.get('email')
@@ -125,6 +184,14 @@ class UserServices:
                     )
 
                 new_user = GetUserSchema.model_validate(new_user)
+                # Create a notification for the new user
+                _ = await self.notification.create(
+                    CreateNotificationSchema(
+                        title=NOTIF_TITLE,
+                        message=NOTIF_MESSAGE,
+                        user_id=new_user.id
+                    )
+                )
                 otp = otp_generator()
                 async_redis = await redis_store.get_async_redis()
                 _ = await async_redis.set(f'otp:{new_user.email}', otp, ex=1800)
@@ -212,12 +279,21 @@ class UserServices:
 
     async def verify_otp(self, data: VerifyOtpSchema):
         try:
+            NOTIF_TITLE = "Email Verification"
+            NOTIF_MESSAGE = "Your email has been verified successfully"
             async_redis = await redis_store.get_async_redis()
             stored_otp = await async_redis.get(f'otp:{data.email}')
             user = await self.repo.get_by_email(data.email)
             if stored_otp == data.otp:
                 _ = await self.repo.save(user, {'email_verified': True})
                 _ = await async_redis.delete(f'otp:{data.email}')
+                _ = await self.notification.create(
+                    CreateNotificationSchema(
+                        title=NOTIF_TITLE,
+                        message=NOTIF_MESSAGE,
+                        user_id=user.id
+                    )
+                )
                 return {'message': 'email verified'}
             return {'message': 'Invalid otp or email'}
         except Exception as e:
@@ -307,11 +383,17 @@ class UserServices:
 
     @staticmethod
     async def _get_current_user(
-        token: Annotated[str, (Depends(oauth_bearer) or Depends(get_from_cookie))],
+        token: Annotated[str, Depends(oauth_bearer), Depends(get_from_cookie)],
         db: Session = Depends(get_db)
     ) -> GetUserSchema:
         repo = UserServices(db).repo
         try:
+            if not token:
+                raise ExcRaiser(
+                    status_code=401,
+                    message='Unauthorized',
+                    detail='No token provided'
+                )
             claims = jwt.decode(
                 token=token,
                 algorithms=app_configs.security.ALGORITHM,
@@ -352,43 +434,3 @@ class UserServices:
 current_user = Annotated[GetUserSchema, Depends(UserServices._get_current_user)]
 
 
-###############################################################################
-############################ Notification Services ############################
-###############################################################################
-
-class UserNotificationServices:
-    def __init__(self, db: Session):
-        self.repo = DBAdaptor(db).notif_repo
-
-    async def list(self, notice: NotificationQuery):
-        try:
-            result = await self.repo.get_all(notice.model_dump(exclude_unset=True))
-            if not result:
-                raise ExcRaiser404(message='No Notification found')
-            valid_notices = [
-                GetNotificationsSchema.model_validate(notice).model_dump()
-                for notice in result.data
-            ]
-            result.data = valid_notices
-            return result
-        except Exception as e:
-            raise e
-        
-    async def retrieve(self, id: str):
-        try:
-            notice = await self.repo.get_by_id(id)
-            if notice:
-                valid_notice = GetNotificationsSchema.model_validate(notice)
-                return valid_notice
-            raise ExcRaiser404(message='Notification not found')
-        except Exception as e:
-            raise e
-        
-    async def create(self, data: CreateNotificationSchema):
-        try:
-            result = await self.repo.add(data.model_dump())
-            if result:
-                return GetNotificationsSchema.model_validate(result)
-            raise ExcRaiser400(message='Unable to create Notification')
-        except Exception as e:
-            raise e
