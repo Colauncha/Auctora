@@ -16,6 +16,7 @@ import fb_auth from "../assets/icons/fb_auth.png";
 import insta_auth from "../assets/icons/insta.png";
 import google_auth from "../assets/icons/google_auth.png";
 import filter_icom from "../assets/icons/filter_icon.png";
+import upload from "../assets/icons/upload.png";
 
 import headphone from "../assets/svg/headphone.svg";
 import cellphone from "../assets/svg/phones.svg";
@@ -69,6 +70,7 @@ export {
   dsmartwatch,
   shipping,
   delivery,
+  upload,
 };
 
 // const buildArr = {
@@ -85,7 +87,7 @@ export {
 export const productListArr = [
   {
     _id: 1,
-    slug:"play-station-5",
+    slug: "play-station-5",
     imgUrl: ps_5,
     itemName: "Play Station 5",
     sellerName: "Blessed",
@@ -95,17 +97,19 @@ export const productListArr = [
     countDown: "4D: 4H : 23M : 2S",
     description: {
       title: "Play Station 5",
-      detail: "The PlayStation 5 (PS5) is a home video game console developed by Sony Interactive Entertainment. It was announced as the successor to the PlayStation 4 in April 2019, was launched on November 12, 2020, in Australia, Japan, New Zealand, North America, and South Korea, and was released worldwide a week later. The PS5 is part of the ninth generation of video game consoles, along with Microsoft's Xbox Series X/S consoles, which were released in the same month."
+      detail:
+        "The PlayStation 5 (PS5) is a home video game console developed by Sony Interactive Entertainment. It was announced as the successor to the PlayStation 4 in April 2019, was launched on November 12, 2020, in Australia, Japan, New Zealand, North America, and South Korea, and was released worldwide a week later. The PS5 is part of the ninth generation of video game consoles, along with Microsoft's Xbox Series X/S consoles, which were released in the same month.",
     },
     review: {
-      reviewerName: 'kenneth Malida',
+      reviewerName: "kenneth Malida",
       rewiewerImg: ps_5,
-      reviewText: "Lorem ipsum dolor sit amet consectetur. Augue quis justo amet tristique nibh. Elementum risus sem ultricies sed id. Quam enim sem eu egestas diam sit auctor nunc ultrices. In consectetur urna nibh molestie. Tincidunt dictumst ut pretium cursus urna sodales et. Duis adipiscing laoreet risus malesuada elementum."
-    }   
+      reviewText:
+        "Lorem ipsum dolor sit amet consectetur. Augue quis justo amet tristique nibh. Elementum risus sem ultricies sed id. Quam enim sem eu egestas diam sit auctor nunc ultrices. In consectetur urna nibh molestie. Tincidunt dictumst ut pretium cursus urna sodales et. Duis adipiscing laoreet risus malesuada elementum.",
+    },
   },
   {
     _id: 2,
-    slug:"Nikon-camera",
+    slug: "Nikon-camera",
     imgUrl: Nikon,
     itemName: "Nikon Camera",
     sellerName: "Ayomide",
@@ -116,7 +120,7 @@ export const productListArr = [
   },
   {
     _id: 3,
-    slug:"Refrigerator",
+    slug: "Refrigerator",
     imgUrl: Fride,
     itemName: "Refrigerator",
     sellerName: "Ayomide",
@@ -127,7 +131,7 @@ export const productListArr = [
   },
   {
     _id: 4,
-    slug:"Macbook-air",
+    slug: "Macbook-air",
     imgUrl: Macbook,
     itemName: "Macbook Air 20",
     sellerName: "Ayomide",
@@ -136,6 +140,4 @@ export const productListArr = [
     price: "230000",
     countDown: "4D: 4H : 23M : 2S",
   },
-  
- 
 ];

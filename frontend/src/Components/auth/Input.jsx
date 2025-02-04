@@ -1,14 +1,18 @@
-import React from "react";
-
 const Input = ({ title, htmlFor, type, id, className }) => {
   return (
     <div className="flex flex-col">
-      <label htmlFor={htmlFor}> {title}</label>
+      <label
+        className={`text-[13px] lg:text-[15px] text-slate-500 ${className}`}
+        htmlFor={htmlFor}
+      >
+        {" "}
+        {title}
+      </label>
       <input
         type={type}
         id={id}
         required
-        className={`border-[1px] rounded-md w-full h-[35px] px-3 ${className}`}
+        className={`border-[1px] rounded-md w-full h-[35px] focus:outline-[#9f3248] px-3 ${className}`}
       />
     </div>
   );
