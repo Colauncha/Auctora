@@ -1,3 +1,4 @@
+from fastapi import WebSocket
 from sqlalchemy.orm import Session
 from server.models.bids import Bids
 from server.services.user_service import UserNotificationServices
@@ -39,8 +40,11 @@ class BidServices:
             )
             user = await self.user_repo.get_by_id(data.user_id)
             auction = await self.auction_repo.get_by_id(data.auction_id)
+            prev_bids = sorted(
+                auction.bids, key=lambda x: x.amount, reverse=True
+            )
 
-            if data.amount <= auction.bids[0].amount:
+            if data.amount <= prev_bids[0].amount:
                 raise ExcRaiser400(
                     'Amount must be higher than current highest bid'
                 )
@@ -80,6 +84,10 @@ class BidServices:
         except Exception as e:
             raise e
         
+    async def create_ws(self, data: CreateBidSchema, ws: WebSocket):
+        
+        ...
+
     async def update(
             self, amount: float,
             user_id: str = None,

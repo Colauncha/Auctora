@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from fastapi import WebSocket
 from server.repositories import DBAdaptor
 from server.models.items import Items
 from server.enums.auction_enums import AuctionStatus
@@ -12,7 +13,7 @@ from server.services.user_service import (
 from server.schemas import (
     GetAuctionSchema, AuctionParticipantsSchema,
     CreateNotificationSchema, CreateAuctionParticipantsSchema,
-    PagedQuery, PagedResponse,
+    PagedQuery, PagedResponse, GetUserSchema
 )
 
 
@@ -106,6 +107,9 @@ class AuctionServices:
             _ = await self.participant_repo.add(data)
         except Exception as e:
             raise e
+        
+    async def ws_bid(self, user: GetUserSchema, auction_id: str, ws: WebSocket):
+        ...
 
     async def delete(self, id: str):
         ...

@@ -13,13 +13,13 @@ class Permissions(Enum):
 
 
 class TransactionTypes(Enum):
-    FUNDING = 'funding'
-    WITHDRAWAL = 'withdrawal'
-    CREDIT = 'credit'
-    DEBIT = 'debit'
+    FUNDING = 'FUNDING'
+    WITHDRAWAL = 'WITHDRAWAL'
+    CREDIT = 'CREDIT'
+    DEBIT = 'DEBIT'
 
 
 class TransactionStatus(Enum):
-    PENDING = 'pending'
-    COMPLETED = 'completed'
-    FAILED = 'failed'
+    PENDING = 'PENDING'
+    COMPLETED = 'COMPLETED'
+    FAILED = 'FAILED'

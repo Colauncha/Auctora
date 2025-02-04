@@ -57,15 +57,15 @@ class UserRepository(Repository):
                 user = self.db.query(Users).filter(Users.id == id).first()
                 user.available_balance -= amount
                 user.auctioned_amount += amount
-                DESCRIPTION = f'{amount} placed on bid'
-                data = {
-                    'user_id': user.id,
-                    'amount': amount,
-                    'description': DESCRIPTION,
-                    'transaction_type': TransactionTypes.DEBIT,
-                    'status': TransactionStatus.COMPLETED
-                }
-                await self.wallet_transaction.add(data)
+            DESCRIPTION = f'{amount} placed on bid'
+            data = {
+                'user_id': user.id,
+                'amount': amount,
+                'description': DESCRIPTION,
+                'transaction_type': TransactionTypes.DEBIT,
+                'status': TransactionStatus.COMPLETED
+            }
+            await self.wallet_transaction.add(data)
         except (Exception, SQLAlchemyError) as e:
             self.db.rollback()
             raise ExcRaiser(
@@ -91,15 +91,15 @@ class UserRepository(Repository):
                 user = self.db.query(Users).filter(Users.id == id).first()
                 user.auctioned_amount -= amount
                 user.available_balance += amount
-                DESCRIPTION = f'{amount} placed on bid'
-                data = {
-                    'user_id': user.id,
-                    'amount': amount,
-                    'description': DESCRIPTION,
-                    'transaction_type': TransactionTypes.DEBIT,
-                    'status': TransactionStatus.COMPLETED
-                }
-                await self.wallet_transaction.add(data)
+            DESCRIPTION = f'{amount} placed on bid'
+            data = {
+                'user_id': user.id,
+                'amount': amount,
+                'description': DESCRIPTION,
+                'transaction_type': TransactionTypes.CREDIT,
+                'status': TransactionStatus.COMPLETED
+            }
+            await self.wallet_transaction.add(data)
         except (Exception, SQLAlchemyError) as e:
             self.db.rollback()
             raise ExcRaiser(
@@ -121,25 +121,25 @@ class UserRepository(Repository):
                 buyer.auctioned_amount -= amount
                 seller.wallet += amount
 
-                SELLERS_DESCRIPTION = f'{amount} has been transfered\
-                    to you from {buyer.id}'
-                BUYERS_DESCRIPTION = f'You have transfered {amount} to {seller.id}'
-                sellers_data = {
-                    'user_id': seller.id,
-                    'amount': amount,
-                    'description': SELLERS_DESCRIPTION,
-                    'transaction_type': TransactionTypes.CREDIT,
-                    'status': TransactionStatus.COMPLETED
-                }
-                buyer_data = {
-                    'user_id': buyer.id,
-                    'amount': amount,
-                    'description': BUYERS_DESCRIPTION,
-                    'transaction_type': TransactionTypes.DEBIT,
-                    'status': TransactionStatus.COMPLETED
-                }
-                await self.wallet_transaction.add(sellers_data)
-                await self.wallet_transaction.add(buyer_data)
+            SELLERS_DESCRIPTION = f'{amount} has been transfered\
+                to you from {buyer.id}'
+            BUYERS_DESCRIPTION = f'You have transfered {amount} to {seller.id}'
+            sellers_data = {
+                'user_id': seller.id,
+                'amount': amount,
+                'description': SELLERS_DESCRIPTION,
+                'transaction_type': TransactionTypes.CREDIT,
+                'status': TransactionStatus.COMPLETED
+            }
+            buyer_data = {
+                'user_id': buyer.id,
+                'amount': amount,
+                'description': BUYERS_DESCRIPTION,
+                'transaction_type': TransactionTypes.DEBIT,
+                'status': TransactionStatus.COMPLETED
+            }
+            await self.wallet_transaction.add(sellers_data)
+            await self.wallet_transaction.add(buyer_data)
         except (Exception, SQLAlchemyError) as e:
             self.db.rollback()
             raise ExcRaiser(
