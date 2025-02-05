@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const Pagination = ({ totalPages, currentPage, onPageChange }) => {
   const handlePageClick = (page) => {
@@ -13,17 +13,21 @@ const Pagination = ({ totalPages, currentPage, onPageChange }) => {
     // Add the first page
     if (currentPage > 3) {
       pages.push(1);
-      if (currentPage > 4) pages.push('...');
+      if (currentPage > 4) pages.push("...");
     }
 
     // Add the current page and its neighbors
-    for (let i = Math.max(1, currentPage - 1); i <= Math.min(totalPages, currentPage + 1); i++) {
+    for (
+      let i = Math.max(1, currentPage - 1);
+      i <= Math.min(totalPages, currentPage + 1);
+      i++
+    ) {
       pages.push(i);
     }
 
     // Add the last page
     if (currentPage < totalPages - 2) {
-      if (currentPage < totalPages - 3) pages.push('...');
+      if (currentPage < totalPages - 3) pages.push("...");
       pages.push(totalPages);
     }
 
@@ -31,14 +35,15 @@ const Pagination = ({ totalPages, currentPage, onPageChange }) => {
   };
 
   return (
-    <div className="flex items-center justify-center space-x-2 my-4">
+    <div className="flex items-center justify-center space-x-2 my-4 border-2 w-[400px]">
       {/* Previous Button */}
       <button
         onClick={() => handlePageClick(currentPage - 1)}
         disabled={currentPage === 1}
-        className={`flex items-center justify-center px-4 py-2 border rounded-md text-[#7B2334] border-[#7B2334] ${currentPage === 1
-          ? 'opacity-50 cursor-not-allowed'
-          : 'hover:bg-[#7B2334] hover:text-white'
+        className={`flex items-center justify-center px-4 py-2 border rounded-md text-[#7B2334] border-[#7B2334] ${
+          currentPage === 1
+            ? "opacity-50 cursor-not-allowed"
+            : "hover:bg-[#7B2334] hover:text-white"
         }`}
       >
         &larr; Previous
@@ -46,19 +51,22 @@ const Pagination = ({ totalPages, currentPage, onPageChange }) => {
 
       {/* Page Numbers */}
       {renderPageNumbers().map((page, index) =>
-        typeof page === 'number' ? (
+        typeof page === "number" ? (
           <button
             key={index}
             onClick={() => handlePageClick(page)}
-            className={`px-4 py-2 rounded-md ${page === currentPage
-              ? 'bg-[#7B2334] text-white'
-              : 'text-[#7B2334] border border-[#7B2334] hover:bg-[#7B2334] hover:text-white'
+            className={`px-4 py-2 rounded-md ${
+              page === currentPage
+                ? "bg-[#7B2334] text-white"
+                : "text-[#7B2334] border border-[#7B2334] hover:bg-[#7B2334] hover:text-white"
             }`}
           >
             {page}
           </button>
         ) : (
-          <span key={index} className="px-4 py-2 text-pink-400">...</span>
+          <span key={index} className="px-4 py-2 text-pink-400">
+            ...
+          </span>
         )
       )}
 
@@ -66,9 +74,10 @@ const Pagination = ({ totalPages, currentPage, onPageChange }) => {
       <button
         onClick={() => handlePageClick(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className={`flex items-center justify-center px-4 py-2 border rounded-md text-[#7B2334] border-[#7B2334] ${currentPage === totalPages
-          ? 'opacity-50 cursor-not-allowed'
-          : 'hover:bg-[#7B2334] hover:text-white'
+        className={`flex items-center justify-center px-4 py-2 border rounded-md text-[#7B2334] border-[#7B2334] ${
+          currentPage === totalPages
+            ? "opacity-50 cursor-not-allowed"
+            : "hover:bg-[#7B2334] hover:text-white"
         }`}
       >
         Next &rarr;

@@ -8,7 +8,7 @@ const Slider = ({ className }) => {
   };
   return (
     <div
-      className={`border-[1px] w-[19rem] h-[24rem] rounded-md py-4 px-6 ${className}`}
+      className={`border-[1px] w-full lg:w-[19rem] h-[24rem] rounded-md py-4 px-6 ${className}`}
     >
       <div className="flex justify-between">
         <h3 className="font-[700] text-[#9f3248]">Filter</h3>

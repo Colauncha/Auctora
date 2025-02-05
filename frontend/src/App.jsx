@@ -12,6 +12,8 @@ import CategoryResult from "./Pages/Category/CategoryResult";
 import DetailPage from "./Pages/Detail/Detail";
 import Otp from "./Pages/Account/Otp";
 import Profile from "./Pages/Dashboard/Profile";
+import AddressVerification from "./Pages/Dashboard/AddressVerification";
+import Notification from "./Pages/Notification/Notification";
 
 const App = () => {
   return (
@@ -20,7 +22,8 @@ const App = () => {
       <Nav />
       <Routes>
         <Route path="/" element={<Layout />} />
-        <Route path="/list" element={<Profile />} />
+        <Route path="/list" element={<AddressVerification />} />
+        <Route path="/notification" element={<Notification />} />
         <Route path="/about-us" element={<AboutUs />} />
         <Route path="/Ongoing-Auction" element={<ViewAll />} />
         <Route path="/category" element={<CategoryResult />} />
