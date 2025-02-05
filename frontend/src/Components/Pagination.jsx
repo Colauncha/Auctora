@@ -27,7 +27,7 @@ const Pagination = ({ totalPages, currentPage, onPageChange }) => {
 
     // Add the last page
     if (currentPage < totalPages - 2) {
-      if (currentPage < totalPages - 3) pages.push("...");
+      if (currentPage < totalPages - 3) pages.push("..");
       pages.push(totalPages);
     }
 
@@ -35,12 +35,12 @@ const Pagination = ({ totalPages, currentPage, onPageChange }) => {
   };
 
   return (
-    <div className="flex items-center justify-center space-x-2 my-4 border-2 w-[400px]">
+    <div className="flex items-center justify-center space-x-2 my-4">
       {/* Previous Button */}
       <button
         onClick={() => handlePageClick(currentPage - 1)}
         disabled={currentPage === 1}
-        className={`flex items-center justify-center px-4 py-2 border rounded-md text-[#7B2334] border-[#7B2334] ${
+        className={`flex items-center justify-center px-1 lg:px-4 lg:py-2 text-[11px] lg:text-[14px] border rounded-md text-[#7B2334] border-[#7B2334] ${
           currentPage === 1
             ? "opacity-50 cursor-not-allowed"
             : "hover:bg-[#7B2334] hover:text-white"
@@ -55,7 +55,7 @@ const Pagination = ({ totalPages, currentPage, onPageChange }) => {
           <button
             key={index}
             onClick={() => handlePageClick(page)}
-            className={`px-4 py-2 rounded-md ${
+            className={`lg:px-4 px-2 text-[10px] lg:text-[14px] lg:py-2 rounded-md ${
               page === currentPage
                 ? "bg-[#7B2334] text-white"
                 : "text-[#7B2334] border border-[#7B2334] hover:bg-[#7B2334] hover:text-white"
@@ -64,7 +64,7 @@ const Pagination = ({ totalPages, currentPage, onPageChange }) => {
             {page}
           </button>
         ) : (
-          <span key={index} className="px-4 py-2 text-pink-400">
+          <span key={index} className="lg:px-4 lg:py-2 text-[#7B2334]">
             ...
           </span>
         )
@@ -74,7 +74,7 @@ const Pagination = ({ totalPages, currentPage, onPageChange }) => {
       <button
         onClick={() => handlePageClick(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className={`flex items-center justify-center px-4 py-2 border rounded-md text-[#7B2334] border-[#7B2334] ${
+        className={`flex items-center justify-center px-1 lg:px-4 lg:py-2 text-[11px] lg:text-[14px] border rounded-md text-[#7B2334] border-[#7B2334] ${
           currentPage === totalPages
             ? "opacity-50 cursor-not-allowed"
             : "hover:bg-[#7B2334] hover:text-white"
