@@ -1,10 +1,17 @@
 import { fb_auth, google_auth, insta_auth } from "../../Constants";
 import Button from "../Button";
 import Input from "./Input";
+import useModeStore from "../../Store/Store";
+import { useNavigate } from "react-router-dom";
 
 const AuthFormSginUp = ({ heading }) => {
+  const { isMobile } = useModeStore();
+  const navigate = useNavigate();
   const submit = () => {
     console.log("submitting....");
+  };
+  const signIn = () => {
+    navigate("/sign-in");
   };
   return (
     <div className="w-[620px] h-[500px] p-10 bg-white rounded-tl-md rounded-bl-md">
@@ -13,6 +20,19 @@ const AuthFormSginUp = ({ heading }) => {
           <legend className="text-[30px] font-[700] text-[#9f3247]">
             {heading}
           </legend>
+          {isMobile && (
+            <div className="flex items-center gap-1">
+              <p className="text-[#848a8f] text-[12px]">
+                Already have Account?
+              </p>
+              <span
+                className="text-[#de506d] text-[12px] cursor-pointer"
+                onClick={signIn}
+              >
+                Sign In
+              </span>
+            </div>
+          )}
           <Input
             title={`Email`}
             id={`email`}
