@@ -20,6 +20,7 @@ const AuthFormSginUp = ({ heading }) => {
           <legend className="text-[30px] font-[700] text-[#9f3247]">
             {heading}
           </legend>
+          {/* Only on Mobile */}
           {isMobile && (
             <div className="flex items-center gap-1">
               <p className="text-[#848a8f] text-[12px]">

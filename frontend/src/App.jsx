@@ -14,6 +14,10 @@ import Otp from "./Pages/Account/Otp";
 import Profile from "./Pages/Dashboard/Profile";
 import AddressVerification from "./Pages/Dashboard/AddressVerification";
 import Notification from "./Pages/Notification/Notification";
+import BankVerification from "./Pages/Dashboard/BankVerification";
+import VerificationLoading from "./Pages/Dashboard/VerificationLoading";
+import GetStarted from "./Pages/Dashboard/GetStarted";
+import AddProduct from "./Pages/Dashboard/AddProduct";
 
 const App = () => {
   return (
@@ -22,7 +26,7 @@ const App = () => {
       <Nav />
       <Routes>
         <Route path="/" element={<Layout />} />
-        <Route path="/list" element={<AddressVerification />} />
+        <Route path="/list" element={<GetStarted />} />
         <Route path="/notification" element={<Notification />} />
         <Route path="/about-us" element={<AboutUs />} />
         <Route path="/Ongoing-Auction" element={<ViewAll />} />
@@ -30,6 +34,7 @@ const App = () => {
         <Route path="/category/:slug" element={<DetailPage />} />
         <Route path="/sign-up" element={<SignUp />} />
         <Route path="/sign-in" element={<SignIn />} />
+        <Route path="/add-product" element={<AddProduct />} />
       </Routes>
       <Footer />
     </div>
