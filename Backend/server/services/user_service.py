@@ -16,14 +16,19 @@ from server.schemas import (
     LoginToken, ResetPasswordSchema,
     ChangePasswordSchema, PagedResponse,
     PagedQuery, GetUsers, GetNotificationsSchema,
-    NotificationQuery, CreateNotificationSchema
+    NotificationQuery, CreateNotificationSchema,
+    WalletTransactionSchema
 )
 from server.repositories import DBAdaptor
-from server.models.users import Users, Notifications
+from server.models.users import Users
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
 )
-from server.events import publish_reset_token, publish_otp, publish_bid_placed
+from server.events import (
+    publish_reset_token,
+    publish_otp,
+    publish_fund_account
+)
 from server.utils import is_valid_email, otp_generator
 from sqlalchemy.orm import Session
 from uuid import uuid4
@@ -81,6 +86,44 @@ class UserNotificationServices:
                 if result:
                     return True
             raise ExcRaiser404(message='Notification not found')
+        except Exception as e:
+            raise e
+
+
+###############################################################################
+############################ Notification Services ############################
+###############################################################################
+
+class UserWalletTransactionServices:
+    def __init__(self, db: Session):
+        self.repo = DBAdaptor(db).wallet_repo
+        self.user_repo = DBAdaptor(db).user_repo
+        self.notification = UserNotificationServices(db)
+
+    async def create(self, transaction, extra):
+        try:
+            transaction = WalletTransactionSchema(**transaction, **extra)
+            NOTIF_TITLE = f"Funding Account {transaction.status.value}"
+            NOTIF_MESSAGE = (
+                f"Your attempt to credit your wallet with N{transaction.amount} "
+                f"has {transaction.status.value}"
+            )
+            exist = await self.repo.get_by_attr({'reference_id': transaction.reference_id})
+            if exist:
+                return
+            _ = await self.user_repo.fund_wallet(transaction)
+            user = await self.user_repo.get_by_id(transaction.user_id)
+            pub_data = transaction.model_dump()
+            pub_data['email'] = user.email
+            _ = await self.notification.create(
+                CreateNotificationSchema(
+                    title=NOTIF_TITLE,
+                    message=NOTIF_MESSAGE,
+                    user_id=user.id
+                )
+            )
+            await publish_fund_account(pub_data)
+            return
         except Exception as e:
             raise e
 
@@ -374,10 +417,9 @@ class UserServices:
             if issubclass(type(exc), ExcRaiser):
                 raise exc
             raise ExcRaiser500()
+
         
-    ###############################################################################
     ############################## Static Methods #################################
-    ###############################################################################
 
     @staticmethod
     def get_from_cookie(request: Request):
@@ -442,7 +484,7 @@ class UserServices:
                 message='Unauthenticated',
                 detail=e.__repr__()
             )
-        
+
 
 current_user = Annotated[GetUserSchema, Depends(UserServices._get_current_user)]
 

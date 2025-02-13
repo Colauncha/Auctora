@@ -49,6 +49,12 @@ class CloudinaryConfig(BaseSettings):
     model_config = {'env_prefix': 'CLOUDINARY_'}
 
 
+class PayStack(BaseSettings):
+    SECRET_KEY: str
+    model_config = {}
+    model_config['env_prefix'] = 'TEST_' if ENV == 'development' else ''
+
+
 class AppConfig(BaseSettings):
     APP_NAME: str
     URI_PREFIX: str = '/api'
@@ -59,7 +65,8 @@ class AppConfig(BaseSettings):
     email_settings: EmailSettiings = EmailSettiings()
     cloudinary: CloudinaryConfig = CloudinaryConfig()
     ENV: str
-    DEBUG: bool = True if ENV in ["dev", "test"] else False
+    paystack: PayStack = PayStack()
+    DEBUG: bool = True if ENV in ["development", "test"] else False
     CORS_ALLOWED: list[str] | str = "*"
 
 

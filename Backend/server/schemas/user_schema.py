@@ -144,3 +144,4 @@ class WalletTransactionSchema(BaseModel):
     description: str
     transaction_type: TransactionTypes
     status: TransactionStatus
+    reference_id: str

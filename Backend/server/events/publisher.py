@@ -33,5 +33,15 @@ async def publish_win_auction(data: dict[str, any]):
     await local_publish('Win-Auction', data)
 
 
+async def publish_fund_account(data: dict[str, any]):
+    data['transaction_type'] = data['transaction_type'].value
+    data['status'] = data['status'].value
+    await local_publish('Fund-Account', data)
+
+
+# async def publish_withdrawal(data: dict[str, any]):
+#     await local_publish('Withdrawal', data)
+
+
 # if __name__ == '__main__':
 #     run(publish_otp(123456))

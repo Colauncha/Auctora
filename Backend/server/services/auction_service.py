@@ -30,8 +30,10 @@ class AuctionServices:
         try:
             NOTIF_TITLE = "New Auction"
             NOTIF_BODY = "Your new auction has been created"
-            NOTIF_BODY_PRIV = "Your new private auction has been created \
-                and the participants have been notified"
+            NOTIF_BODY_PRIV = (
+                "Your new private auction has been created "
+                "and the participants have been notified"
+            )
             participants: dict = data.pop('participants')
             item: dict = data.pop('item')
             user_id = data.get('users_id')
@@ -100,8 +102,10 @@ class AuctionServices:
     ):
         try:
             NOTIF_TITLE = 'Auction Invitation'
-            NOTIF_BODY = f"You have been invited to participate in an auction.\
-                Auction ID: {data.get('auction_id')}"
+            NOTIF_BODY = (
+                "You have been invited to participate in an auction. "
+                f"Auction ID: {data.get('auction_id')}"
+            )
             user =  await self.user_repo.get_by_email(data.get('participant_email'))
             if user:
                 await self.notify(str(user.id), NOTIF_TITLE, NOTIF_BODY)

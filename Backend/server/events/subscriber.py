@@ -64,6 +64,23 @@ async def send_win_auction_mail(data):
     print('➡ sent ✅')
 
 
+async def send_fund_account_mail(data):
+    print('📨 Sending Funding account mail 📫')
+    async with Emailer(
+        subject='Transaction Receipt',
+        template_name="funding_account_template.html",
+        to=data.get('email'),
+        amount=data.get('amount'),
+        reference=data.get('reference_id'),
+        type=data.get('transaction_type'),
+        status=data.get('status'),
+    ) as emailer:
+        await emailer.send_message()
+    await sleep(0.5)
+    print(f'♻ Type: {type(data)} -- {data}')
+    print('➡ sent ✅')
+
+
 channels = {
     'OTP-sender': send_otp_mail,
     'Bid-placed': send_bid_placed_mail,
@@ -71,6 +88,8 @@ channels = {
     'OutBid': send_outbid_mail,
     'Create-Auction': send_auction_created_mail,
     'Win-Auction': send_win_auction_mail,
+    'Fund-Account': send_fund_account_mail,
+    # 'Withdrawal': send_withdrawal_mail,
 }
 
 

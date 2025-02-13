@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, BackgroundTasks, Response
-from server.config import get_db, redis_store
+from server.config import get_db, redis_store, app_configs
 from server.enums import ServiceKeys
-from server.enums.user_enums import Permissions, UserRoles
+from server.enums.user_enums import Permissions, TransactionTypes, UserRoles, TransactionStatus
 from server.middlewares.exception_handler import ExcRaiser
 from server.middlewares.auth import permissions
 from server.schemas import (
@@ -12,15 +12,23 @@ from server.schemas import (
     LoginToken, PagedQuery,
     ErrorResponse, PagedResponse,
     GetUsers, GetNotificationsSchema,
-    NotificationQuery, UpdateNotificationSchema
+    NotificationQuery, UpdateNotificationSchema,
+    WalletTransactionSchema
 )
-from server.services import UserServices, current_user, UserNotificationServices
+from server.services import (
+    UserServices,
+    current_user,
+    UserNotificationServices,
+    UserWalletTransactionServices
+)
 from server.utils import Emailer
 from sqlalchemy.orm import Session
+import requests
 
 
 route = APIRouter(prefix='/users', tags=['users'])
 notif_route = APIRouter(prefix='/notifications', tags=['notifications'])
+transac_route = APIRouter(prefix='/transactions')
 db = Depends(get_db)
 
 
@@ -256,4 +264,45 @@ async def update(
     return APIResponse(data=result)
 
 
+###############################################################################
+############################ Transactions Endpoints ###########################
+###############################################################################
+from pydantic import BaseModel, Field
+from typing import Optional
+class DData(BaseModel):
+    email: str
+    amount: float
+    user_id: str
+    reference_id: Optional[str] = Field(default=None)
+
+@transac_route.post('/verify/{ref}')
+# @permissions(permission_level=Permissions.CLIENT)
+async def verify_funding(
+    # user: current_user,
+    ref: str,
+    data: DData,
+    db: Session = Depends(get_db)
+) -> WalletTransactionSchema:
+    extra = {
+        'transaction_type': TransactionTypes.CREDIT,
+    }
+    url = f"https://api.paystack.co/transaction/verify/{ref}"
+    headers = {
+        "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}"
+    }
+    response = requests.get(url, headers=headers)
+    res_data: dict = response.json()
+    if res_data.get('data').get('status') == 'success':
+        extra['status'] = TransactionStatus.COMPLETED
+        extra['description'] = res_data.get('message')
+        data.amount = float(res_data.get('data').get('amount') / 100)
+    else:
+        extra['status'] = TransactionStatus.FAILED
+        extra['description'] = res_data.get('message')
+    data.reference_id = ref
+    _ = await UserWalletTransactionServices(db).create(data.model_dump(), extra)
+    return WalletTransactionSchema(**data.model_dump(), **extra)
+
+
 route.include_router(notif_route)
+route.include_router(transac_route)
