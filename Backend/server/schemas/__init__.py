@@ -64,6 +64,7 @@ class GetUsers(GetUserSchema):
 
 class NotificationQuery(PagedQuery):
     user_id: Optional[UUID] = Query(default=None, description="User ID")
+    read: Optional[bool] = Query(default=False, description="Read status")
 
 
 class AuctionQueryVector(PagedQuery):

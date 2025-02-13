@@ -224,10 +224,11 @@ async def change_password(
 @permissions(permission_level=Permissions.CLIENT)
 async def list(
     user: current_user,
-    filter: PagedQuery = Depends(PagedQuery),
+    filter: NotificationQuery = Depends(NotificationQuery),
     db: Session = Depends(get_db)
 ) -> PagedResponse[list[GetNotificationsSchema]]:
-    filter = NotificationQuery(**filter.model_dump(), user_id=user.id)
+    filter.user_id = user.id
+    filter = NotificationQuery(**filter.model_dump())
     notifications = await UserNotificationServices(db).list(filter)
     return notifications
 

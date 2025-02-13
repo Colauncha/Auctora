@@ -101,6 +101,7 @@ class WalletTransactions(BaseModel):
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), index=True)
     amount = Column(Float, nullable=False, default=0.00)
     description = Column(String, nullable=True)
+    reference_id = Column(String, index=True)
     transaction_type = Column(
         ENUM(TransactionTypes, name='transaction_types', create_type=True, schema='auctora_dev'), 
         nullable=False, default=TransactionTypes.FUNDING

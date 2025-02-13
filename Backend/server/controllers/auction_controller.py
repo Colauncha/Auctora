@@ -75,7 +75,7 @@ async def update(
 #     return APIResponse(data=result)
 
 
-# @route.post('/{auction_id}/participants')
+# @route.put('/{auction_id}/participants')
 # @permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.AUCTION)
 # async def add_participant(
 #     user: current_user,
@@ -97,15 +97,3 @@ async def update(
 # ) -> APIResponse[GetAuctionSchema]:
 #     result = await AuctionServices(db).remove_participant(auction_id, email)
 #     return APIResponse(data=result)
-
-
-@route.websocket('/ws_bids/{auction_id}')
-@permissions(permission_level=Permissions.CLIENT)
-async def ws_bid(
-    user: current_user,
-    auction_id: str,
-    ws: WebSocket
-):
-    await ws.accept()
-    await AuctionServices().ws_bids(auction_id, ws)
-    await ws.close()
