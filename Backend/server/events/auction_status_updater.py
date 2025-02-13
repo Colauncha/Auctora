@@ -30,6 +30,8 @@ def update_status():
             elif event.status == AuctionStatus.ACTIVE and current_time >= event.end_date:
                 print(f"♻ Updating status for event {event.id} to {AuctionStatus.COMPLETED}")
                 event.status = AuctionStatus.COMPLETED
+                # TODO: Notify participants and winner here
+                # 
                 print('✅ Event status updated')
                 update = True
 
@@ -45,7 +47,7 @@ def update_status():
         session.close()
 
 # Schedule the job to run every minute (or any interval you need)
-scheduler.add_job(update_status, 'interval', minutes=1)
+scheduler.add_job(update_status, 'interval', seconds=15)
 
 # Start the scheduler
 scheduler.start()

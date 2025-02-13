@@ -40,10 +40,37 @@ async def send_reset_token_mail(data):
     print('➡ sent ✅')
 
 
+async def send_outbid_mail(data):
+    print('📨 Sending Outbid mail 📫')
+    ...  # some code
+    await sleep(0.5)
+    print(f'♻ Type: {type(data)} -- {data}')
+    print('➡ sent ✅')
+
+
+async def send_auction_created_mail(data):
+    print('📨 Sending Auction Created mail 📫')
+    ...  # some code
+    await sleep(0.5)
+    print(f'♻ Type: {type(data)} -- {data}')
+    print('➡ sent ✅')
+
+
+async def send_win_auction_mail(data):
+    print('📨 Sending Auction Created mail 📫')
+    ...  # some code
+    await sleep(0.5)
+    print(f'♻ Type: {type(data)} -- {data}')
+    print('➡ sent ✅')
+
+
 channels = {
     'OTP-sender': send_otp_mail,
     'Bid-placed': send_bid_placed_mail,
     'Reset-token': send_reset_token_mail,
+    'OutBid': send_outbid_mail,
+    'Create-Auction': send_auction_created_mail,
+    'Win-Auction': send_win_auction_mail,
 }
 
 

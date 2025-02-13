@@ -99,7 +99,7 @@ async def update(
 #     return APIResponse(data=result)
 
 
-@route.websocket('/ws/bids/{auction_id}')
+@route.websocket('/ws_bids/{auction_id}')
 @permissions(permission_level=Permissions.CLIENT)
 async def ws_bid(
     user: current_user,
@@ -107,5 +107,5 @@ async def ws_bid(
     ws: WebSocket
 ):
     await ws.accept()
-    await AuctionServices().ws_bid(user, auction_id, ws)
+    await AuctionServices().ws_bids(auction_id, ws)
     await ws.close()

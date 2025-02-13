@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from fastapi import WebSocket
+from server.config import redis_store
 from server.repositories import DBAdaptor
 from server.models.items import Items
 from server.enums.auction_enums import AuctionStatus
@@ -108,8 +109,13 @@ class AuctionServices:
         except Exception as e:
             raise e
         
-    async def ws_bid(self, user: GetUserSchema, auction_id: str, ws: WebSocket):
-        ...
+    async def ws_bids(self, auction_id: str, ws: WebSocket):
+        try:
+            async_redis = await redis_store.get_async_redis()
+            bid_list = async_redis.get(f'auction:{auction_id}')
+            await ws.send(bid_list)
+        except Exception as e:
+            raise e
 
     async def delete(self, id: str):
         ...

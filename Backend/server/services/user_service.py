@@ -1,6 +1,9 @@
 from datetime import datetime, timezone, timedelta
 from typing import Annotated
-from fastapi import Depends, HTTPException, Request
+from fastapi import (
+    Depends, HTTPException, Request,
+    WebSocket, WebSocketException, status
+)
 from fastapi.security import OAuth2PasswordBearer
 from jose import ExpiredSignatureError, jwt
 from jose.exceptions import JWTError, JWTClaimsError
@@ -380,6 +383,15 @@ class UserServices:
     def get_from_cookie(request: Request):
         token = request.cookies.get('access_token', None)
         return token
+    
+    @staticmethod
+    async def get_ws_user(ws: WebSocket, db: Session = Depends(get_db)):
+        token = ws.headers.get('Authorization')
+        token = token.split(' ')[-1] if token else None
+        if not token:
+            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+        return await UserServices._get_current_user(token, db)
+
 
     @staticmethod
     async def _get_current_user(
@@ -391,7 +403,7 @@ class UserServices:
             if not token:
                 raise ExcRaiser(
                     status_code=401,
-                    message='Unauthorized',
+                    message='Unauthenticated',
                     detail='No token provided'
                 )
             claims = jwt.decode(
@@ -399,6 +411,7 @@ class UserServices:
                 algorithms=app_configs.security.ALGORITHM,
                 key=app_configs.security.JWT_SECRET_KEY
             )
+
             if claims and claims.get('email') and claims.get('id'):
                 user = await repo.get_by_attr({'id': claims.get('id')})
                 if user:
@@ -406,19 +419,19 @@ class UserServices:
             else:
                 raise ExcRaiser(
                     status_code=401,
-                    message = 'Unauthorized',
+                    message = 'Unauthenticated',
                     detail="Invalid token"
                 )
         except ExpiredSignatureError as ex_sig:
             raise ExcRaiser(
                 status_code=401,
-                message='Unauthorized',
+                message='Unauthenticated',
                 detail=['Expired token', ex_sig.__repr__()]
             )
         except (JWTClaimsError, JWTError) as j_e:
             raise ExcRaiser(
                 status_code=401,
-                message='Unauthorized',
+                message='Unauthenticated',
                 detail=['Invalid token', j_e.__repr__()]
             )
         except Exception as e:
@@ -426,7 +439,7 @@ class UserServices:
                 raise e
             raise ExcRaiser(
                 status_code=401,
-                message='Unauthorized',
+                message='Unauthenticated',
                 detail=e.__repr__()
             )
         

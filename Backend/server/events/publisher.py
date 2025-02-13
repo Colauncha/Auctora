@@ -21,5 +21,17 @@ async def publish_bid_placed(data: dict[str, any]):
     await local_publish('Bid-placed', data)
 
 
+async def publish_outbid(data: dict[str, any]):
+    await local_publish('OutBid', data)
+
+
+async def publish_create_auction(data: dict[str, any]):
+    await local_publish('Create-Auction', data)
+
+
+async def publish_win_auction(data: dict[str, any]):
+    await local_publish('Win-Auction', data)
+
+
 # if __name__ == '__main__':
 #     run(publish_otp(123456))

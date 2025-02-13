@@ -1,9 +1,14 @@
+from datetime import datetime
+import json
 from fastapi import WebSocket
 from sqlalchemy.orm import Session
+from server.config import redis_store
 from server.models.bids import Bids
 from server.services.user_service import UserNotificationServices
 from server.repositories import DBAdaptor
 from server.middlewares.exception_handler import ExcRaiser400, ExcRaiser
+from server.enums.auction_enums import AuctionStatus
+from server.utils.ws_manager import WSManager
 from server.schemas import (
     CreateNotificationSchema,
     GetBidSchema, CreateBidSchema
@@ -40,6 +45,19 @@ class BidServices:
             )
             user = await self.user_repo.get_by_id(data.user_id)
             auction = await self.auction_repo.get_by_id(data.auction_id)
+            time = datetime.now()
+
+            # if auction.status != AuctionStatus.ACTIVE:
+            #     raise ExcRaiser400('Auction is not active')
+
+            # if auction.end_time < time:
+            #     raise ExcRaiser400('Auction has ended')
+
+            # TODO: Check if price >= auction.buy_now_price
+            # if auction.buy_now:
+            #   if data.amount >= auction.buy_now_price:
+            #       
+
             prev_bids = sorted(
                 auction.bids, key=lambda x: x.amount, reverse=True
             )
@@ -84,8 +102,32 @@ class BidServices:
         except Exception as e:
             raise e
         
-    async def create_ws(self, data: CreateBidSchema, ws: WebSocket):
-        
+    async def create_ws(self, data: CreateBidSchema, wsmanager: WSManager, ws: WebSocket):
+        try:
+            bid = await self.create(data)
+            if bid:
+                redis = await redis_store.get_async_redis()
+                auction = await self.auction_repo.get_by_id(data.auction_id)
+                prev_bids = sorted(
+                    auction.bids, key=lambda x: x.amount, reverse=True
+                )
+                prev_bids = json.dumps([
+                        {'id': str(pb.user_id), 'username': pb.username, 'amount': pb.amount}
+                        for pb in prev_bids
+                    ])
+                _ = await redis.set(f'auction:{auction.id}', prev_bids)
+                return bid
+            else:
+                await wsmanager.send_message('Unable to place bid', ws)
+
+        except Exception as e:
+            print(e.__class__, e, e.__traceback__)
+            await wsmanager.send_message(
+                message=str(e),
+                websocket=ws
+            )
+
+    async def buy_now(self, auction_id: str, user_id: str):
         ...
 
     async def update(

@@ -160,7 +160,8 @@ async def login(
         key='access_token',
         value=token.token,
         httponly=True,
-        max_age=180
+        max_age=1800,
+        samesite="lax"
     )
     return APIResponse(data=token)
 
