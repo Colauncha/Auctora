@@ -1,15 +1,17 @@
-from datetime import datetime, timezone, timedelta
+from uuid import uuid4
 from typing import Annotated
-from fastapi import (
-    Depends, HTTPException, Request,
-    WebSocket, WebSocketException, status
-)
-from fastapi.security import OAuth2PasswordBearer
 from jose import ExpiredSignatureError, jwt
-from jose.exceptions import JWTError, JWTClaimsError
+from datetime import datetime, timezone, timedelta
+
+from sqlalchemy.orm import Session
+from server.models.users import Users
 from passlib.context import CryptContext
-from server.config import app_configs, redis_store
 from server.config.database import get_db
+from server.repositories import DBAdaptor
+from fastapi.security import OAuth2PasswordBearer
+from server.config import app_configs, redis_store
+from jose.exceptions import JWTError, JWTClaimsError
+from server.utils import is_valid_email, otp_generator
 from server.schemas import (
     VerifyOtpSchema, LoginSchema,
     GetUserSchema, UpdateUserSchema,
@@ -19,8 +21,6 @@ from server.schemas import (
     NotificationQuery, CreateNotificationSchema,
     WalletTransactionSchema
 )
-from server.repositories import DBAdaptor
-from server.models.users import Users
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
 )
@@ -29,9 +29,11 @@ from server.events import (
     publish_otp,
     publish_fund_account
 )
-from server.utils import is_valid_email, otp_generator
-from sqlalchemy.orm import Session
-from uuid import uuid4
+from fastapi import (
+    Depends, HTTPException, Request,
+    WebSocket, WebSocketException, status
+)
+
 
 
 oauth_bearer = OAuth2PasswordBearer(tokenUrl=f"api/users/login")
@@ -209,15 +211,16 @@ class UserServices:
                 )
 
             # Check if username already exist
-            exist_user_username = await self.repo.get_by_username(
-                data.get('username')
-            )
-            if exist_user_username:
-                raise ExcRaiser(
-                    message="Username already in use",
-                    status_code=400,
-                    detail="Use another username address or login with the username"
+            if data.get('username'):
+                exist_user_username = await self.repo.get_by_username(
+                    data.get('username')
                 )
+                if exist_user_username:
+                    raise ExcRaiser(
+                        message="Username already in use",
+                        status_code=400,
+                        detail="Use another username address or login with the username"
+                    )
 
             # Create new user
             else:

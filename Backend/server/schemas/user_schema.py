@@ -14,19 +14,23 @@ class GetUserSchema(BaseModel):
         description="ID of the User",
         examples=["84hgdf-dmeu-fvtre-wectb-yyrrv4254"]
     )
-    username: str = Field(
+    username: Optional[str] = Field(
+        default=None,
         description="Unique username",
         examples=[app_configs.test_user.USERNAME]
     )
-    first_name: str = Field(
+    first_name: Optional[str] = Field(
+        default=None,
         description="First name of the User",
         examples=[app_configs.test_user.FIRSTNAME]
     )
-    last_name: str = Field(
+    last_name: Optional[str] = Field(
+        default=None,
         description="last name of the User",
         examples=[app_configs.test_user.LASTNAME]
     )
-    phone_number: str = Field(
+    phone_number: Optional[str] = Field(
+        default=None,
         description="User's phone number",
         examples=[app_configs.test_user.PHONENUMBER]
     )
@@ -44,7 +48,8 @@ class GetUserSchema(BaseModel):
 
 
 class CreateUserSchema(BaseModel):
-    username: str = Field(
+    username: Optional[str] = Field(
+        default=None,
         description="Unique username",
         examples=[app_configs.test_user.USERNAME]
     )
@@ -56,15 +61,18 @@ class CreateUserSchema(BaseModel):
         description="Password for the user account",
         examples=[app_configs.test_user.PASSWORD]
     )
-    first_name: str = Field(
+    first_name: Optional[str] = Field(
+        default=None,
         description="First name of the User",
         examples=[app_configs.test_user.FIRSTNAME]
     )
-    last_name: str = Field(
+    last_name: Optional[str] = Field(
+        default=None,
         description="last name of the User",
         examples=[app_configs.test_user.LASTNAME]
     )
-    phone_number: str = Field(
+    phone_number: Optional[str] = Field(
+        default=None,
         description="User's phone number",
         examples=[app_configs.test_user.PHONENUMBER]
     )

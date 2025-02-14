@@ -13,10 +13,10 @@ class Users(BaseModel):
     __tablename__ = 'users'
     __mapper_args__ = {'polymorphic_identity': 'users'}
 
-    username = Column(String, index=True, unique=True, nullable=False)
-    first_name = Column(String, nullable=False)
-    last_name = Column(String, nullable=False)
-    phone_number = Column(String, nullable=False)
+    username = Column(String, index=True, unique=True, nullable=True)
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+    phone_number = Column(String, nullable=True)
     hash_password = Column(String, nullable=False)
     email = Column(String, index=True, unique=True, nullable=False)
     email_verified = Column(Boolean, default=False)
@@ -52,10 +52,10 @@ class Users(BaseModel):
 
     def __init__(
             self,
-            username: str,
-            email: str,
-            phone_number: str,
             password: str,
+            email: str,
+            username: str = None,
+            phone_number: str = None,
             first_name: str = None,
             last_name: str = None,
             role: UserRoles = UserRoles.CLIENT
