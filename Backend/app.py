@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 import sys
 import uvicorn
-import asyncio
 
 from server import create_app, create_admin
 
-asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 app = create_app()
 
