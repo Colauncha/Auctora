@@ -23,6 +23,7 @@ class Users(BaseModel):
     wallet = Column(Float, nullable=True, default=0.00)
     available_balance = Column(Float, nullable=True, default=0.00)
     auctioned_amount = Column(Float, nullable=True, default=0.00)
+    kyc_verified = Column(Boolean, default=False)
     role = Column(
         ENUM(UserRoles, name='userroles', create_type=True, schema='auctora_dev'), 
         nullable=False, default=UserRoles.CLIENT

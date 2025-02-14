@@ -11,12 +11,16 @@ __all__ = ["app_configs", "AppConfigs"]
 
 class DataBaseSettings(BaseSettings):
     DATABASE_URL: str
+    NEON_DB_URL: str
     SCHEMA: str
     REDIS_HOST: str
     REDIS_PORT: str
     REDIS_DB: str
     REDIS_URL: str
     TEST_DATABASE: Optional[str]
+
+    def all(self):
+        return [self.DATABASE_URL, self.NEON_DB_URL]
 
 
 class JWTSettings(BaseSettings):
