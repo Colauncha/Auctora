@@ -1,14 +1,27 @@
-import React from "react";
 import BreadCrumb from "../../Components/Breadcrumbs";
 import Button from "../../Components/Button";
 import Input from "../../Components/auth/Input";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Otp = () => {
+  const [loading, setLoading] = useState(false);
+
+  const navigate = useNavigate();
   const generateOtp = () => {
     console.log("Generating OTP...");
   };
   const verify = () => {
-    console.log("Verifying...");
+    try {
+      setLoading(true);
+      console.log("Verifying...");
+    } catch (error) {
+      console.error("Error during verification", error);
+    } finally {
+      setLoading(false);
+      console.log("Verification in progress...");
+      navigate("/profile");
+    }
   };
   return (
     <>
@@ -76,6 +89,7 @@ const Otp = () => {
                   label={`Verify`}
                   onClick={verify}
                   className={`hover:bg-[#de506d] w-[500px]`}
+                  loading={loading ? "Verifying..." : ""}
                 />
               </div>
             </fieldset>

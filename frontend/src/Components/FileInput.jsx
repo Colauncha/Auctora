@@ -1,10 +1,10 @@
 import React from "react";
 import { upload } from "../Constants";
 
-const FileInput = ({ text }) => {
+const FileInput = ({ text, className }) => {
   return (
     <div
-      className={`${`className`} flex items-center cursor-pointer justify-center border-[1px] p-3 w-full lg:w-[400px] border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100`}
+      className={`${className} flex items-center cursor-pointer justify-center border-[1px] p-3 w-full lg:w-[400px] border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100`}
     >
       <div className="relative">
         <input type="file" id="file-input" className="hidden" />

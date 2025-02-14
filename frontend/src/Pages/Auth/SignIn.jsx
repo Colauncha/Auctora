@@ -14,7 +14,7 @@ const SignIn = () => {
       <div className="formatter">
         <div className="py-6">
           <Breadcrumbs />
-          <div className="flex w-full">
+          <div className="flex w-full mt-6">
             <AuthFormSginIn heading={`Sign In`} />
             <div className="hidden lg:block">
               <AuthNote

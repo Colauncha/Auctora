@@ -90,28 +90,3 @@ const AddressVerification = () => {
 };
 
 export default AddressVerification;
-
-const AddressForm = () => {
-  return (
-    <div className="border-2 border-blue-400 p-6 rounded-lg w-full">
-      <h2 className="text-xl font-semibold text-red-700 mb-4">
-        Address Information
-      </h2>
-
-      <div className="grid grid-cols-2 gap-10">
-        {/* Country */}
-
-        {/* State */}
-      </div>
-
-      {/* Address Textarea */}
-
-      {/* Next Button */}
-      <button className="mt-4 bg-red-700 text-white px-6 py-2 rounded">
-        Next
-      </button>
-    </div>
-  );
-};
-
-// export default AddressForm;

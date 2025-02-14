@@ -3,14 +3,45 @@ import Button from "../Button";
 import Input from "./Input";
 import useModeStore from "../../Store/Store";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 const AuthFormSginUp = ({ heading }) => {
   const { isMobile } = useModeStore();
   const navigate = useNavigate();
-  const submit = () => {
-    console.log("submitting....");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [checked, setChecked] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const response = await fetch("http://localhost:5000/api/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "applications/json",
+        },
+        body: JSON.stringify({ email, password, checked }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Sign Up Successful", data);
+        localStorage.setItem("token", data.token);
+        alert("Sign Up Successful");
+        navigate("/opt"); // add product
+      } else {
+        const errorData = await response.json();
+        console.error("sign up failed: ", errorData.message);
+      }
+    } catch (error) {
+      console.error("Error during sign up", error);
+    } finally {
+      setLoading(false);
+    }
+    console.log("Sign up, please wait");
   };
-  const signIn = () => {
+  const SignIn = () => {
     navigate("/sign-in");
   };
   return (
@@ -28,7 +59,7 @@ const AuthFormSginUp = ({ heading }) => {
               </p>
               <span
                 className="text-[#de506d] text-[12px] cursor-pointer"
-                onClick={signIn}
+                onClick={SignIn}
               >
                 Sign In
               </span>
@@ -39,18 +70,27 @@ const AuthFormSginUp = ({ heading }) => {
             id={`email`}
             type={`email`}
             htmlFor={`email`}
+            className={`focus:outline-[#9f3248]`}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
           <Input
             title={`Password`}
             id={`password`}
             type={`password`}
             htmlFor={`password`}
+            className={`focus:outline-[#9f3248]`}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
           <Input
             title={`Confirm Password`}
             id={`password`}
             type={`password`}
             htmlFor={`password`}
+            className={`focus:outline-[#9f3248]`}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
           <div className="flex items-center  gap-4">
             <Input
@@ -58,6 +98,8 @@ const AuthFormSginUp = ({ heading }) => {
               type={`checkbox`}
               htmlFor={`checkbox`}
               className={`outline-none border-none`}
+              value={checked}
+              onChange={(e) => setChecked(e.target.value)}
             />
             <p className="text-[#848a8f]">I accept terms and conditions</p>
           </div>

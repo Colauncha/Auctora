@@ -1,11 +1,11 @@
 import React from "react";
-import BreadCrumb from "../../Components/Breadcrumbs";
-import Button from "../../Components/Button";
-import StepProgress from "../../Components/StepProgress";
-import UploadDetails from "../../Components/UploadDetails";
-import Units from "../../Components/Units";
+import BreadCrumb from "../../../Components/Breadcrumbs";
+import StepProgress from "../../../Components/StepProgress";
+import UploadDetails from "../../../Components/UploadDetails";
+import Units from "../../../Components/Units";
+import Button from "../../../Components/Button";
 
-const AddProduct = () => {
+const ProductDelivery = () => {
   return (
     <>
       <div className="formatter">
@@ -32,4 +32,4 @@ const AddProduct = () => {
   );
 };
 
-export default AddProduct;
+export default ProductDelivery;
