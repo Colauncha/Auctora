@@ -17,8 +17,6 @@
     }
   ],
   "env": {
-    "UVICORN_LOOP": "asyncio",
-    "PYTHONUNBUFFERED": "1",
-    "PYTHONASYNCIODEBUG": "1"
+    "UVICORN_LOOP": "asyncio"
   }
 }
