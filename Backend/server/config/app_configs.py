@@ -55,6 +55,7 @@ class CloudinaryConfig(BaseSettings):
 
 class PayStack(BaseSettings):
     SECRET_KEY: str
+    PAYSTACK_URL: str
     model_config = {}
     model_config['env_prefix'] = 'TEST_' if ENV == 'development' else ''
 

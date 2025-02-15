@@ -13,7 +13,8 @@ from server.schemas import (
     ErrorResponse, PagedResponse,
     GetUsers, GetNotificationsSchema,
     NotificationQuery, UpdateNotificationSchema,
-    WalletTransactionSchema
+    WalletTransactionSchema, VerifyTransactionData,
+    InitializePaymentRes
 )
 from server.services import (
     UserServices,
@@ -267,26 +268,38 @@ async def update(
 ###############################################################################
 ############################ Transactions Endpoints ###########################
 ###############################################################################
-from pydantic import BaseModel, Field
-from typing import Optional
-class DData(BaseModel):
-    email: str
-    amount: float
-    user_id: str
-    reference_id: Optional[str] = Field(default=None)
 
-@transac_route.post('/verify/{ref}')
-# @permissions(permission_level=Permissions.CLIENT)
+@transac_route.get('/init')
+@permissions(permission_level=Permissions.CLIENT)
+async def get_gateway_url(
+    user: current_user,
+    amount: str
+) -> InitializePaymentRes:
+    url = f"{app_configs.paystack.PAYSTACK_URL}/transaction/initialize"
+    headers = {
+        "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "amount": amount * 100,
+        "email": user.email,
+    }
+    response = requests.post(url, headers=headers, json=data)
+    res_data: dict = response.json()
+    return InitializePaymentRes.model_validate(res_data)
+
+
+@transac_route.post('/verify')
+@permissions(permission_level=Permissions.CLIENT)
 async def verify_funding(
-    # user: current_user,
-    ref: str,
-    data: DData,
+    user: current_user,
+    data: VerifyTransactionData,
     db: Session = Depends(get_db)
 ) -> WalletTransactionSchema:
     extra = {
         'transaction_type': TransactionTypes.CREDIT,
     }
-    url = f"https://api.paystack.co/transaction/verify/{ref}"
+    url = f"{app_configs.paystack.PAYSTACK_URL}/transaction/verify/{data.reference_id}"
     headers = {
         "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}"
     }
@@ -299,7 +312,8 @@ async def verify_funding(
     else:
         extra['status'] = TransactionStatus.FAILED
         extra['description'] = res_data.get('message')
-    data.reference_id = ref
+    data.user_id = str(user.id)
+    data.email = user.email
     _ = await UserWalletTransactionServices(db).create(data.model_dump(), extra)
     return WalletTransactionSchema(**data.model_dump(), **extra)
 

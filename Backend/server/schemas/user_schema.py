@@ -153,3 +153,24 @@ class WalletTransactionSchema(BaseModel):
     transaction_type: TransactionTypes
     status: TransactionStatus
     reference_id: str
+
+
+class VerifyTransactionData(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    email: Optional[str] = Field(default=None)
+    amount: float
+    user_id: Optional[str] = Field(default=None)
+    reference_id: str
+
+
+class AuthorizationURL(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    authorization_url: str
+    access_code: str
+    reference: str
+
+class InitializePaymentRes(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    status: bool
+    message: str
+    data: AuthorizationURL
