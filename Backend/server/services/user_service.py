@@ -201,26 +201,12 @@ class UserServices:
                 "We are glad to have you on board"
             )
             # Check if email already exist
-            exist_user_email = await self.repo.get_by_email(
-                data.get('email')
-            )
-            if exist_user_email:
-                raise ExcRaiser(
-                    message="Email already in use",
-                    status_code=400,
-                    detail="Use another email address or login with the email"
-                )
-
-            # Check if username already exist
-            exist_user_username = await self.repo.get_by_username(
-                data.get('username')
-            )
-            if exist_user_username:
-                raise ExcRaiser(
-                    message="Username already in use",
-                    status_code=400,
-                    detail="Use another username address or login with the username"
-                )
+            ex_uname = await self.repo.get_by_username(data.get('username'))\
+            if data.get('username') else None
+            ex_email = await self.repo.get_by_email(data.get('email'))
+            print(f'name: {ex_uname},\nemail: {ex_email}')
+            if ex_email or ex_uname:
+                raise ExcRaiser400(detail='Username or email already exist')
 
             # Create new user
             else:
@@ -264,7 +250,7 @@ class UserServices:
     async def create_admin(self, data: dict):
         try:
             ex_uname = await self.repo.get_by_username(data.get('username'))
-            ex_email = await self.repo.get_by_username(data.get('email'))
+            ex_email = await self.repo.get_by_email(data.get('email'))
             if ex_email or ex_uname:
                 raise ExcRaiser400(message='User already exist')
             data['role'] = UserRoles.ADMIN
