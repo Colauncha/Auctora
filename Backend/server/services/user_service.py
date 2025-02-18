@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 from sqlalchemy.orm import Session
 from server.models.users import Users
+from server.enums.user_enums import UserRoles
 from passlib.context import CryptContext
 from server.config.database import get_db
 from server.repositories import DBAdaptor
@@ -211,16 +212,15 @@ class UserServices:
                 )
 
             # Check if username already exist
-            if data.get('username'):
-                exist_user_username = await self.repo.get_by_username(
-                    data.get('username')
+            exist_user_username = await self.repo.get_by_username(
+                data.get('username')
+            )
+            if exist_user_username:
+                raise ExcRaiser(
+                    message="Username already in use",
+                    status_code=400,
+                    detail="Use another username address or login with the username"
                 )
-                if exist_user_username:
-                    raise ExcRaiser(
-                        message="Username already in use",
-                        status_code=400,
-                        detail="Use another username address or login with the username"
-                    )
 
             # Create new user
             else:
@@ -245,12 +245,12 @@ class UserServices:
                 async_redis = await redis_store.get_async_redis()
                 _ = await async_redis.set(f'otp:{new_user.email}', otp, ex=1800)
                 # url = f"http://link.to.frontend/verify_otp?id={id}&otp={otp}"
-
-                return {
+                data = {
                     'email': new_user.email,
                     'otp': otp,
-                    # 'url': url,
                 }
+                await publish_otp(data)
+                return data
 
         except Exception as e:
             if type(e) == ExcRaiser:
@@ -261,14 +261,36 @@ class UserServices:
                 detail=str(e)
             )
 
-    # async def create_admin(self, data: dict):
-    #     try:
-    #         ex_uname = await self.repo.get_by_username(data.get('username'))
-    #         ex_email = await self.repo.get_by_username(data.get('email'))
-    #         if ex_email or ex_uname:
-    #             raise Exception()
-    #     except Exception as e:
-    #         ...
+    async def create_admin(self, data: dict):
+        try:
+            ex_uname = await self.repo.get_by_username(data.get('username'))
+            ex_email = await self.repo.get_by_username(data.get('email'))
+            if ex_email or ex_uname:
+                raise ExcRaiser400(message='User already exist')
+            data['role'] = UserRoles.ADMIN
+            new_user = await self.repo.add(data)
+            new_user = GetUserSchema.model_validate(new_user)
+            # Create a notification for the new user
+            _ = await self.notification.create(
+                CreateNotificationSchema(
+                    title="ADMIN Registration",
+                    message="You have been registered as an Admin",
+                    user_id=new_user.id
+                )
+            )
+            otp = otp_generator()
+            async_redis = await redis_store.get_async_redis()
+            _ = await async_redis.set(f'otp:{new_user.email}', otp, ex=1800)
+            data = {
+                'email': new_user.email,
+                'otp': otp,
+            }
+            await publish_otp(data)
+            return data
+        except Exception as e:
+            if type(e) == ExcRaiser:
+                raise e
+            raise ExcRaiser500()
 
     async def retrieve(self, id) -> GetUserSchema:
         try:

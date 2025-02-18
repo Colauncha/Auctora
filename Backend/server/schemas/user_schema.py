@@ -9,7 +9,7 @@ from server.enums.user_enums import (
 )
 
 
-class GetUserSchema(BaseModel):
+class GetUsersSchemaPublic(BaseModel):
     id: UUID = Field(
         description="ID of the User",
         examples=["84hgdf-dmeu-fvtre-wectb-yyrrv4254"]
@@ -45,6 +45,17 @@ class GetUserSchema(BaseModel):
     )
 
     model_config = {"from_attributes": True}
+
+
+class GetUserSchema(GetUsersSchemaPublic):
+    wallet: float = Field(
+        description="User's wallet balance",
+        examples=[1000.00]
+    )
+    available_balance: float = Field(
+        description="User's available balance",
+        examples=[900.00]
+    )
 
 
 class CreateUserSchema(BaseModel):

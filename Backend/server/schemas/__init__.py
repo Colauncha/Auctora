@@ -57,7 +57,7 @@ class PagedQuery(pyd.BaseModel):
     # attr: Optional[str|int] = Query(default=None, description="Attribute to filter by")
 
 
-class GetUsers(GetUserSchema):
+class GetUsers(GetUsersSchemaPublic):
     model_config = {"from_attributes": True}
     auctions: Optional[list[GetAuctionSchema]] = Field(default=[])
 

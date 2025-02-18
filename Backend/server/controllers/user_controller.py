@@ -14,7 +14,7 @@ from server.schemas import (
     GetUsers, GetNotificationsSchema,
     NotificationQuery, UpdateNotificationSchema,
     WalletTransactionSchema, VerifyTransactionData,
-    InitializePaymentRes
+    InitializePaymentRes, GetUsersSchemaPublic
 )
 from server.services import (
     UserServices,
@@ -59,7 +59,7 @@ async def retrieve_users(
     user: current_user,
     id: str,
     db: Session = Depends(get_db)
-) -> APIResponse[GetUserSchema]:
+) -> APIResponse[GetUsersSchemaPublic]:
     """
     Get user
     """
@@ -81,21 +81,9 @@ async def retrieve_users(
     )
 async def register(
     data: CreateUserSchema,
-    background_task: BackgroundTasks,
     db: Session = Depends(get_db)
 ) -> APIResponse:
-    result = await UserServices(db).create_user(data.model_dump(exclude_unset=True))
-    emailer = Emailer(
-        subject="Email verification",
-        to=result.get('email'),
-        template_name="otp_template.html",
-        otp=result.get('otp')
-    )
-    emailer = await emailer.enter()
-    background_task.add_task(
-        emailer.send_message
-    )
-
+    _ = await UserServices(db).create_user(data.model_dump(exclude_unset=True))
     return APIResponse(
         data={
             'message':
@@ -114,17 +102,7 @@ async def register_admin(
 ) -> APIResponse:
     data = data.model_dump(exclude_unset=True)
     data['role'] = UserRoles.ADMIN
-    result = await UserServices(db).create_user(data)
-    emailer = Emailer(
-        subject="Email verification",
-        to=result.get('email'),
-        template_name="otp_template.html",
-        otp=result.get('otp')
-    )
-    emailer = await emailer.enter()
-    background_task.add_task(
-        emailer.send_message
-    )
+    _ = await UserServices(db).create_user(data)
 
     return APIResponse(
         data={
