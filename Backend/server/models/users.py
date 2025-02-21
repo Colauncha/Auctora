@@ -1,12 +1,23 @@
-from server.models.base import BaseModel
-from server.enums.user_enums import (
-    UserRoles, TransactionStatus,
-    TransactionTypes,
+from sqlalchemy import (
+    UUID,
+    Boolean,
+    Column,
+    Float,
+    ForeignKey,
+    String,
+    Enum
 )
-from sqlalchemy import UUID, Boolean, Column, Float, ForeignKey, String, Enum
+from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import relationship
 from passlib.context import CryptContext
-from sqlalchemy.dialects.postgresql import ENUM
+
+from server.models.base import BaseModel
+from server.enums.user_enums import (
+    UserRoles,
+    TransactionStatus,
+    TransactionTypes,
+)
+
 
 
 class Users(BaseModel):
@@ -25,7 +36,10 @@ class Users(BaseModel):
     auctioned_amount = Column(Float, nullable=True, default=0.00)
     kyc_verified = Column(Boolean, default=False)
     role = Column(
-        ENUM(UserRoles, name='userroles', create_type=True, schema='auctora_dev'), 
+        ENUM(
+            UserRoles, name='userroles',
+            create_type=True, schema='auctora_dev'
+        ), 
         nullable=False, default=UserRoles.CLIENT
     )
 
@@ -84,7 +98,11 @@ class Notifications(BaseModel):
     __tablename__ = 'notifications'
     __mapper_args__ = {'polymorphic_identity': 'notifications'}
 
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), index=True)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('users.id', ondelete='CASCADE'),
+        index=True
+        )
     title = Column(String, nullable=False)
     message = Column(String, nullable=False)
     read = Column(Boolean, default=False)
@@ -99,16 +117,26 @@ class Notifications(BaseModel):
 class WalletTransactions(BaseModel):
     __tablename__ = 'wallet_transactions'
     __mapper_args__ = {'polymorphic_identity': 'wallet_transactions'}
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), index=True)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('users.id', ondelete='CASCADE'),
+        index=True
+    )
     amount = Column(Float, nullable=False, default=0.00)
     description = Column(String, nullable=True)
     reference_id = Column(String, index=True)
     transaction_type = Column(
-        ENUM(TransactionTypes, name='transaction_types', create_type=True, schema='auctora_dev'), 
+        ENUM(
+            TransactionTypes, name='transaction_types',
+            create_type=True, schema='auctora_dev'
+        ),
         nullable=False, default=TransactionTypes.FUNDING
     )
     status = Column(
-        ENUM(TransactionStatus, name='transaction_status', create_type=True, schema='auctora_dev'), 
+        ENUM(
+            TransactionStatus, name='transaction_status',
+            create_type=True, schema='auctora_dev'
+        ), 
         nullable=False, default=TransactionStatus.PENDING
     )
 

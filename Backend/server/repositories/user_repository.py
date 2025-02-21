@@ -41,7 +41,7 @@ class UserRepository(Repository):
     
     async def wtab(self, id: str, amount: float):
         """
-        WALLET TO AUCTION_BALANCE\n
+        WALLET/AVAILABLE_BALANCE TO AUCTION_BALANCE\n
         Transfer of fund from a users available_balance to the same users\
         auctioned_balance, summation of both equates to wallet balance.
         `avaialable_balance`: Money that can be spent on auctions.
@@ -52,7 +52,6 @@ class UserRepository(Repository):
             - amount <float>: Transaction amount
         """
         try:
-            print('checkpoint 1')
             with self.db.begin(nested=True):
                 user = self.db.query(Users).filter(Users.id == id).first()
                 user.available_balance -= amount
@@ -76,7 +75,7 @@ class UserRepository(Repository):
         
     async def abtw(self, id: str, amount: float):
         """
-        AUCTION_BALANCE TO WALLET\n
+        AUCTION_BALANCE TO WALLET/AVAILABLE_BALANCE\n
         Transfer of fund from a users auctioned_balance to the same users\
         avaialable_balance, summation of both equates to wallet balance.
         `avaialable_balance`: Money that can be spent on auctions.

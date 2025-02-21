@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from fastapi import WebSocket
 from sqlalchemy.orm import Session
 from server.config import redis_store
 from server.models.bids import Bids
 from server.services.user_service import UserNotificationServices
+from server.services.auction_service import AuctionServices
 from server.repositories import DBAdaptor
 from server.middlewares.exception_handler import ExcRaiser400, ExcRaiser
 from server.enums.auction_enums import AuctionStatus
@@ -21,6 +22,7 @@ class BidServices:
         self.user_repo = DBAdaptor(db).user_repo
         self.auction_repo = DBAdaptor(db).auction_repo
         self.notification = UserNotificationServices(db).create
+        self.auctions_services = AuctionServices(db)
 
     async def retrieve(self, id: str) -> GetBidSchema:
         try:
@@ -36,6 +38,58 @@ class BidServices:
         except Exception as e:
             raise e
 
+    async def buy_now(self, data: CreateBidSchema) -> GetBidSchema:
+        try:
+            user = await self.user_repo.get_by_id(data.user_id)
+            auction = await self.auction_repo.get_by_id(data.auction_id)
+            date = datetime.now(tz=timezone.utc)
+            data.amount = auction.buy_now_price
+
+            if auction.status != AuctionStatus.ACTIVE:
+                raise ExcRaiser400(
+                    f'Auction is not active, status: {auction.status.value}'
+                )
+            if auction.end_date < date:
+                raise ExcRaiser400('Auction has ended')
+            
+            if not auction.buy_now:
+                raise ExcRaiser400('Buy now is not enabled')
+
+            if auction.private:
+                participant = await self.auction_repo.validate_participant(
+                    data.auction_id, user.email
+                )
+                if not participant:
+                    raise ExcRaiser(
+                        status_code=403,
+                        message='Unauthorized',
+                        detail='You are not a participant in this auction'
+                    )
+            exist = await self.repo.exists(
+                {"auction_id":data.auction_id, "user_id":data.user_id}
+            )
+            if exist:
+                amount = data.amount - exist.amount
+            else:
+                amount = data.amount
+
+            if user.available_balance < amount:
+                raise ExcRaiser400('Insufficient wallet balance')
+            if exist:
+                bid = await self.repo.update(
+                    exist, {'amount': data.amount}
+                )
+            else:
+                bid = await self.repo.add(data.model_dump())
+            await self.auction_repo.update(
+                auction, {'current_price': data.amount}
+            )
+            await self.auctions_services.close(data.auction_id)
+            return bid
+        except Exception as e:
+            raise e
+            
+
     async def create(self, data: CreateBidSchema) -> GetBidSchema:
         try:
             NOTIF_TITLE = 'Bid Placed'
@@ -45,24 +99,31 @@ class BidServices:
             )
             user = await self.user_repo.get_by_id(data.user_id)
             auction = await self.auction_repo.get_by_id(data.auction_id)
-            time = datetime.now()
+            date = datetime.now(tz=timezone.utc)
 
             # if auction.status != AuctionStatus.ACTIVE:
             #     raise ExcRaiser400('Auction is not active')
 
-            # if auction.end_time < time:
+            # if auction.end_time < date:
             #     raise ExcRaiser400('Auction has ended')
 
             # TODO: Check if price >= auction.buy_now_price
             # if auction.buy_now:
             #   if data.amount >= auction.buy_now_price:
-            #       
+            #       return await self.buy_now(data)
+
+            # Check if price is within 10% of buy_now_price
+            if auction.buy_now:
+                if data.amount >= auction.buy_now_price * 0.9:
+                    await self.auction_repo.update(
+                        auction, {'buy_now': False}
+                    )
 
             prev_bids = sorted(
                 auction.bids, key=lambda x: x.amount, reverse=True
             )
 
-            if data.amount <= prev_bids[0].amount:
+            if data.amount <= auction.current_price:
                 raise ExcRaiser400(
                     'Amount must be higher than current highest bid'
                 )
@@ -98,6 +159,9 @@ class BidServices:
             if bid:
                 await self.notify(user.id, NOTIF_TITLE, NOTIF_BODY)
                 await self.nphb(bid.auction_id, user.id)
+            await self.auction_repo.update(
+                auction, {'current_price': data.amount}
+            )
             return bid
         except Exception as e:
             raise e
@@ -126,9 +190,6 @@ class BidServices:
                 message=str(e),
                 websocket=ws
             )
-
-    async def buy_now(self, auction_id: str, user_id: str):
-        ...
 
     async def update(
             self, amount: float,
@@ -164,7 +225,7 @@ class BidServices:
                 if not exists:
                     raise ExcRaiser400(message='Bid not found')
 
-                amount_ = exists.amount - amount
+                amount_ = amount - exists.amount
 
                 if user.available_balance < amount_:
                     raise ExcRaiser400('Insufficient wallet balance')
@@ -177,6 +238,10 @@ class BidServices:
                     await self.nphb(bid.auction_id, user.id)
             else:
                 raise ExcRaiser400(message='Bid not found')
+            auction = await self.auction_repo.get_by_id(auc__id)
+            await self.auction_repo.update(
+                auction, {'current_price': amount}
+            )
             return bid
         except Exception as e:
             raise e

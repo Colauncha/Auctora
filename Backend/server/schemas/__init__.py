@@ -6,6 +6,7 @@ from server.schemas.user_schema import *
 from server.schemas.item_category_schema import *
 from server.schemas.auction_schema import *
 from server.schemas.bid_schema import *
+from server.schemas.payment_schema import *
 
 
 T = t.TypeVar("T")
@@ -83,3 +84,33 @@ class AuctionQueryScalar(PagedQuery):
 
 class BidQuery(PagedQuery):
     auction_id: Optional[UUID] = Query(default=None, description="Auction ID")
+
+
+class PaystackData(BaseModel):
+    model_config = {"from_attributes": True}
+    id: Union[any, int, str] = Field(examples=["123456"], description="Transaction ID")
+    domain: str = Field(examples=["live"], description="Domain")
+    status: str = Field(examples=["success"], description="Transaction status")
+    amount: int = Field(examples=[10000], description="Amount")
+    currency: str = Field(examples=["NGN"], description="Currency")
+    message: Optional[str] = Field(
+        examples=["Transaction successful"],
+        description="Transaction message",
+        default=None
+    )
+    transfer_code: str = Field(
+        default=None,
+        examples=["TRF_123456"],
+        description="Transfer code"
+    )
+    source: str = Field(
+        default=None,
+        examples=["balance"],
+        description="Source"
+    )
+
+
+class PaystackWebhookSchema(BaseModel):
+    event: str = Field(examples=["charge.success"], description="Event type")
+    data: PaystackData = Field(description="Data object")
+    model_config = {"from_attributes": True}

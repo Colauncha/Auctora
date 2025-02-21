@@ -19,3 +19,6 @@ class AuctionRepository(Repository):
             return True if confirmed_participant else False
         except Exception as e:
             raise e
+
+    async def get_all(self, filter = None, relative = False):
+        return await super().get_all(filter, relative)

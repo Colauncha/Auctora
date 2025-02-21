@@ -34,7 +34,22 @@ async def create(
     data["user_id"] = user.id
     data["username"] = user.username
     result = await BidServices(db).create(CreateBidSchema(**data))
-    return result
+    return APIResponse(data=result)
+
+
+@route.post('/buy_now')
+@permissions(permission_level=Permissions.CLIENT)
+async def buy_now(
+    user: current_user,
+    data: CreateBidSchema,
+    db: Session = Depends(get_db)
+) -> APIResponse[GetBidSchema]:
+    data = data.model_dump()
+    data["user_id"] = user.id
+    data["username"] = user.username
+    result = await BidServices(db).buy_now(CreateBidSchema(**data))
+    return APIResponse(data=result)
+
 
 
 @route.put('/{bid_id}')

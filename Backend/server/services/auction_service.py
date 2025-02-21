@@ -4,7 +4,7 @@ from server.config import redis_store
 from server.repositories import DBAdaptor
 from server.models.items import Items
 from server.enums.auction_enums import AuctionStatus
-# from server.events.publisher import p
+from server.events.publisher import publish_win_auction
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
 )
@@ -14,7 +14,7 @@ from server.services.user_service import (
 from server.schemas import (
     GetAuctionSchema, AuctionParticipantsSchema,
     CreateNotificationSchema, CreateAuctionParticipantsSchema,
-    PagedQuery, PagedResponse, GetUserSchema
+    PagedQuery, PagedResponse, GetUserSchema, CreatePaymentSchema
 )
 
 
@@ -24,6 +24,7 @@ class AuctionServices:
         self.participant_repo = DBAdaptor(db).auction_p_repo
         self.user_repo = UserServices(db).repo
         self.notification = UserNotificationServices(db).create
+        self.payment_repo = DBAdaptor(db).payment_repo
 
     # Auction services
     async def create(self, data: dict):
@@ -63,22 +64,16 @@ class AuctionServices:
                 raise ExcRaiser404("Auction not found")
             return GetAuctionSchema.model_validate(result)
         except Exception as e:
-            print((type(e)))
             if issubclass(type(e), ExcRaiser):
                 raise e
             raise e
 
     async def list(self, filter: PagedQuery) -> PagedResponse[list[GetAuctionSchema]]:
         try:
-            result = await self.repo.get_all(filter.model_dump(exclude_unset=True))
-            if result:
-                valid_auctions = [
-                    GetAuctionSchema.model_validate(auction).model_dump()
-                    for auction in result.data
-                    if auction.private is False
-                ]
-                result.data = valid_auctions
-                return result
+            filter = filter.model_dump(exclude_unset=True)
+            filter['private'] = False
+            result = await self.repo.get_all(filter)
+            return result
         except Exception as e:
             if issubclass(type(e), ExcRaiser):
                 raise e
@@ -118,6 +113,49 @@ class AuctionServices:
             async_redis = await redis_store.get_async_redis()
             bid_list = async_redis.get(f'auction:{auction_id}')
             await ws.send(bid_list)
+        except Exception as e:
+            raise e
+
+    async def close(self, id: str):
+        try:
+            auction = await self.repo.get_by_id(id)
+            if auction:
+                await self.repo.update(
+                    auction, {'status': AuctionStatus.COMPLETED}
+                )
+                self.notify(
+                    auction.users_id, 'Auction Closed',
+                    'Your auction has been closed'
+                )
+                bids: list = auction.bids
+                winner = max(bids, key=lambda x: x.amount)
+                await self.payment_repo.add(
+                    CreatePaymentSchema(
+                        from_id=winner.id, to_id=auction.users_id,
+                        auction_id=auction.id, amount=winner.amount
+                    )
+                )
+                await self.notify(
+                    winner.user_id, 'Auction Won',
+                    'Congratulations, you have won the auction'
+                )
+                await publish_win_auction(
+                    {
+                        'auction_id': id,
+                        'winner': winner.user_id,
+                        'amount': winner.amount
+                    }
+                )
+                # TODO: Develop system to move amount to company's account
+                bids = sorted(bids, key=lambda x: x.amount)
+                print(bid.amount for bid in bids)
+                bids = bids[:-1]
+                for bid in bids:
+                    _ = await self.user_repo.abtw(bid.user_id, bid.amount)
+                    await self.notify(
+                        bid.user_id, 'Auction Lost',
+                        'You have lost the auction, Amount has been returned'
+                    )
         except Exception as e:
             raise e
 

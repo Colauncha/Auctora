@@ -1,11 +1,16 @@
-from fastapi import APIRouter, Depends, BackgroundTasks, Response
+from fastapi import APIRouter, Depends, Request, Response
 from server.config import get_db, redis_store, app_configs
 from server.enums import ServiceKeys
-from server.enums.user_enums import Permissions, TransactionTypes, UserRoles, TransactionStatus
-from server.middlewares.exception_handler import ExcRaiser
+from server.enums.user_enums import (
+    Permissions,
+    TransactionTypes,
+    UserRoles,
+    TransactionStatus
+)
+from server.middlewares.exception_handler import ExcRaiser, ExcRaiser400
 from server.middlewares.auth import permissions
 from server.schemas import (
-    CreateUserSchema, VerifyOtpSchema,
+    CreateUserSchema, PaystackWebhookSchema, VerifyOtpSchema,
     APIResponse, UpdateUserSchema,
     GetUserSchema, ResetPasswordSchema,
     LoginSchema, ChangePasswordSchema,
@@ -97,7 +102,6 @@ async def register(
 async def register_admin(
     user: current_user,
     data: CreateUserSchema,
-    background_task: BackgroundTasks,
     db: Session = Depends(get_db)
 ) -> APIResponse:
     data = data.model_dump(exclude_unset=True)
@@ -294,6 +298,19 @@ async def verify_funding(
     data.email = user.email
     _ = await UserWalletTransactionServices(db).create(data.model_dump(), extra)
     return WalletTransactionSchema(**data.model_dump(), **extra)
+
+
+@transac_route.post('/paystack/webhook')
+async def call_back(
+    request: Request,
+    data: PaystackWebhookSchema
+) -> APIResponse:
+    # signature = request.headers.get("x-paystack-signature")
+    
+    # if not signature:
+    #     raise ExcRaiser400(detail="Signature missing")
+    print(data)
+    return APIResponse()
 
 
 route.include_router(notif_route)

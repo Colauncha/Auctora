@@ -117,12 +117,8 @@ class Repository:
         limit = per_page
         offset = paginator(page, per_page)
         QueryModel = self._Model
-        # attr = filter.pop('attr') if (filter and filter.get('attr')) else None
 
         try:
-            # if filter and relative:
-            #     query = self.db.query(QueryModel).filter(attr)
-            #     total = query.count
             if filter:
                 query = self.db.query(QueryModel).filter_by(**filter)
                 total = query.count()

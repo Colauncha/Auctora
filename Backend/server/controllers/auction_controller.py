@@ -30,9 +30,9 @@ async def create(
 
 
 @route.get('/')
-@permissions(permission_level=Permissions.AUTHENTICATED)
+# @permissions(permission_level=Permissions.AUTHENTICATED)
 async def list(
-    user: current_user,
+    # user: current_user,
     filter: PagedQuery = Depends(PagedQuery),
     db: Session = Depends(get_db)
 ) -> PagedResponse[list[GetAuctionSchema]]:

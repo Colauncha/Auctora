@@ -1,11 +1,11 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Union
 from uuid import UUID, uuid4
 from server.config import app_configs
 
 
 class CreateBidSchema(BaseModel):
-    auction_id: UUID = Field(example=uuid4(), description="Auction ID")
+    auction_id: Union[UUID, str] = Field(example=uuid4(), description="Auction ID")
     user_id: Optional[UUID] = Field(default=None,example=uuid4(), description="user ID")
     username: Optional[str] = Field(default=None, example=app_configs.test_user.USERNAME)
     amount: float = Field(example=100.00, description="Amount to place on bid")
@@ -13,7 +13,7 @@ class CreateBidSchema(BaseModel):
 
 
 class GetBidSchema(CreateBidSchema):
-    id: str
+    id: Union[UUID, str]
 
 
 class UpdateBidSchema(BaseModel):

@@ -445,7 +445,6 @@ class UserServices:
             raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
         return await UserServices._get_current_user(token, db)
 
-
     @staticmethod
     async def _get_current_user(
         token: Annotated[str, Depends(oauth_bearer), Depends(get_from_cookie)],
