@@ -255,7 +255,7 @@ async def update(
 @permissions(permission_level=Permissions.CLIENT)
 async def get_gateway_url(
     user: current_user,
-    amount: str
+    amount: int
 ) -> InitializePaymentRes:
     url = f"{app_configs.paystack.PAYSTACK_URL}/transaction/initialize"
     headers = {
@@ -266,8 +266,10 @@ async def get_gateway_url(
         "amount": amount * 100,
         "email": user.email,
     }
+    print(data)
     response = requests.post(url, headers=headers, json=data)
     res_data: dict = response.json()
+    print(res_data)
     return InitializePaymentRes.model_validate(res_data)
 
 
@@ -303,13 +305,19 @@ async def verify_funding(
 @transac_route.post('/paystack/webhook')
 async def call_back(
     request: Request,
-    data: PaystackWebhookSchema
+    data: any
 ) -> APIResponse:
     # signature = request.headers.get("x-paystack-signature")
+    # ip = request.client.host
+
+    # if ip not in app_configs.paystack.PAYSTACK_IP_WL:
+    #     raise ExcRaiser400(detail="IP not allowed")
     
     # if not signature:
     #     raise ExcRaiser400(detail="Signature missing")
+
     print(data)
+    data = PaystackWebhookSchema.model_validate(data)
     return APIResponse()
 
 
