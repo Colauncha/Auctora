@@ -111,6 +111,6 @@ class PaystackData(BaseModel):
 
 
 class PaystackWebhookSchema(BaseModel):
-    event: str = Field(examples=["charge.success"], description="Event type")
-    data: PaystackData = Field(description="Data object")
+    event: Optional[str] = Field(default=None, examples=["charge.success"], description="Event type")
+    data: Union[any, PaystackData] = Field(description="Data object")
     model_config = {"from_attributes": True}
