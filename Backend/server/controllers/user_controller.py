@@ -304,8 +304,7 @@ async def verify_funding(
 
 @transac_route.post('/paystack/webhook')
 async def call_back(
-    request: Request,
-    data: PaystackWebhookSchema
+    request: Request
 ) -> APIResponse:
     # signature = request.headers.get("x-paystack-signature")
     # ip = request.client.host
@@ -316,8 +315,9 @@ async def call_back(
     # if not signature:
     #     raise ExcRaiser400(detail="Signature missing")
 
+    data = await request.json()
+    data = PaystackWebhookSchema.model_validate(data)
     print(data)
-    # data = PaystackWebhookSchema.model_validate(data)
     return APIResponse()
 
 
