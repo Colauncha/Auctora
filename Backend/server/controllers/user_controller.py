@@ -283,7 +283,8 @@ async def verify_funding(
     extra = {
         'transaction_type': TransactionTypes.CREDIT,
     }
-    url = f"{app_configs.paystack.PAYSTACK_URL}/transaction/verify/{data.reference_id}"
+    paystack_url = app_configs.paystack.PAYSTACK_URL
+    url = f"{paystack_url}/transaction/verify/{data.reference_id}"
     headers = {
         "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}"
     }
@@ -298,7 +299,9 @@ async def verify_funding(
         extra['description'] = res_data.get('message')
     data.user_id = str(user.id)
     data.email = user.email
-    _ = await UserWalletTransactionServices(db).create(data.model_dump(), extra)
+    _ = await UserWalletTransactionServices(db).create(
+        data.model_dump(), extra
+    )
     return WalletTransactionSchema(**data.model_dump(), **extra)
 
 
@@ -316,7 +319,7 @@ async def call_back(
     #     raise ExcRaiser400(detail="Signature missing")
 
     data = await request.json()
-    data = PaystackWebhookSchema.model_validate(data)
+    # data = PaystackWebhookSchema.model_validate(data)
     print(data)
     return APIResponse()
 
