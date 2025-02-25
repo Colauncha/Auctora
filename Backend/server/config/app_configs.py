@@ -62,7 +62,7 @@ class PayStack(BaseSettings):
         "52.214.14.220"
     ]
     model_config = {}
-    model_config['env_prefix'] = 'TEST_' if ENV == 'development' else ''
+    model_config['env_prefix'] = 'TEST_' if ENV == 'development' else 'PAYSTACK'
 
 
 class AppConfig(BaseSettings):
