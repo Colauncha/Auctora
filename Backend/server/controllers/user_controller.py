@@ -321,22 +321,19 @@ async def call_back(
         raise ExcRaiser400(detail="IP not allowed")
  
     if not signature:
-        # print("Signature missing")
         raise ExcRaiser400(detail="Signature missing")
 
-    data = await request.json()
-    json_data = json.dumps(data, separators=(",", ":"), sort_keys=True)
-    hash_obj = hmac.new(secret, json_data.encode(), hashlib.sha512).hexdigest()
+    data_bytes = await request.body()
+    hash_obj = hmac.new(secret, data_bytes, hashlib.sha512).hexdigest()
 
-    if not hmac.compare_digest(hash_obj, signature):
+    if not hmac.compare_digest(hash_obj.lower(), signature.lower()):
         print(f'Hash: {hash_obj}')
         print(f'Signature: {signature}')
         raise ExcRaiser400(detail="Invalid signature")
-        # print("Invalid signature")
 
     print("Source verification successful")
 
-    data = PaystackWebhookSchema.model_validate(data)
+    data = PaystackWebhookSchema.model_validate(json.loads(data_bytes))
     return APIResponse()
 
 
