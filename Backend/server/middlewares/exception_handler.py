@@ -1,8 +1,10 @@
-from typing import Any
+from typing import Any, Union
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from pydantic import BaseModel
+from sqlalchemy.exc import (
+    IntegrityError, DataError, OperationalError
+)
 
 
 class ExcRaiser(Exception):
@@ -10,6 +12,16 @@ class ExcRaiser(Exception):
         self.status_code = status_code
         self.message = message
         self.detail = detail
+
+
+class ExcRaiser400(ExcRaiser):
+    default_detail = 'Bad request'
+    message = 'Bad request'
+    def __init__(self, message: str = None, detail: str | Any = None):
+        super().__init__(
+            400, self.message if message is None else message,
+            self.default_detail if detail is None else detail
+        )
 
 
 class ExcRaiser404(ExcRaiser):
@@ -27,14 +39,46 @@ class ExcRaiser500(ExcRaiser):
         super().__init__(500, 'Internal server error', None)
 
 
-async def exception_handler(request: Request, exc: ExcRaiser):
+async def exception_handler(request: Request, exc: ExcRaiser | BaseException):
+    print(exc)
+    if isinstance(exc, ExcRaiser):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                'status_code': exc.status_code,
+                'message': exc.message,
+                'detail': exc.detail
+            }
+        )
+    return JSONResponse(
+        status_code=500,
+        content={
+            'status_code': 500,
+            'message': 'Internal server error',
+            'detail': 'An error occurred while processing your request'
+        }
+    )
+
+
+async def db_exception_handler(request: Request, exc: OperationalError):
     print(exc)
     return JSONResponse(
-        status_code=exc.status_code,
+        status_code=500,
         content={
-            'status_code': exc.status_code,
-            'message': exc.message,
-            'detail': exc.detail
+            'status_code': 500,
+            'message': 'Internal server error',
+            'detail': 'An error occurred while processing your request'
+        }
+    )
+
+async def integrity_error_handler(request: Request, exc: IntegrityError | DataError):
+    print(exc)
+    return JSONResponse(
+        status_code=400,
+        content={
+            'status_code': 400,
+            'message': 'Bad request',
+            'detail': 'An error occurred while processing your request'
         }
     )
 

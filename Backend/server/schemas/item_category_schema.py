@@ -61,10 +61,6 @@ class UpdateItemSchema(CreateItemSchema):
 
 class GetItemSchema(UpdateItemSchema):
     id: UUID
-    users_id: UUID = Field(
-        description="ID of the Seller",
-        examples=["84hgdf-dmeu-fvtre-wectb-yyrrv4254"]
-    )
 
 
 class CreateCategorySchema(BaseModel):

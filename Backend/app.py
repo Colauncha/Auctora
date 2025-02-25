@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-from server import create_app, create_admin
-import uvicorn
 import sys
+import uvicorn
+
+from server import create_app, create_admin
 
 
 app = create_app()

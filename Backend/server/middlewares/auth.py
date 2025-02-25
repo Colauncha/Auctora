@@ -26,12 +26,13 @@ def permissions(
             elif permission_level == Permissions.ADMIN and user.role == UserRoles.ADMIN:
                 return await f(*args, **kwargs)
             elif permission_level == Permissions.CLIENT and (user.role == UserRoles.ADMIN or user.role == UserRoles.CLIENT):
-                if service:
+                if service and service != ServiceKeys.USER:
                     entity_id = kwargs.get(service.id)
                     if not entity_id:
                         raise ExcRaiser404("Entity ID not found")
                     entity = await service.service(kwargs.get('db')).retrieve(entity_id)
-                    if entity.users_id != user.id or entity.id != user.id:
+                    if (getattr(entity, 'users_id', None) != user.id) and (getattr(entity, 'user_id', None) != user.id) and (entity.id != user.id):
+                        print(entity, f'\n{getattr(entity, "user_id", None) == user.id}')
                         raise HTTPException(
                             status_code=403,
                             detail='Unauthorized'

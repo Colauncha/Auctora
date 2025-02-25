@@ -6,7 +6,8 @@ from server.models.users import Users
 from server.schemas import (
     GetUserSchema, GetCategorySchema,
     GetSubCategorySchema, GetItemSchema,
-    PagedResponse
+    PagedResponse, GetAuctionSchema,
+    GetBidSchema
 )
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404
@@ -17,6 +18,7 @@ from server.utils.helpers import paginator
 T = Union[
     GetUserSchema, GetCategorySchema,
     GetItemSchema, GetSubCategorySchema,
+    GetAuctionSchema, GetBidSchema
 
 ]
 
@@ -58,7 +60,7 @@ class Repository:
             entity = self.db.query(self._Model).filter(self._Model.id == id).order_by(self._Model.id)
             if entity:
                 return entity.first()
-            return None
+            raise ExcRaiser404(message='Entity not found')
         except Exception as e:
             raise e
         
@@ -108,7 +110,7 @@ class Repository:
         except Exception as e:
             raise e
         
-    async def get_all(self, filter: dict = None) -> PagedResponse:
+    async def get_all(self, filter: dict = None, relative: bool = False) -> PagedResponse:
     
         page = filter.pop('page') if (filter and filter.get('page')) else 1
         per_page = filter.pop('per_page') if (filter and filter.get('per_page')) else 10

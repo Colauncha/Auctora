@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, WebSocket
 from sqlalchemy.orm import Session
 from server.config import get_db
 from server.schemas import (
     APIResponse, UpdateAuctionSchema,
-    GetAuctionSchema, CreateAuctionSchema
+    GetAuctionSchema, CreateAuctionSchema,
+    PagedQuery, PagedResponse,
 )
 from server.services.auction_service import AuctionServices
 from server.middlewares.auth import (
@@ -23,17 +24,20 @@ async def create(
     db: Session = Depends(get_db)
 ) -> APIResponse[GetAuctionSchema]:
     data = data.model_dump(exclude_unset=True)
-    data["user_id"] = user.id
+    data["users_id"] = user.id
     result = await AuctionServices(db).create(data)
-    return APIResponse(data=result)
+    return APIResponse(status_code=201, data=result)
 
 
 @route.get('/')
+# @permissions(permission_level=Permissions.AUTHENTICATED)
 async def list(
+    # user: current_user,
+    filter: PagedQuery = Depends(PagedQuery),
     db: Session = Depends(get_db)
-) -> APIResponse[GetAuctionSchema]:
-    result = await AuctionServices(db).list()
-    return APIResponse(data=result)
+) -> PagedResponse[list[GetAuctionSchema]]:
+    result = await AuctionServices(db).list(filter)
+    return result
 
 
 @route.get('/{id}')
@@ -58,3 +62,38 @@ async def update(
     data = data.model_dump(exclude_unset=True)
     result = await AuctionServices(db).update(auction_id, data)
     return APIResponse(data=result)
+
+
+# @route.delete('/{auction_id}')
+# @permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.AUCTION)
+# async def delete(
+#     user: current_user,
+#     auction_id: str,
+#     db: Session = Depends(get_db)
+# ) -> APIResponse[GetAuctionSchema]:
+#     result = await AuctionServices(db).delete(auction_id)
+#     return APIResponse(data=result)
+
+
+# @route.put('/{auction_id}/participants')
+# @permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.AUCTION)
+# async def add_participant(
+#     user: current_user,
+#     auction_id: str,
+#     email: list[str],   # This should be a list of emails
+#     db: Session = Depends(get_db)
+# ) -> APIResponse[GetAuctionSchema]:
+#     result = await AuctionServices(db).add_participant(auction_id, email)
+#     return APIResponse(data=result)
+
+
+# @route.delete('/{auction_id}/participants')
+# @permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.AUCTION)
+# async def remove_participant(
+#     user: current_user,
+#     auction_id: str,
+#     email: list[str],   # This should be a list of emails
+#     db: Session = Depends(get_db)
+# ) -> APIResponse[GetAuctionSchema]:
+#     result = await AuctionServices(db).remove_participant(auction_id, email)
+#     return APIResponse(data=result)

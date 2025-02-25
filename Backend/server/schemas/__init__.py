@@ -5,6 +5,8 @@ from typing import Any, Union
 from server.schemas.user_schema import *
 from server.schemas.item_category_schema import *
 from server.schemas.auction_schema import *
+from server.schemas.bid_schema import *
+from server.schemas.payment_schema import *
 
 
 T = t.TypeVar("T")
@@ -53,3 +55,62 @@ class PagedResponse(APIResponse):
 class PagedQuery(pyd.BaseModel):
     page: int = Query(1, ge=1)
     per_page: int = Query(10, ge=1, le=100)
+    # attr: Optional[str|int] = Query(default=None, description="Attribute to filter by")
+
+
+class GetUsers(GetUsersSchemaPublic):
+    model_config = {"from_attributes": True}
+    auctions: Optional[list[GetAuctionSchema]] = Field(default=[])
+
+
+class NotificationQuery(PagedQuery):
+    user_id: Optional[UUID] = Query(default=None, description="User ID")
+    read: Optional[bool] = Query(default=False, description="Read status")
+
+
+class AuctionQueryVector(PagedQuery):
+    start_price: Optional[float] = Query(default=None, description="Start price")
+    current_price: Optional[float] = Query(default=None, description="Current price")
+    buy_now_price: Optional[float] = Query(default=None, description="Buy now price")
+
+
+class AuctionQueryScalar(PagedQuery):
+    category_id: Optional[UUID] = Query(default=None, description="Category ID")
+    sub_category_id: Optional[UUID] = Query(default=None, description="Sub category ID")
+    status: Optional[str] = Query(default=None, description="Status")
+    buy_now: Optional[bool] = Query(default=None, description="Buy now")
+    user_id: Optional[UUID] = Query(default=None, description="User ID")
+
+
+class BidQuery(PagedQuery):
+    auction_id: Optional[UUID] = Query(default=None, description="Auction ID")
+
+
+class PaystackData(BaseModel):
+    model_config = {"from_attributes": True, "extra": "ignore"}
+    id: Union[any, int, str] = Field(examples=["123456"], description="Transaction ID")
+    domain: str = Field(examples=["live"], description="Domain")
+    status: str = Field(examples=["success"], description="Transaction status")
+    amount: int = Field(examples=[10000], description="Amount")
+    currency: str = Field(examples=["NGN"], description="Currency")
+    message: Optional[str] = Field(
+        examples=["Transaction successful"],
+        description="Transaction message",
+        default=None
+    )
+    transfer_code: Optional[str] = Field(
+        default=None,
+        examples=["TRF_123456"],
+        description="Transfer code"
+    )
+    source: Union[str, dict] = Field(
+        default=None,
+        examples=["balance", {"type": "api", "source": "merchant_api"}],
+        description="Source"
+    )
+
+class PaystackWebhookSchema(BaseModel):
+    event: Optional[str] = Field(default=None, examples=["charge.success"], description="Event type")
+    data: Union[any, PaystackData] = Field(description="Data object")
+    model_config = {"from_attributes": True}
+

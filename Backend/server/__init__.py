@@ -9,12 +9,11 @@ from fastapi.responses import RedirectResponse
 from server.config import app_configs, init_db, get_db
 from server.controllers import routes
 from server.middlewares.exception_handler import (
-    ExcRaiser,
-    RequestValidationError,
-    HTTPException,
+    ExcRaiser, RequestValidationError,
+    HTTPException, IntegrityError, DataError, OperationalError,
     request_validation_error_handler,
-    HTTP_error_handler,
-    exception_handler,
+    HTTP_error_handler, integrity_error_handler,
+    exception_handler, db_exception_handler,
 )
 
 
@@ -50,7 +49,10 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
     app.exception_handlers = {
         ExcRaiser: exception_handler,
         RequestValidationError: request_validation_error_handler,
-        HTTPException: HTTP_error_handler
+        HTTPException: HTTP_error_handler,
+        IntegrityError: integrity_error_handler,
+        DataError: integrity_error_handler,
+        OperationalError: db_exception_handler
     }
     app.include_router(routes)
     init_db()

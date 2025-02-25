@@ -11,12 +11,16 @@ __all__ = ["app_configs", "AppConfigs"]
 
 class DataBaseSettings(BaseSettings):
     DATABASE_URL: str
+    NEON_DB_URL: str
     SCHEMA: str
     REDIS_HOST: str
     REDIS_PORT: str
     REDIS_DB: str
     REDIS_URL: str
     TEST_DATABASE: Optional[str]
+
+    def all(self):
+        return [self.DATABASE_URL, self.NEON_DB_URL]
 
 
 class JWTSettings(BaseSettings):
@@ -49,6 +53,18 @@ class CloudinaryConfig(BaseSettings):
     model_config = {'env_prefix': 'CLOUDINARY_'}
 
 
+class PayStack(BaseSettings):
+    SECRET_KEY: str
+    PAYSTACK_URL: str
+    PAYSTACK_IP_WL: list[str] = [
+        "52.31.139.75",
+        "52.49.173.169",
+        "52.214.14.220"
+    ]
+    model_config = {}
+    model_config['env_prefix'] = 'TEST_' if ENV == 'development' else 'PAYSTACK'
+
+
 class AppConfig(BaseSettings):
     APP_NAME: str
     URI_PREFIX: str = '/api'
@@ -59,7 +75,8 @@ class AppConfig(BaseSettings):
     email_settings: EmailSettiings = EmailSettiings()
     cloudinary: CloudinaryConfig = CloudinaryConfig()
     ENV: str
-    DEBUG: bool = True if ENV in ["dev", "test"] else False
+    paystack: PayStack = PayStack()
+    DEBUG: bool = True if ENV in ["development", "test"] else False
     CORS_ALLOWED: list[str] | str = "*"
 
 

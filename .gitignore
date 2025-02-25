@@ -74,3 +74,10 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# tests
+test*
+pytest*
+
+# custom
+pip_freeze.sh
