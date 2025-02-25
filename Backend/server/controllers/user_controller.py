@@ -316,18 +316,22 @@ async def call_back(
     signature = request.headers.get("x-paystack-signature")
     # ip = request.client.host
     secret = app_configs.paystack.SECRET_KEY
+
     # if ip not in app_configs.paystack.PAYSTACK_IP_WL:
     #     raise ExcRaiser400(detail="IP not allowed")
-    
-    # if not signature:
-    #     raise ExcRaiser400(detail="Signature missing")
+ 
+    if not signature:
+        raise ExcRaiser400(detail="Signature missing")
 
+    secret = app_configs.paystack.SECRET_KEY.encode()
     data = await request.json()
     json_data = json.dumps(data, separators=(",", ":"), sort_keys=True)
     hash_obj = hmac.new(secret, json_data.encode(), hashlib.sha512).hexdigest()
 
-    if hash_obj == signature:
-        print("Source verification successful")
+    if not hmac.compare_digest(hash_obj, signature):
+        raise ExcRaiser400(detail="Invalid signature")
+
+    print("Source verification successful")
 
     data = PaystackWebhookSchema.model_validate(data)
     return APIResponse()
