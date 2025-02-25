@@ -309,8 +309,8 @@ async def verify_funding(
 async def call_back(
     request: Request
 ) -> APIResponse:
-    # signature = request.headers.get("x-paystack-signature")
-    # ip = request.client.host
+    signature = request.headers.get("x-paystack-signature")
+    ip = request.client.host
 
     # if ip not in app_configs.paystack.PAYSTACK_IP_WL:
     #     raise ExcRaiser400(detail="IP not allowed")
@@ -318,9 +318,9 @@ async def call_back(
     # if not signature:
     #     raise ExcRaiser400(detail="Signature missing")
 
+    print(signature, ip)
     data = await request.json()
-    # data = PaystackWebhookSchema.model_validate(data)
-    print(data)
+    data = PaystackWebhookSchema.model_validate(data)
     return APIResponse()
 
 

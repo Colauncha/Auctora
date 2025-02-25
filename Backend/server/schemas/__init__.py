@@ -87,7 +87,7 @@ class BidQuery(PagedQuery):
 
 
 class PaystackData(BaseModel):
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "extra": "ignore"}
     id: Union[any, int, str] = Field(examples=["123456"], description="Transaction ID")
     domain: str = Field(examples=["live"], description="Domain")
     status: str = Field(examples=["success"], description="Transaction status")
@@ -98,19 +98,19 @@ class PaystackData(BaseModel):
         description="Transaction message",
         default=None
     )
-    transfer_code: str = Field(
+    transfer_code: Optional[str] = Field(
         default=None,
         examples=["TRF_123456"],
         description="Transfer code"
     )
-    source: str = Field(
+    source: Union[str, dict] = Field(
         default=None,
-        examples=["balance"],
+        examples=["balance", {"type": "api", "source": "merchant_api"}],
         description="Source"
     )
-
 
 class PaystackWebhookSchema(BaseModel):
     event: Optional[str] = Field(default=None, examples=["charge.success"], description="Event type")
     data: Union[any, PaystackData] = Field(description="Data object")
     model_config = {"from_attributes": True}
+
