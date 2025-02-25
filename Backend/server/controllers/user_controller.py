@@ -327,13 +327,13 @@ async def call_back(
     hash_obj = hmac.new(secret, data_bytes, hashlib.sha512).hexdigest()
 
     if not hmac.compare_digest(hash_obj.lower(), signature.lower()):
-        print(f'Hash: {hash_obj}')
-        print(f'Signature: {signature}')
         raise ExcRaiser400(detail="Invalid signature")
 
-    print("Source verification successful")
+    ...
 
     data = PaystackWebhookSchema.model_validate(json.loads(data_bytes))
+    if data.event == '':
+        ...
     return APIResponse()
 
 
