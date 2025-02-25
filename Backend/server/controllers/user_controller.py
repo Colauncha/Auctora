@@ -321,16 +321,18 @@ async def call_back(
         raise ExcRaiser400(detail="IP not allowed")
  
     if not signature:
-        print("Signature missing")
-        # raise ExcRaiser400(detail="Signature missing")
+        # print("Signature missing")
+        raise ExcRaiser400(detail="Signature missing")
 
     data = await request.json()
     json_data = json.dumps(data, separators=(",", ":"), sort_keys=True)
     hash_obj = hmac.new(secret, json_data.encode(), hashlib.sha512).hexdigest()
 
     if not hmac.compare_digest(hash_obj, signature):
-        # raise ExcRaiser400(detail="Invalid signature")
-        print("Invalid signature")
+        print(f'Hash: {hash_obj}')
+        print(f'Signature: {signature}')
+        raise ExcRaiser400(detail="Invalid signature")
+        # print("Invalid signature")
 
     print("Source verification successful")
 
