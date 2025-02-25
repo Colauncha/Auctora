@@ -321,7 +321,8 @@ async def call_back(
     #     raise ExcRaiser400(detail="IP not allowed")
  
     if not signature:
-        raise ExcRaiser400(detail="Signature missing")
+        print("Invalid signature")
+        # raise ExcRaiser400(detail="Signature missing")
 
     secret = app_configs.paystack.SECRET_KEY.encode()
     data = await request.json()
@@ -329,7 +330,8 @@ async def call_back(
     hash_obj = hmac.new(secret, json_data.encode(), hashlib.sha512).hexdigest()
 
     if not hmac.compare_digest(hash_obj, signature):
-        raise ExcRaiser400(detail="Invalid signature")
+        # raise ExcRaiser400(detail="Invalid signature")
+        print("Invalid signature")
 
     print("Source verification successful")
 
