@@ -1,9 +1,10 @@
-import { fb_auth, google_auth, insta_auth } from "../../Constants";
+import { google_auth } from "../../Constants";
+import PropTypes from 'prop-types';
 import Button from "../Button";
 import Input from "./Input";
 import useModeStore from "../../Store/Store";
 import { useNavigate } from "react-router-dom";
-import {useState, useEffect} from "react"
+import {useState} from "react"
 
 const AuthFormSginIn = ({ heading }) => {
   const { isMobile } = useModeStore();
@@ -18,20 +19,28 @@ const AuthFormSginIn = ({ heading }) => {
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    const data = {
+      identifier: email,
+      password
+    }
+    console.log(JSON.stringify(data))
+    // let endpoint = "https://api-auctora.vercel.app/api/users/login";
+    let endpoint = "http://localhost:8000/api/users/login";
     try {
-      const response = await fetch('http://localhost:5000/api/login', {
+      const response = await fetch(endpoint, {
        method: "POST",
        headers: {
-        'Content-Type':'applications/json',
+        'Content-Type':'application/json',
        },
-       body:JSON.stringify({email, password}),
+       body: JSON.stringify(data),
       });
       if (response.ok){
         const data = await response.json();
         console.log('Login Successful', data);
         localStorage.setItem('token', data.token);
         alert('Login Successful')
-        navigate('/add-product') // add product
+        navigate('/profile')
+        // navigate('/add-product') // add product
       } else{
         const errorData = await response.json();
         console.error('Login Failed: ', errorData.message);
@@ -42,7 +51,7 @@ const AuthFormSginIn = ({ heading }) => {
     } finally{
       setLoading(false)
     }
-    console.log("Logging in, please wait");
+    // console.log("Logging in, please wait");
   };
   const signUp = () => {
     navigate("/sign-up");
@@ -57,7 +66,7 @@ const AuthFormSginIn = ({ heading }) => {
           {isMobile && (
             <div className="flex items-center gap-1">
               <p className="text-[#848a8f] text-[12px]">
-                Don't have an account?{" "}
+                Don&apos;t have an account?{" "}
               </p>
               <span
                 className="text-[#de506d] text-[12px] cursor-pointer"
@@ -109,12 +118,13 @@ const AuthFormSginIn = ({ heading }) => {
         <p>Or Login with</p>
         <div className="flex items-center gap-3">
           <img src={google_auth} alt="" className="w-10 h-10 cursor-pointer" />
-          <img src={fb_auth} alt="" className="w-10 h-10 cursor-pointer" />
-          <img src={insta_auth} alt="" className="w-10 h-10 cursor-pointer" />
         </div>
       </div>
     </div>
   );
+};
+AuthFormSginIn.propTypes = {
+  heading: PropTypes.string.isRequired,
 };
 
 export default AuthFormSginIn;

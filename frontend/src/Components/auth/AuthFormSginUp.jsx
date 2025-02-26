@@ -1,5 +1,6 @@
-import { fb_auth, google_auth, insta_auth } from "../../Constants";
+import { google_auth } from "../../Constants";
 import Button from "../Button";
+import PropTypes from 'prop-types';
 import Input from "./Input";
 import useModeStore from "../../Store/Store";
 import { useNavigate } from "react-router-dom";
@@ -10,26 +11,29 @@ const AuthFormSginUp = ({ heading }) => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
   const [checked, setChecked] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    // let endpoint = "https://api-auctora.vercel.app/api/users/register";
+    let endpoint = "http://localhost:8000/api/users/register";
     try {
-      const response = await fetch("http://localhost:5000/api/signup", {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
-          "Content-Type": "applications/json",
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password, checked }),
+        body: JSON.stringify({ email, password }),
       });
       if (response.ok) {
         const data = await response.json();
         console.log("Sign Up Successful", data);
         localStorage.setItem("token", data.token);
         alert("Sign Up Successful");
-        navigate("/opt"); // add product
+        navigate("/otp"); // add product
       } else {
         const errorData = await response.json();
         console.error("sign up failed: ", errorData.message);
@@ -85,12 +89,12 @@ const AuthFormSginUp = ({ heading }) => {
           />
           <Input
             title={`Confirm Password`}
-            id={`password`}
+            id={`confirmPass`}
             type={`password`}
             htmlFor={`password`}
             className={`focus:outline-[#9f3248]`}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            value={confirmPass}
+            onChange={(e) => setConfirmPass(e.target.value)}
           />
           <div className="flex items-center  gap-4">
             <Input
@@ -107,19 +111,21 @@ const AuthFormSginUp = ({ heading }) => {
             label={`Register`}
             onClick={submit}
             className={`hover:bg-[#de506d]`}
-          />
+            >{loading ? "Submitting": "Logged IN"}</Button>
         </fieldset>
       </form>
       <div className="flex flex-col gap-3 mt-2 items-center">
         <p>Or sign Up With</p>
         <div className="flex items-center gap-3">
           <img src={google_auth} alt="" className="w-10 h-10" />
-          <img src={fb_auth} alt="" className="w-10 h-10" />
-          <img src={insta_auth} alt="" className="w-10 h-10" />
         </div>
       </div>
     </div>
   );
+};
+
+AuthFormSginUp.propTypes = {
+  heading: PropTypes.string.isRequired,
 };
 
 export default AuthFormSginUp;
