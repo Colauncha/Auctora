@@ -40,7 +40,6 @@ import requests
 route = APIRouter(prefix='/users', tags=['users'])
 notif_route = APIRouter(prefix='/notifications', tags=['notifications'])
 transac_route = APIRouter(prefix='/transactions')
-db = Depends(get_db)
 
 
 ###############################################################################
@@ -347,7 +346,8 @@ async def verify_funding(
 
 @transac_route.post('/paystack/webhook')
 async def paystack_webhook(
-    request: Request
+    request: Request,
+    db: Session = Depends(get_db)
 ) -> APIResponse:
     
     signature = request.headers.get("x-paystack-signature")
