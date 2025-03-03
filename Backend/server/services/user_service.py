@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 from sqlalchemy.orm import Session
 from server.models.users import Users
-from server.enums.user_enums import TransactionStatus, UserRoles
+from server.enums.user_enums import TransactionStatus, TransactionTypes, UserRoles
 from passlib.context import CryptContext
 from server.config.database import get_db
 from server.repositories import DBAdaptor
@@ -20,7 +20,8 @@ from server.schemas import (
     ChangePasswordSchema, PagedResponse,
     PagedQuery, GetUsers, GetNotificationsSchema,
     NotificationQuery, CreateNotificationSchema,
-    WalletTransactionSchema, WalletHistoryQuery
+    WalletTransactionSchema, WalletHistoryQuery,
+    InitializePaymentRes
 )
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
@@ -102,6 +103,26 @@ class UserWalletTransactionServices:
         self.repo = DBAdaptor(db).wallet_repo
         self.user_repo = DBAdaptor(db).user_repo
         self.notification = UserNotificationServices(db)
+
+    async def init_transaction(
+            self,
+            data: InitializePaymentRes,
+            user: GetUserSchema,
+            amount: float
+        ):
+        try:
+            wallet_data = WalletTransactionSchema.model_validate({
+                "user_id": user.id,
+                "status": TransactionStatus.PENDING,
+                "transaction_type": TransactionTypes.FUNDING,
+                "description": f"Funding of {amount} pending",
+                "amount": amount,
+                "reference_id": data.data.reference
+            })
+            _ = await self.repo.add(wallet_data.model_dump())
+            return True
+        except Exception as e:
+            raise e
 
     async def create(self, transaction, extra):
         try:

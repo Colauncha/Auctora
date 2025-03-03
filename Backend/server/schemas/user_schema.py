@@ -184,7 +184,7 @@ class AuthorizationURL(BaseModel):
 
 
 class InitializePaymentRes(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
     status: bool
     message: str
     data: Optional[AuthorizationURL] = Field(default=None)

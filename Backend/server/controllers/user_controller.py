@@ -275,7 +275,8 @@ async def list(
 @permissions(permission_level=Permissions.CLIENT)
 async def get_gateway_url(
     user: current_user,
-    amount: int
+    amount: int,
+    db: Session = Depends(get_db)
 ) -> InitializePaymentRes:
     url = f"{app_configs.paystack.PAYSTACK_URL}/transaction/initialize"
     headers = {
@@ -285,12 +286,19 @@ async def get_gateway_url(
     data = {
         "amount": amount * 100,
         "email": user.email,
+        "metadata": {
+            "user_id": str(user.id),
+            "amount": amount,
+            "email": user.email
+        }
     }
-    print(data)
     response = requests.post(url, headers=headers, json=data)
     res_data: dict = response.json()
-    print(res_data)
-    return InitializePaymentRes.model_validate(res_data)
+    data = InitializePaymentRes.model_validate(res_data)
+    _ = await UserWalletTransactionServices(db).init_transaction(
+        data, user, amount
+    )
+    return data
 
 
 @transac_route.post('/verify')
@@ -353,6 +361,7 @@ async def paystack_webhook(
         raise ExcRaiser400(detail="Signature missing")
 
     data_bytes = await request.body()
+    data_json = await request.json()
     hash_obj = hmac.new(secret, data_bytes, hashlib.sha512).hexdigest()
 
     if not hmac.compare_digest(hash_obj.lower(), signature.lower()):
@@ -361,14 +370,32 @@ async def paystack_webhook(
     ...
 
     data = PaystackWebhookSchema.model_validate(json.loads(data_bytes))
+    meta = data_json.get('data').get('customer').get('metadata')
+    print(meta)
 
-    # SPlit event string e.g 'charge.success' == ['charge', 'success']
+    extra = {
+        'transaction_type': TransactionTypes.FUNDING,
+    }
+
+    # Split event string e.g 'charge.success' == ['charge', 'success']
     event, subevent = data.event.split('.')
     if event == 'charge':
+        tranx = {
+            "user_id": meta.get('user_id'),
+            "email": meta.get('email'),
+            "amount": meta.get('amount'),
+            "reference_id": data.data.reference
+        }
         if subevent == 'success':
-            ...
+            extra["status"] = TransactionStatus.COMPLETED
         else:
-            ...
+            extra["status"] = TransactionStatus.FAILED
+        extra['description'] = (
+            f"{data.data.message}: transaction {extra['status'].value}"
+        )
+        print(tranx, extra)
+        _ = await UserWalletTransactionServices(db).create(tranx, extra)
+
     elif event == 'transfer':
         if subevent == 'success':
             ...

@@ -106,6 +106,11 @@ class PaystackData(BaseModel):
     status: str = Field(examples=["success"], description="Transaction status")
     amount: int = Field(examples=[10000], description="Amount")
     currency: str = Field(examples=["NGN"], description="Currency")
+    reference: Optional[str] = Field(
+        default=None,
+        examples=["7PVGKCOYLSMSZJW"],
+        description="Reference ID"
+    )
     message: Optional[str] = Field(
         examples=["Transaction successful"],
         description="Transaction message",
