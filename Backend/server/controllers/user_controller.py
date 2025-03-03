@@ -371,7 +371,6 @@ async def paystack_webhook(
 
     data = PaystackWebhookSchema.model_validate(json.loads(data_bytes))
     meta = data_json.get('data').get('metadata')
-    print(data_json)
 
     extra = {
         'transaction_type': TransactionTypes.FUNDING,
@@ -393,7 +392,6 @@ async def paystack_webhook(
         extra['description'] = (
             f"{data.data.message}: transaction {extra['status'].value}"
         )
-        print(tranx, extra)
         _ = await UserWalletTransactionServices(db).create(tranx, extra)
 
     elif event == 'transfer':

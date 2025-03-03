@@ -130,6 +130,7 @@ class UserWalletTransactionServices:
             user = await self.user_repo.get_by_id(transaction.user_id)
             notify = False
 
+            print(transaction, user)
             NOTIF_TITLE = f"Funding Account {transaction.status.value}"
             NOTIF_MESSAGE = (
             f"Your attempt to credit your wallet with N{transaction.amount} "
@@ -140,6 +141,7 @@ class UserWalletTransactionServices:
                 {'reference_id': transaction.reference_id}
             )
 
+            print(exist)
             if transaction.status == TransactionStatus.COMPLETED:
                 if exist and exist.status == transaction.status:
                     return
