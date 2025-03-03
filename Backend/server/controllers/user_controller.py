@@ -370,8 +370,8 @@ async def paystack_webhook(
     ...
 
     data = PaystackWebhookSchema.model_validate(json.loads(data_bytes))
-    meta = data_json.get('data').get('customer').get('metadata')
-    print(meta)
+    meta = data_json.get('data').get('metadata')
+    print(data_json)
 
     extra = {
         'transaction_type': TransactionTypes.FUNDING,
