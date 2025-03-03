@@ -172,7 +172,7 @@ class UserWalletTransactionServices:
                         user_id=user.id
                     )
                 )
-                await publish_fund_account(pub_data)
+                # await publish_fund_account(pub_data)
             return
         except Exception as e:
             raise e
