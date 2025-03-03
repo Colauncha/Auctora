@@ -1,6 +1,7 @@
 import json
 import hashlib
 import hmac
+from typing import Union
 from fastapi import APIRouter, Depends, Request, Response
 from server.config import get_db, redis_store, app_configs
 from server.enums import ServiceKeys
@@ -22,7 +23,8 @@ from server.schemas import (
     GetUsers, GetNotificationsSchema,
     NotificationQuery, UpdateNotificationSchema,
     WalletTransactionSchema, VerifyTransactionData,
-    InitializePaymentRes, GetUsersSchemaPublic
+    InitializePaymentRes, GetUsersSchemaPublic,
+    WalletHistoryQuery, TransferRecipientData
 )
 from server.services import (
     UserServices,
@@ -246,13 +248,28 @@ async def update(
     data: UpdateNotificationSchema,
     db: Session = Depends(get_db)
 ) -> APIResponse:
-    result = await UserNotificationServices(db).update(notification_id, data.read)
+    result = await UserNotificationServices(db).update(
+        notification_id, data.read
+    )
     return APIResponse(data=result)
 
 
-###############################################################################
-############################ Transactions Endpoints ###########################
-###############################################################################
+##############################################################################
+############################ Transactions Endpoints ##########################
+##############################################################################
+
+@transac_route.get('/history')
+@permissions(permission_level=Permissions.CLIENT)
+async def list(
+    user: current_user,
+    filter: WalletHistoryQuery = Depends(),
+    db: Session = Depends(get_db)
+) -> PagedResponse:
+    filter.user_id = user.id
+    print(filter)
+    result = await UserWalletTransactionServices(db).list(filter)
+    return result
+
 
 @transac_route.get('/init')
 @permissions(permission_level=Permissions.CLIENT)
@@ -284,22 +301,34 @@ async def verify_funding(
     db: Session = Depends(get_db)
 ) -> WalletTransactionSchema:
     extra = {
-        'transaction_type': TransactionTypes.CREDIT,
+        'transaction_type': TransactionTypes.FUNDING,
     }
     paystack_url = app_configs.paystack.PAYSTACK_URL
     url = f"{paystack_url}/transaction/verify/{data.reference_id}"
     headers = {
         "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}"
     }
+    response_types = {
+        'success': ['success'],
+        'failed': ['failed', 'cancelled', 'reversed'],
+        'pending': ['pending', 'ongoing', 'processing', 'queued']
+    }
     response = requests.get(url, headers=headers)
     res_data: dict = response.json()
-    if res_data.get('data').get('status') == 'success':
+
+    if res_data.get('data').get('status') in response_types['success']:
         extra['status'] = TransactionStatus.COMPLETED
-        extra['description'] = res_data.get('message')
-        data.amount = float(res_data.get('data').get('amount') / 100)
+    elif res_data.get('data').get('status') in response_types['pending']:
+        extra['status'] = TransactionStatus.PENDING
+    elif res_data.get('data').get('status') in response_types['failed']:
+        extra['status'] = TransactionStatus.FAILED
     else:
         extra['status'] = TransactionStatus.FAILED
-        extra['description'] = res_data.get('message')
+
+    extra['description'] = (
+        f"{res_data.get('message')}: transaction {extra['status'].value}"
+    )
+    data.amount = float(res_data.get('data').get('amount') / 100)
     data.user_id = str(user.id)
     data.email = user.email
     _ = await UserWalletTransactionServices(db).create(
@@ -309,7 +338,7 @@ async def verify_funding(
 
 
 @transac_route.post('/paystack/webhook')
-async def call_back(
+async def paystack_webhook(
     request: Request
 ) -> APIResponse:
     
@@ -332,9 +361,65 @@ async def call_back(
     ...
 
     data = PaystackWebhookSchema.model_validate(json.loads(data_bytes))
-    if data.event == '':
-        ...
+
+    # SPlit event string e.g 'charge.success' == ['charge', 'success']
+    event, subevent = data.event.split('.')
+    if event == 'charge':
+        if subevent == 'success':
+            ...
+        else:
+            ...
+    elif event == 'transfer':
+        if subevent == 'success':
+            ...
+        else:
+            ...
     return APIResponse()
+
+
+@transac_route.get('/resolve')
+async def resolve_acct_number(
+    account_number: str,
+    bank_code: str
+) -> APIResponse:
+    url = f"{app_configs.paystack.PAYSTACK_URL}/bank/resolve"
+    headers = {
+        "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}"
+    }
+    params = {
+        "account_number": account_number,
+        "bank_code": bank_code
+    }
+    response = requests.get(url, headers=headers, params=params)
+    res_data: dict = response.json()
+    return res_data
+
+
+@transac_route.post('/transfer_recipient')
+async def transfer_recipient(
+    data: TransferRecipientData
+) -> Union[APIResponse, dict]:
+    url_resolve = f"{app_configs.paystack.PAYSTACK_URL}/bank/resolve"
+    url_tr = f"{app_configs.paystack.PAYSTACK_URL}/transferrecipient"
+    headers = {
+        "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}",
+        "Content-Type": "application/json"
+    }
+    params = {
+        "account_number": data.account_number,
+        "bank_code": data.bank_code
+    }
+    resolve_res = requests.get(url_resolve, headers=headers, params=params)
+    resolve_res_data: dict = resolve_res.json()
+    if not resolve_res_data.get('data'):
+        resolve_message = resolve_res_data.get('message')
+        return APIResponse(message=resolve_message, data=None)
+    data.name = resolve_res_data.get('data').get('account_name')
+    response = requests.post(url_tr, headers=headers, json=data.model_dump())
+    return response.json()
+
+
+# @transac_route.post('/withdraw')
 
 
 route.include_router(notif_route)

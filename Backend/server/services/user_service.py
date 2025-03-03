@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 from sqlalchemy.orm import Session
 from server.models.users import Users
-from server.enums.user_enums import UserRoles
+from server.enums.user_enums import TransactionStatus, UserRoles
 from passlib.context import CryptContext
 from server.config.database import get_db
 from server.repositories import DBAdaptor
@@ -20,7 +20,7 @@ from server.schemas import (
     ChangePasswordSchema, PagedResponse,
     PagedQuery, GetUsers, GetNotificationsSchema,
     NotificationQuery, CreateNotificationSchema,
-    WalletTransactionSchema
+    WalletTransactionSchema, WalletHistoryQuery
 )
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
@@ -106,27 +106,70 @@ class UserWalletTransactionServices:
     async def create(self, transaction, extra):
         try:
             transaction = WalletTransactionSchema(**transaction, **extra)
+            user = await self.user_repo.get_by_id(transaction.user_id)
+            notify = False
+
             NOTIF_TITLE = f"Funding Account {transaction.status.value}"
             NOTIF_MESSAGE = (
-                f"Your attempt to credit your wallet with N{transaction.amount} "
-                f"has {transaction.status.value}"
+            f"Your attempt to credit your wallet with N{transaction.amount} "
+            f"has {transaction.status.value}"
             )
-            exist = await self.repo.get_by_attr({'reference_id': transaction.reference_id})
-            if exist:
-                return
-            _ = await self.user_repo.fund_wallet(transaction)
-            user = await self.user_repo.get_by_id(transaction.user_id)
-            pub_data = transaction.model_dump()
-            pub_data['email'] = user.email
-            _ = await self.notification.create(
-                CreateNotificationSchema(
-                    title=NOTIF_TITLE,
-                    message=NOTIF_MESSAGE,
-                    user_id=user.id
+
+            exist = await self.repo.get_by_attr(
+                {'reference_id': transaction.reference_id}
+            )
+
+            if transaction.status == TransactionStatus.COMPLETED:
+                if exist and exist.status == transaction.status:
+                    return
+                elif exist and exist.status != transaction.status:
+                    _ = await self.user_repo.fund_wallet(
+                        transaction, update=True, exist=exist
+                    )
+                    notify = True
+                elif not exist:
+                    _ = await self.user_repo.fund_wallet(transaction)
+                    notify = True
+
+            else:
+                if exist and exist.status == transaction.status:
+                    return
+                elif exist and exist.status != transaction.status:
+                    _ = await self.repo.save(exist, transaction.model_dump())
+                else:
+                    _ = await self.repo.add(transaction.model_dump())
+                    notify = True
+            
+
+            if notify:
+                pub_data = transaction.model_dump()
+                pub_data['email'] = user.email
+                _ = await self.notification.create(
+                    CreateNotificationSchema(
+                        title=NOTIF_TITLE,
+                        message=NOTIF_MESSAGE,
+                        user_id=user.id
+                    )
                 )
-            )
-            await publish_fund_account(pub_data)
+                await publish_fund_account(pub_data)
             return
+        except Exception as e:
+            raise e
+
+    async def list(self, filter: WalletHistoryQuery):
+        try:
+            filter = filter.model_dump(exclude_none=True)
+            history = await self.repo.get_all(filter=filter)
+            if not history:
+                raise ExcRaiser404(message='No Transaction found')
+            valid_history = [
+                WalletTransactionSchema
+                .model_validate(transaction)
+                .model_dump()
+                for transaction in history.data
+            ]
+            history.data = valid_history
+            return history
         except Exception as e:
             raise e
 

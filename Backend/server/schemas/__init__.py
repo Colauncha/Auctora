@@ -58,16 +58,27 @@ class PagedQuery(pyd.BaseModel):
     # attr: Optional[str|int] = Query(default=None, description="Attribute to filter by")
 
 
+# User related
 class GetUsers(GetUsersSchemaPublic):
     model_config = {"from_attributes": True}
     auctions: Optional[list[GetAuctionSchema]] = Field(default=[])
 
 
+# Notification related
 class NotificationQuery(PagedQuery):
     user_id: Optional[UUID] = Query(default=None, description="User ID")
     read: Optional[bool] = Query(default=False, description="Read status")
 
 
+# Wallet related
+class WalletHistoryQuery(PagedQuery):
+    user_id: Optional[UUID] = Query(default=None, description="User ID")
+    amount: Optional[float] = Query(default=None, description="Amount") # might change to a vector query
+    status: Optional[TransactionStatus] = Query(default=None)
+    transaction_type: Optional[TransactionTypes] = Query(default=None)
+
+
+# Auction related
 class AuctionQueryVector(PagedQuery):
     start_price: Optional[float] = Query(default=None, description="Start price")
     current_price: Optional[float] = Query(default=None, description="Current price")
@@ -82,10 +93,12 @@ class AuctionQueryScalar(PagedQuery):
     user_id: Optional[UUID] = Query(default=None, description="User ID")
 
 
+# Bid related
 class BidQuery(PagedQuery):
     auction_id: Optional[UUID] = Query(default=None, description="Auction ID")
 
 
+# Paystack related
 class PaystackData(BaseModel):
     model_config = {"from_attributes": True, "extra": "ignore"}
     id: Union[any, int, str] = Field(examples=["123456"], description="Transaction ID")
@@ -113,4 +126,16 @@ class PaystackWebhookSchema(BaseModel):
     event: Optional[str] = Field(default=None, examples=["charge.success"], description="Event type")
     data: Union[any, PaystackData] = Field(description="Data object")
     model_config = {"from_attributes": True}
+
+
+# Miscellaneous schemas
+class BanksQuery(PagedQuery):
+    country: Optional[str] = Query(default='Nigeria')
+    use_cursor: Optional[bool] = Query(default=False)
+    perPage: Optional[int] = Query(default=100)
+    type: Optional[str] = Query(default='nuban')
+
+
+
+
 

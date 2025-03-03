@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 from uuid import UUID
 from fastapi import Query
 from pydantic import BaseModel, Field, ConfigDict
@@ -139,6 +139,7 @@ class ChangePasswordSchema(BaseModel):
     confirm_password: str = Field(min_length=8, max_length=32)
 
 
+# Notification related
 class CreateNotificationSchema(BaseModel):
     title: str
     message: str
@@ -156,20 +157,21 @@ class UpdateNotificationSchema(BaseModel):
     read: bool = True
 
 
+# Wallet related
 class WalletTransactionSchema(BaseModel):
-    model_config = {"from_attributes": True}
-    user_id: str
+    model_config = {"from_attributes": True, "extra": "ignore"}
+    user_id: Union[str, UUID]
     amount: float
     description: str
     transaction_type: TransactionTypes
     status: TransactionStatus
-    reference_id: str
+    reference_id: Optional[Union[str, UUID]]
 
 
 class VerifyTransactionData(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     email: Optional[str] = Field(default=None)
-    amount: float
+    amount: Optional[float] = Field(default=None)
     user_id: Optional[str] = Field(default=None)
     reference_id: str
 
@@ -180,6 +182,7 @@ class AuthorizationURL(BaseModel):
     access_code: str
     reference: str
 
+
 class InitializePaymentRes(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     status: bool
@@ -187,3 +190,12 @@ class InitializePaymentRes(BaseModel):
     data: Optional[AuthorizationURL] = Field(default=None)
     code: Optional[str] = Field(default=None)
     type: Optional[str] = Field(default=None)
+
+
+class TransferRecipientData(BaseModel):
+
+    type: Optional[str] = Field(default="nuban")
+    name: Optional[str] = Field(default=None)
+    account_number: str
+    bank_code: str
+    currency: Optional[str] = Field(default="NGN")
