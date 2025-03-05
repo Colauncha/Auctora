@@ -4,25 +4,32 @@ import Button from "../Button";
 import Input from "./Input";
 import useModeStore from "../../Store/Store";
 import { useNavigate } from "react-router-dom";
+import Loader from "../../assets/loader";
 import {useState} from "react"
+import useAuthStore from "../../Store/AuthStore";
+import style from "./css/auth.module.css"
 
 const AuthFormSginIn = ({ heading }) => {
   const { isMobile } = useModeStore();
   const navigate = useNavigate();
+
   // States of the applications
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [checked, setChecked] = useState(false)
+  // const [checked, setChecked] = useState(true)
+  const [alertT, setAlert] = useState({isAlert: false, level: 'warn', message: ""});
   const [loading, setLoading]=useState(false)
-
+  const login = useAuthStore((state) => state.login);
 
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
     const data = {
       identifier: email,
       password
     }
+
     console.log(JSON.stringify(data))
     // let endpoint = "https://api-auctora.vercel.app/api/users/login";
     let endpoint = "http://localhost:8000/api/users/login";
@@ -37,28 +44,42 @@ const AuthFormSginIn = ({ heading }) => {
       if (response.ok){
         const data = await response.json();
         console.log('Login Successful', data);
-        localStorage.setItem('token', data.token);
-        alert('Login Successful')
-        navigate('/profile')
-        // navigate('/add-product') // add product
+        localStorage.setItem('token', JSON.stringify(data.data.token));
+        setAlert({isAlert: true, level: "success", message: "Log In Successful"})
+        setTimeout(() => {
+          login()
+          setLoading(false)
+          navigate('/dashboard')
+        }, 500)
       } else{
         const errorData = await response.json();
-        console.error('Login Failed: ', errorData.message);
-        
+        console.error('Login Failed: ', errorData);
+        setTimeout(() => {
+          setLoading(false)
+          setAlert({isAlert: true, message: `${errorData.message}: ${errorData.detail}`})
+        }, 500)
       }
     } catch (error) {
       console.error('Error during Login', error)
-    } finally{
-      setLoading(false)
+      setTimeout(() => {
+        setLoading(false)
+        setAlert({isAlert: true, message: error.message})
+      }, 500)
     }
-    // console.log("Logging in, please wait");
   };
+
   const signUp = () => {
     navigate("/sign-up");
   };
   return (
     <div className="w-[620px] h-[500px] p-10 bg-white rounded-tl-md rounded-bl-md">
       <form >
+        {loading && <Loader />}
+        <div className={
+          `${alertT.isAlert ? style.alertShow : style.alertNone}
+           ${alertT.level === 'success' ? style.alertSuccess : ''}
+          `
+        }>{alertT.message}</div>
         <fieldset className="flex flex-col gap-3">
           <legend className="text-[30px] font-[700] text-[#9f3247]">
             {heading}
@@ -83,7 +104,10 @@ const AuthFormSginIn = ({ heading }) => {
             type={`email`}
             htmlFor={`email`}
             className={`focus:outline-[#9f3248]`}
-            onChange={(e)=>setEmail(e.target.value)}
+            onChange={(e) => {
+              setAlert({isAlert: false, message: ""})
+              setEmail(e.target.value)
+            }}
           />
           <Input
             title={`Password`}
@@ -92,10 +116,13 @@ const AuthFormSginIn = ({ heading }) => {
             htmlFor={`password`}
             value={password}
             className={`focus:outline-[#9f3248]`}
-            onChange={(e)=>setPassword(e.target.value)}
+            onChange={(e) => {
+              setAlert({isAlert: false, message: ""})
+              setPassword(e.target.value)
+            }}
           />
 
-          <div className="flex items-center  gap-4">
+          {/* <div className="flex items-center  gap-4">
             <Input
               id={`checkbox`}
               type={`checkbox`}
@@ -105,10 +132,10 @@ const AuthFormSginIn = ({ heading }) => {
               onChange={(e)=>setChecked(e.target.checked)}
             />
             <p className="text-[#848a8f]">Remember Me</p>
-          </div>
+          </div> */}
           <Button
             label={`Login`}
-            onClick={submit}
+            onClick={submit }
             className={`hover:bg-[#de506d]`}
             disabled={loading}
           >{loading ? "Submitting": "Logged IN"}</Button>

@@ -1,0 +1,14 @@
+.container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.sandwich {
+    width: 30%;
+    background-color: #802536;
+}
+
+.panel {
+    width: 70%;
+}

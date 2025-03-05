@@ -5,9 +5,10 @@ import useAuthStore from "../../Store/AuthStore";
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
+  console.log(isAuthenticated);
   if (!isAuthenticated) {
     // Redirect to login page if not authenticated
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/sign-in" replace />;
   }
 
   return children;
