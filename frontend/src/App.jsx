@@ -3,7 +3,7 @@ import Ads from "../src/Pages/Home/Ads";
 import Nav from "../src/Pages/Home/Nav";
 import Layout from "../src/Pages/Home/Layout/Layout";
 import AboutUs from "../src/Pages/About/About";
-import List from "./Pages/Sell/List";
+// import List from "./Pages/Sell/List";
 import Footer from "./Pages/Home/Footer";
 import SignUp from "./Pages/Auth/SignUp";
 import SignIn from "./Pages/Auth/SignIn";
