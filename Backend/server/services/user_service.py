@@ -305,7 +305,8 @@ class UserServices:
                 return data
 
         except Exception as e:
-            if type(e) == ExcRaiser:
+            if issubclass(type(e), ExcRaiser):
+                print(e)
                 raise e
             raise ExcRaiser(
                 message="Unable to create User",
