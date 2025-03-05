@@ -21,7 +21,7 @@ from server.schemas import (
     PagedQuery, GetUsers, GetNotificationsSchema,
     NotificationQuery, CreateNotificationSchema,
     WalletTransactionSchema, WalletHistoryQuery,
-    InitializePaymentRes
+    InitializePaymentRes, AccountDetailsSchema,
 )
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
@@ -343,6 +343,18 @@ class UserServices:
             if type(e) == ExcRaiser:
                 raise e
             raise ExcRaiser500()
+        
+    async def add_recipient_code(
+        self,
+        data: AccountDetailsSchema,
+        user: GetUserSchema
+    ) -> AccountDetailsSchema:
+        try:
+            data = data.model_dump(exclude={'id'})
+            res = await self.repo.update(user, data)
+            return AccountDetailsSchema.model_validate(*res)
+        except Exception as e:
+            raise e
 
     async def retrieve(self, id) -> GetUserSchema:
         try:

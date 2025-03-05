@@ -24,7 +24,8 @@ from server.schemas import (
     NotificationQuery, UpdateNotificationSchema,
     WalletTransactionSchema, VerifyTransactionData,
     InitializePaymentRes, GetUsersSchemaPublic,
-    WalletHistoryQuery, TransferRecipientData
+    WalletHistoryQuery, TransferRecipientData,
+    AccountDetailsSchema,
 )
 from server.services import (
     UserServices,
@@ -421,8 +422,11 @@ async def resolve_acct_number(
 
 
 @transac_route.post('/transfer_recipient')
+@permissions(permission_level=Permissions.CLIENT)
 async def transfer_recipient(
-    data: TransferRecipientData
+    user: current_user,
+    data: TransferRecipientData,
+    db: Session = Depends(get_db)
 ) -> Union[APIResponse, dict]:
     url_resolve = f"{app_configs.paystack.PAYSTACK_URL}/bank/resolve"
     url_tr = f"{app_configs.paystack.PAYSTACK_URL}/transferrecipient"
@@ -436,15 +440,40 @@ async def transfer_recipient(
     }
     resolve_res = requests.get(url_resolve, headers=headers, params=params)
     resolve_res_data: dict = resolve_res.json()
+
+    # TODO: save recipient code to user model
+
     if not resolve_res_data.get('data'):
         resolve_message = resolve_res_data.get('message')
         return APIResponse(message=resolve_message, data=None)
     data.name = resolve_res_data.get('data').get('account_name')
     response = requests.post(url_tr, headers=headers, json=data.model_dump())
-    return response.json()
+    response = response.json().get('data')
+
+    if response.get('active') is False:
+        return APIResponse(message="Account not active")
+
+    account_data = AccountDetailsSchema(
+        acct_no=data.account_number,
+        acct_name=data.name,
+        bank_code=data.bank_code,
+        bank_name=response.get('details').get('bank_name'),
+        recipient_code=response.get('recipient_code'),
+        id=str(user.id)
+    )
+
+    acct_data = await UserServices(db).add_recipient_code(account_data, user)
+    return APIResponse(data=acct_data)
 
 
-# @transac_route.post('/withdraw')
+@transac_route.post('/withdraw')
+@permissions(permission_level=Permissions.CLIENT)
+async def withdraw(
+    user: current_user,
+    amount: int,
+    db: Session = Depends(get_db)
+) -> APIResponse:
+    pass
 
 
 route.include_router(notif_route)

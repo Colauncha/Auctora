@@ -39,6 +39,9 @@ class GetUsersSchemaPublic(BaseModel):
         examples=[app_configs.test_user.EMAIL]
     )
     email_verified: Optional[bool] = Field(default=False)
+    rating: Optional[float] = Field(default=0.00)
+    kyc_verified: Optional[bool] = Field(default=False)
+    address: Optional[str] = Field(default=None)
     role: Optional[UserRoles] = Field(
         description='User roles',
         examples=[UserRoles.CLIENT]
@@ -48,6 +51,12 @@ class GetUsersSchemaPublic(BaseModel):
 
 
 class GetUserSchema(GetUsersSchemaPublic):
+    acct_no: Optional[str]
+    acct_name: Optional[str]
+    bank_code: Optional[str]
+    bank_name: Optional[str]
+    recipient_code: Optional[str]
+
     wallet: float = Field(
         description="User's wallet balance",
         examples=[1000.00]
@@ -139,17 +148,28 @@ class ChangePasswordSchema(BaseModel):
     confirm_password: str = Field(min_length=8, max_length=32)
 
 
+# Bank Account related
+class AccountDetailsSchema(BaseModel):
+    model_config = {"from_attributes": True, "extra": "ignore"}
+    acct_no: str
+    bank_code: str
+    bank_name: str
+    acct_name: str
+    recipient_code: str
+    id: Union[str, UUID]
+
+
 # Notification related
 class CreateNotificationSchema(BaseModel):
     title: str
     message: str
-    user_id: UUID
+    user_id: Union[str, UUID]
 
     model_config = {"from_attributes": True}
 
 
 class GetNotificationsSchema(CreateNotificationSchema):
-    id: UUID
+    id: Union[str, UUID]
     read: bool = False
 
 
