@@ -9,15 +9,12 @@ const Dashboard = () => {
 
   useEffect(() => {
     const getUser = async () => { 
-      let endpoint = "https://api-auctora.vercel.app/api/users";
-      // let endpoint = "http://localhost:8000/api/users";
+      let endpoint = "https://api-auctora.vercel.app/api/users/profile";
+      // let endpoint = "http://localhost:8000/api/users/profile";
       try {
         const response = await fetch(endpoint, {
           method: "GET",
           credentials: "include",
-          // headers: {
-          //  'Content-Type':'application/json',
-          // },
         })
         if (response.ok) {
           let data = await response.json()
