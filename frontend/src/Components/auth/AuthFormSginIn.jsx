@@ -31,8 +31,8 @@ const AuthFormSginIn = ({ heading }) => {
     }
 
     console.log(JSON.stringify(data))
-    // let endpoint = "https://api-auctora.vercel.app/api/users/login";
-    let endpoint = "http://localhost:8000/api/users/login";
+    let endpoint = "https://api-auctora.vercel.app/api/users/login";
+    // let endpoint = "http://localhost:8000/api/users/login";
     try {
       const response = await fetch(endpoint, {
        method: "POST",
