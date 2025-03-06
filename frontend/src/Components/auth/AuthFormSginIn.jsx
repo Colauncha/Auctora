@@ -48,7 +48,7 @@ const AuthFormSginIn = ({ heading }) => {
         localStorage.setItem('token', JSON.stringify(data.data.token));
         setAlert({isAlert: true, level: "success", message: "Log In Successful"})
         setTimeout(() => {
-          login()
+          login(data.data.token.split('.')[0])
           setLoading(false)
           navigate('/dashboard')
         }, 500)

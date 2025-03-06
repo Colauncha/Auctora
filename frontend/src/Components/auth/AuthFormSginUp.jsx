@@ -21,8 +21,8 @@ const AuthFormSginUp = ({ heading }) => {
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // let endpoint = "https://api-auctora.vercel.app/api/users/register";
-    let endpoint = "http://localhost:8000/api/users/register";
+    let endpoint = "https://api-auctora.vercel.app/api/users/register";
+    // let endpoint = "http://localhost:8000/api/users/register";
 
     if (password !== confirmPass) {
       setTimeout(() => {

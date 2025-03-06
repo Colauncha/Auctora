@@ -77,7 +77,7 @@ class AppConfig(BaseSettings):
     ENV: str
     paystack: PayStack = PayStack()
     DEBUG: bool = True if ENV in ["development", "test"] else False
-    CORS_ALLOWED: list[str] | str = "*"
+    CORS_ALLOWED: list[str] | str = ["http://localhost:5173"]
 
 
 app_configs = AppConfig()

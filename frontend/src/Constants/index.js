@@ -35,7 +35,17 @@ import dcomputer from "../assets/svg/dcomputer.svg";
 //shipping services
 import shipping from "../assets/svg/shipping.svg";
 import delivery from "../assets/svg/delivery.svg";
-import Category from "../Pages/Home/Category";
+import category from "../Pages/Home/Category";
+
+// Icons
+import WalletHistory from "../assets/svg/WalletHistory.svg";
+import FundWallet from "../assets/svg/FundWallet.svg";
+import Withdraw from "../assets/svg/Withdraw.svg";
+import Logout from "../assets/svg/Logout.svg";
+import SettingsIcon from "../assets/svg/SettingsIcon.svg";
+import AddIcon from "../assets/svg/AddIcon.svg";
+import ActivityIcon from "../assets/svg/ActivityIcon.svg";
+import Avatar from "../assets/svg/ProfileIcon.svg";
 
 export {
   logo,
@@ -71,6 +81,15 @@ export {
   shipping,
   delivery,
   upload,
+  category,
+  AddIcon,
+  ActivityIcon,
+  Withdraw,
+  WalletHistory,
+  FundWallet,
+  Logout,
+  SettingsIcon,
+  Avatar,
 };
 
 // const buildArr = {
