@@ -157,6 +157,7 @@ async def login(
         value=token.token,
         httponly=True,
         max_age=1800,
+        secure=True,
         samesite="none"
     )
     return APIResponse(data=token)
