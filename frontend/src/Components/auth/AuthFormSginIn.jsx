@@ -40,6 +40,7 @@ const AuthFormSginIn = ({ heading }) => {
         'Content-Type':'application/json',
        },
        body: JSON.stringify(data),
+       credentials: "include",
       });
       if (response.ok){
         const data = await response.json();
