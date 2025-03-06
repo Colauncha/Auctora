@@ -159,7 +159,7 @@ async def login(
         max_age=1800,
         secure=True,
         samesite="None",
-        partitioned=True
+        # partitioned=True
     )
     return APIResponse(data=token)
 
