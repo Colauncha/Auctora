@@ -39,13 +39,15 @@ const Dashboard = () => {
         } else {
           let data = await response.json()
           console.error(data)
+          navigate("/sign-in")
         }
       } catch (error) {
         console.log(error)
+        navigate("/sign-in")
       }
     }
     getUser();
-  }, [])
+  }, [navigate])
 
   const logout = async () => {
     setLoading(true)
