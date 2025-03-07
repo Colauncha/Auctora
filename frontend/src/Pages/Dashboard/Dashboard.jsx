@@ -3,10 +3,20 @@ import style from "./css/Dashboard.module.css"
 import { useState, useEffect } from "react";
 import Button from "../../Components/Button";
 import { useNavigate } from "react-router-dom";
-import { Withdraw, WalletHistory, FundWallet, AddIcon, ActivityIcon, SettingsIcon, Logout } from "../../Constants"
+import { 
+  Withdraw,
+  WalletHistory,
+  FundWallet,
+  AddIcon,
+  ActivityIcon,
+  SettingsIcon,
+  Logout,
+  Edit,
+  Money,
+} from "../../Constants"
 import Loader from "../../assets/loader";
 import useAuthStore from "../../Store/AuthStore";
-import { capitalize, currencyFormat, char20 } from "../../utils";
+import { capitalize, currencyFormat, char20, links } from "../../utils";
 import Avatar  from "./Avatar";
 
 
@@ -21,8 +31,7 @@ const Dashboard = () => {
   useEffect(() => {
     setLoading(true)
     const getUser = async () => { 
-      let endpoint = "https://api-auctora.vercel.app/api/users/profile";
-      // let endpoint = "http://localhost:8000/api/users/profile";
+      let endpoint = `${links.local}users/profile`;
       try {
         const response = await fetch(endpoint, {
           method: "GET",
@@ -51,8 +60,8 @@ const Dashboard = () => {
 
   const logout = async () => {
     setLoading(true)
-    let endpoint = "https://api-auctora.vercel.app/api/users/logout";
-    // let endpoint = "http://localhost:8000/api/users/logout";
+    let endpoint = `${links.local}users/logout`;
+
     try {
       const response = await fetch(endpoint, {
         method: "POST",
@@ -106,6 +115,12 @@ const Dashboard = () => {
           <div className={style.top}>
             <div className={style.greet}>
                 <h1>Welcome back, {char20(displayName)}</h1>
+                <div className="flex gap-3 flex-wrap">
+                  <Button icon={Money} className={style.panelButton} iconClassName={style.buttonIcon} label="Account details" onClick={() => {}} />
+                  <Button icon={Edit} className={style.panelButton} iconClassName={style.buttonIcon} label="Update profile" onClick={() => {}} />
+                  <Button icon={AddIcon} className={style.panelButton} iconClassName={style.buttonIcon} label="Create Auction" onClick={() => {}} />
+                  {/* <Button icon={FundWallet} className={style.panelButton} iconClassName={style.buttonIcon} label="Update profile" onClick={() => {}} /> */}
+                </div>
             </div>
             <div className={style.wallet}>
               <h1>Wallet Balance</h1>
@@ -114,8 +129,8 @@ const Dashboard = () => {
                 <p><span>Available:</span> {user.wallet ? currencyFormat(user.available_balance) : currencyFormat("0.00")}</p>
               </div>
               <div className={style.walletActions}>
-                <Button icon={FundWallet} className={style.button} iconClassName={style.buttonIcon} label="Fund Wallet" onClick={() => {}} />
-                <Button icon={Withdraw} className={style.button} iconClassName={style.buttonIcon} label="Withdraw" onClick={() => {}} />
+                <Button icon={FundWallet} className={style.panelButton} iconClassName={style.buttonIcon} label="Fund Wallet" onClick={() => {}} />
+                <Button icon={Withdraw} className={style.panelButton} iconClassName={style.buttonIcon} label="Withdraw" onClick={() => {}} />
               </div>
             </div>
           </div>

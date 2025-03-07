@@ -81,6 +81,23 @@
     gap: 20px;
 }
 
+.panelButton {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    height: 35px !important;
+    width: 220px !important;
+    border-radius: 10%px !important;
+    border-bottom: 3px solid #7d243436 !important;
+    font-size: small !important;
+    font-weight: 600 !important;
+    background-color: #ffffff3d !important;
+    color: #7d2435 !important;
+    transition: background-color 0.3s, color 0.3s, border 0.3s !important;
+}
+
 .top {
     display: flex;
     flex-direction: row;
@@ -97,9 +114,9 @@
     border: 2px solid #f0f0f080;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: space-between;
     align-items: start;
-    gap: 5px;
+    gap: 50px;
     font-size: 1.5rem;
     font-weight: 700;
     padding: 10px 15px;
@@ -150,6 +167,7 @@
     transition: background-color 0.3s, color 0.3s, border 0.3s !important;
 }
 
+.panelButton:hover,
 .button:hover {
     background-color: #a71c1cc5 !important;
     color: #ffffff !important;

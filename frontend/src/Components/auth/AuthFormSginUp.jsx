@@ -6,7 +6,8 @@ import useModeStore from "../../Store/Store";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Loader from "../../assets/loader";
-import style from "./css/auth.module.css"
+import style from "./css/auth.module.css";
+import { links } from "../../utils";
 
 const AuthFormSginUp = ({ heading }) => {
   const { isMobile } = useModeStore();
@@ -21,8 +22,7 @@ const AuthFormSginUp = ({ heading }) => {
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    let endpoint = "https://api-auctora.vercel.app/api/users/register";
-    // let endpoint = "http://localhost:8000/api/users/register";
+    let endpoint = `${links.local}users/register`;
 
     if (password !== confirmPass) {
       setTimeout(() => {

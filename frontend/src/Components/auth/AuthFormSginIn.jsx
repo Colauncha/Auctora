@@ -7,7 +7,8 @@ import { useNavigate } from "react-router-dom";
 import Loader from "../../assets/loader";
 import {useState} from "react"
 import useAuthStore from "../../Store/AuthStore";
-import style from "./css/auth.module.css"
+import style from "./css/auth.module.css";
+import { links } from "../../utils";
 
 const AuthFormSginIn = ({ heading }) => {
   const { isMobile } = useModeStore();
@@ -31,8 +32,8 @@ const AuthFormSginIn = ({ heading }) => {
     }
 
     console.log(JSON.stringify(data))
-    let endpoint = "https://api-auctora.vercel.app/api/users/login";
-    // let endpoint = "http://localhost:8000/api/users/login";
+    let endpoint = `${links.local}users/login`;
+
     try {
       const response = await fetch(endpoint, {
        method: "POST",

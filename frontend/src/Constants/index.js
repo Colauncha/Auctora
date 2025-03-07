@@ -46,6 +46,8 @@ import SettingsIcon from "../assets/svg/SettingsIcon.svg";
 import AddIcon from "../assets/svg/AddIcon.svg";
 import ActivityIcon from "../assets/svg/ActivityIcon.svg";
 import Avatar from "../assets/svg/ProfileIcon.svg";
+import Edit from "../assets/svg/Edit.svg";
+import Money from "../assets/svg/Money.svg";
 
 export {
   logo,
@@ -90,6 +92,8 @@ export {
   Logout,
   SettingsIcon,
   Avatar,
+  Edit,
+  Money,
 };
 
 // const buildArr = {
