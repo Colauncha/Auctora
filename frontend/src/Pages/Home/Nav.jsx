@@ -36,9 +36,9 @@ const Nav = () => {
   }, [setModeBasedOnScreenSize]);
 
   const navigate = useNavigate();
-  const signIn = () => {
-    navigate("/sign-in");
-  };
+  // const signIn = () => {
+  //   navigate("/sign-in");
+  // };
 
   const handleSearch = () => {
     console.log("searching...");
@@ -128,7 +128,7 @@ const Nav = () => {
               src={user}
               alt=""
               className="h-4 w-4 cursor-pointer"
-              onClick={signIn}
+              onClick={() => navigate('/dashboard')}
             />
           </div>
         </div>

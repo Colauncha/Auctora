@@ -21,9 +21,10 @@ import VerificationLoading from "./Pages/Dashboard/VerificationLoading";
 
 // protected route
 import ProtectedRoute from "./Pages/ProtectedRoute/ProtectedRoute";
-import GetStarted from "./Pages/Dashboard/GetStarted";
+// import GetStarted from "./Pages/Dashboard/GetStarted";
 import AddProduct from "./Pages/Dashboard/AddProduct";
 import ProductPhoto from "./Pages/Dashboard/AddProduct/ProductPhoto";
+import Dashboard from "./Pages/Dashboard/Dashboard";
 
 const App = () => {
   return (
@@ -56,7 +57,7 @@ const App = () => {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <GetStarted />
+              <Dashboard />
             </ProtectedRoute>
           }
         />

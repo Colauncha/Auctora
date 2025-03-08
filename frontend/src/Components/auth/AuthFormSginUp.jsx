@@ -5,6 +5,9 @@ import Input from "./Input";
 import useModeStore from "../../Store/Store";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import Loader from "../../assets/loader";
+import style from "./css/auth.module.css";
+import { links } from "../../utils";
 
 const AuthFormSginUp = ({ heading }) => {
   const { isMobile } = useModeStore();
@@ -12,14 +15,22 @@ const AuthFormSginUp = ({ heading }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
+  const [alertT, setAlert] = useState({isAlert: false, level: 'warn', message: ""});
   const [checked, setChecked] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // let endpoint = "https://api-auctora.vercel.app/api/users/register";
-    let endpoint = "http://localhost:8000/api/users/register";
+    let endpoint = `${links.local}users/register`;
+
+    if (password !== confirmPass) {
+      setTimeout(() => {
+        setAlert({ isAlert: true, message: "Passwords do not match" })
+        setLoading(false)
+      }, 500)
+      return
+    }
     try {
       const response = await fetch(endpoint, {
         method: "POST",
@@ -31,19 +42,26 @@ const AuthFormSginUp = ({ heading }) => {
       if (response.ok) {
         const data = await response.json();
         console.log("Sign Up Successful", data);
-        localStorage.setItem("token", data.token);
-        alert("Sign Up Successful");
-        navigate("/otp"); // add product
+        setAlert({isAlert: true, level: "success", message: "Sign Up Successful"})
+        setTimeout(() => {
+          setLoading(false)
+          navigate("/otp")
+        }, 500)
       } else {
         const errorData = await response.json();
-        console.error("sign up failed: ", errorData.message);
+        console.error("sign up failed: ", errorData);
+        setTimeout(() => {
+          setLoading(false)
+          setAlert({isAlert: true, message: `${errorData.message}: ${errorData.detail}`})
+      }, 500)
       }
     } catch (error) {
       console.error("Error during sign up", error);
-    } finally {
-      setLoading(false);
+      setTimeout(() => {
+        setLoading(false)
+        setAlert({isAlert: true, message: error.detail})
+      }, 500)
     }
-    console.log("Sign up, please wait");
   };
   const SignIn = () => {
     navigate("/sign-in");
@@ -51,6 +69,12 @@ const AuthFormSginUp = ({ heading }) => {
   return (
     <div className="w-[620px] h-[500px] p-10 bg-white rounded-tl-md rounded-bl-md">
       <form action="">
+        {loading && <Loader />}
+        <div className={
+          `${alertT.isAlert ? style.alertShow : style.alertNone}
+           ${alertT.level === 'success' ? style.alertSuccess : ''}
+          `
+          }>{alertT.message}</div>
         <fieldset className="flex flex-col gap-3">
           <legend className="text-[30px] font-[700] text-[#9f3247]">
             {heading}
@@ -76,7 +100,10 @@ const AuthFormSginUp = ({ heading }) => {
             htmlFor={`email`}
             className={`focus:outline-[#9f3248]`}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setAlert({isAlert: false, message: ""})
+              setEmail(e.target.value)
+            }}
           />
           <Input
             title={`Password`}
@@ -85,7 +112,10 @@ const AuthFormSginUp = ({ heading }) => {
             htmlFor={`password`}
             className={`focus:outline-[#9f3248]`}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setAlert({isAlert: false, message: ""})
+              setPassword(e.target.value)
+            }}
           />
           <Input
             title={`Confirm Password`}
@@ -94,7 +124,10 @@ const AuthFormSginUp = ({ heading }) => {
             htmlFor={`password`}
             className={`focus:outline-[#9f3248]`}
             value={confirmPass}
-            onChange={(e) => setConfirmPass(e.target.value)}
+            onChange={(e) => {
+              setAlert({isAlert: false, message: ""})
+              setConfirmPass(e.target.value)
+            }}
           />
           <div className="flex items-center  gap-4">
             <Input
