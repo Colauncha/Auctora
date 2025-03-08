@@ -1,6 +1,8 @@
-import { Link } from "react-router-dom";
+// import { Link } from "react-router-dom";
 import Cta from "./Cta";
 import { facebook, github, instaggram, logo, twitter } from "../../Constants";
+import { ctaContext } from "../../Store/ContextStore";
+import { useEffect } from "react";
 
 const footerArr = [
   {
@@ -33,9 +35,15 @@ const footerArr = [
 ];
 
 const Footer = () => {
+  const useCta = ctaContext((state) => state.useCta);
+
+  useEffect(() => {
+    console.log(window.location.pathname)
+  }, [])
+
   return (
     <div className="bg-[#F0F0F0] min-h-screen w-full lg:h-[500px]">
-      <Cta />
+      {useCta && <Cta />}
       <footer className="formatter flex flex-col text-[#9F3247]">
         <div className="py-10 flex flex-col gap-6 md:flex-row">
           <div className="flex flex-col w-full gap-8 md:w-[450px] ">

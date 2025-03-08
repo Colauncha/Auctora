@@ -90,7 +90,7 @@
     height: 35px !important;
     width: 220px !important;
     border-radius: 10%px !important;
-    border-bottom: 3px solid #7d243436 !important;
+    border-bottom: 3px solid #7d24342a !important;
     font-size: small !important;
     font-weight: 600 !important;
     background-color: #ffffff3d !important;
@@ -107,12 +107,11 @@
     height: 50%;
     padding: 2%;
     border-bottom: 3px solid #f0f0f080;
-    background-color: #f0f0f0f0;
+    background-color: #f0f0f0bb;
     border-radius: 15px;
 }
 
 .greet {
-    border: 2px solid #f0f0f080;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -143,6 +142,35 @@
     color: #7d2435;
 }
 
+.walletBalance {
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+}
+
+.walletBalance #total {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.walletBalance #total > div {
+    font-size: 1.2rem;
+    font-weight: 300;
+}
+
+.walletBalance #available {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.walletBalance > p {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
 .wallet > Button {
     width: 100%;
 }
@@ -169,21 +197,14 @@
 }
 
 .bottomLeft {
-    background-color: #f0f0f0f0;
+    background-color: #f0f0f0bb;
     border-bottom: 3px solid #f0f0f080;
     align-items: center;
     justify-content: space-evenly;
-    border: #7d2435;
     height: 94%;
     width: 60%;
-    padding: 15px;
-}
-
-.bottomLeftButton {
-    width: 100% !important;
-    height: 25px !important;
-    border-radius: 15px !important;
-    margin-top: 5px;
+    padding-bottom: 15px;
+    overflow-y: scroll;
 }
 
 .bottomLeft > h1 {
@@ -192,6 +213,12 @@
     color: #7d2435;
     align-self: flex-start;
     padding-left: 15px;
+    position: sticky;
+    top: 0;
+    padding-top: 10px;
+    background-color: #f0f0f0;
+    border-bottom: 3px solid #f0f0f080;
+    width: 100%;
 }
 
 .bottomLeft > h1 > span {
@@ -202,11 +229,10 @@
     padding-left: 10px;
 }
 
-.bottomLeft > table {
+.bottomLeft > .auctionTable {
     width: 95%;
     text-align: left;
-    overflow-y: auto;
-    border-bottom: 1px solid #7d2435cc;
+    border-bottom: 1px solid #7d243463;
 }
 
 .bottomLeft > table > thead {
@@ -232,7 +258,7 @@
 
 .bottomRightRating {
     height: 30%;
-    background-color: #f0f0f0f0;
+    background-color: #f0f0f0bb;
     border-radius: 15px;
     border-bottom: 3px solid #f0f0f080;
     align-content: center;
@@ -242,7 +268,7 @@
 
 .bottomRightBids {
     height: calc(64% - 5px);
-    background-color: #f0f0f0f0;
+    background-color: #f0f0f0bb;
     border-radius: 15px;
     border-bottom: 3px solid #f0f0f080;
     align-content: center;
@@ -264,7 +290,7 @@
     height: 35px !important;
     width: 250px !important;
     border-radius: 10%px !important;
-    border-bottom: 3px solid #f0f0f080 !important;
+    border-bottom: 3px solid #f0f0f0b2 !important;
     font-size: small !important;
     font-weight: 600 !important;
     background-color: #ffffff3d !important;

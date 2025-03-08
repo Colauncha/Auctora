@@ -22,6 +22,35 @@
   border-radius: 20px;
 }
 
+/* For the whole page */
+::-webkit-scrollbar {
+  width: 10px; /* Width of vertical scrollbar */
+  height: 10px; /* Height of horizontal scrollbar */
+}
+
+/* Track (background) */
+::-webkit-scrollbar-track {
+  background: #f0f0f080; 
+  border-radius: 15px; 
+}
+
+/* Thumb (scrollable part) */
+::-webkit-scrollbar-thumb {
+  background: #9f3247; 
+  border-radius: 15px; 
+  border: 3px solid #f0f0f0; /* Space between thumb and track */
+}
+
+/* On hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #9f324780; 
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+
 /* Resp breaskpoints */
 
   .mobile {
