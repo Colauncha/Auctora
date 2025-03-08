@@ -32,7 +32,7 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["https://auctora.vercel.app"],
+        allow_origins=app_configs.CORS_ALLOWED,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

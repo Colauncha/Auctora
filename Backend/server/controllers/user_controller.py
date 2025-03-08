@@ -157,9 +157,8 @@ async def login(
         value=token.token,
         httponly=True,
         max_age=1800,
-        secure=True,
-        samesite="None",
-        # partitioned=True
+        secure=True if app_configs.ENV == 'production' else False,
+        samesite="None" if app_configs.ENV == 'production' else "lax",
     )
     return APIResponse(data=token)
 
