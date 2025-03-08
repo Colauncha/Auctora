@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 const Card = ({
   imgUrl,
   itemName,
@@ -6,9 +8,10 @@ const Card = ({
   bid,
   // bidTimes,
   countDown,
+  to
 }) => {
   return (
-    <div className="flex flex-col relative">
+    <Link className="flex flex-col relative" to={to}>
       <img
         src={imgUrl}
         alt=""
@@ -39,7 +42,7 @@ const Card = ({
           <p> Time Left</p>: <span className="ml-1">{countDown}</span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 

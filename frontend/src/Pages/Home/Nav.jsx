@@ -36,14 +36,16 @@ const Nav = () => {
   }, [setModeBasedOnScreenSize]);
 
   const navigate = useNavigate();
-  const signIn = () => {
-    navigate("/sign-in");
-  };
+  // const signIn = () => {
+  //   navigate("/sign-in");
+  // };
 
   const handleSearch = () => {
     console.log("searching...");
   };
-
+  const handleNotification = () => {
+    navigate("/notification");
+  };
   return (
     <div className="h-[36px] my-[20px]">
       {isMobile ? (
@@ -116,12 +118,17 @@ const Nav = () => {
             placeholder={`Search for products...`}
           />
           <div className="flex gap-4">
-            <img src={likee} alt="" className="h-4 w-4 cursor-pointer" />
+            <img
+              src={likee}
+              alt=""
+              className="h-4 w-4 cursor-pointer"
+              onClick={handleNotification}
+            />
             <img
               src={user}
               alt=""
               className="h-4 w-4 cursor-pointer"
-              onClick={signIn}
+              onClick={() => navigate('/dashboard')}
             />
           </div>
         </div>

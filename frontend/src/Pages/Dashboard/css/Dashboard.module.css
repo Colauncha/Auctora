@@ -1,0 +1,180 @@
+.container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: calc(100dvh - 112px);
+    border: 3px solid #f0f0f080;
+    background-color: #ffffff;
+}
+
+/* Left side of the dashboard */
+.sandwich {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    width: 20%;
+    border-right: 3px solid #f0f0f080;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    /* background-color: #f0f0f0f0; */
+}
+
+.actions {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+}
+
+.avatar {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 3px solid #f0f0f080;
+    width: 200px;
+    gap: 5px;
+}
+
+.avatar > p {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #7d2435;
+}
+
+.avatar > img {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+}
+
+.avatar > img:hover {
+    cursor: pointer;
+    
+}
+
+.avatarEmail {
+    font-size: 0.8rem !important;
+}
+
+.preferences {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    padding-bottom: 10px;
+}
+
+/* *************************** */
+/* Right side of the dashboard */
+/* *************************** */
+.panel {
+    width: 80%;
+    padding: 10px 15px;
+    display: flex;
+    flex-direction: column;
+    color: #7d2435;
+    gap: 20px;
+}
+
+.panelButton {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    height: 35px !important;
+    width: 220px !important;
+    border-radius: 10%px !important;
+    border-bottom: 3px solid #7d243436 !important;
+    font-size: small !important;
+    font-weight: 600 !important;
+    background-color: #ffffff3d !important;
+    color: #7d2435 !important;
+    transition: background-color 0.3s, color 0.3s, border 0.3s !important;
+}
+
+.top {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: start;
+    width: 95%;
+    padding: 2%;
+    border-bottom: 3px solid #f0f0f080;
+    background-color: #f0f0f0f0;
+    border-radius: 15px;
+}
+
+.greet {
+    border: 2px solid #f0f0f080;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: start;
+    gap: 50px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    padding: 10px 15px;
+}
+
+.wallet {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: start;
+    gap: 10px;
+    padding: 10px 25px;
+    /* border: 2px solid #a18585d7; */
+    width: 30%;
+    border-radius: 15px;
+    box-shadow:  11px 11px 31px #d0d0d0,
+        -11px -11px 31px #f0f0f0;
+}
+
+.wallet > h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #7d2435;
+}
+
+.wallet > Button {
+    width: 100%;
+}
+
+
+/* ******* */
+/* Buttons */
+/* ******* */
+.button {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    height: 35px !important;
+    width: 250px !important;
+    border-radius: 10%px !important;
+    border-bottom: 3px solid #f0f0f080 !important;
+    font-size: small !important;
+    font-weight: 600 !important;
+    background-color: #ffffff3d !important;
+    color: #7d2435 !important;
+    transition: background-color 0.3s, color 0.3s, border 0.3s !important;
+}
+
+.panelButton:hover,
+.button:hover {
+    background-color: #a71c1cc5 !important;
+    color: #ffffff !important;
+    border-bottom: 3px #ffffff00 !important;
+}
+
+.buttonIcon {
+    width: 22px;
+    height: 20px;
+}

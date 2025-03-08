@@ -1,0 +1,23 @@
+.alertNone {
+    display: none;
+}
+
+.alertShow {
+    display: flex;
+    width: 100%;
+    height: 30px;
+    align-items: center;
+    padding-left: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #802536;
+    background-color: #ffb546b1;
+    border: 1px solid #ffb546;
+    border-radius: 4px;
+}
+
+.alertSuccess {
+    color: #ffffff;
+    border: #1c9a00;
+    background-color: #6ef186b8;
+}

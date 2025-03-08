@@ -21,7 +21,7 @@ const Cta = () => {
           />
           <Button
             label={`Subscribe to Newsletter`}
-            className={`border-[1px] text-red-800 bg-white outline-none border-none`}
+            className={`shadow-lg hover:bg-[#7B2334]`}
           />
         </div>
       </div>
