@@ -1,7 +1,9 @@
 const links = {
   live: "https://api-auctora.vercel.app/api/",
-  local: 'http://localhost:8000/api/'
+  local: 'http://localhost:8000/api/',
 }
+
+const current = links.local;
 
 const capitalize = (s) => {
   if (typeof s !== 'string') return ''
@@ -9,11 +11,10 @@ const capitalize = (s) => {
   return newString
 };
 
-const char20 = (s) => {
-  console.log(s)
+const charLimit = (s, limit) => {
   if (typeof s !== 'string') return ''
-  if (s.length > 20) {
-    return s.slice(0, 20) + '...'
+  if (s.length > limit) {
+    return s.slice(0, limit) + '...'
   } return s
 };
 
@@ -27,6 +28,7 @@ const currencyFormat = (num) => {
 export {
   capitalize,
   currencyFormat,
-  char20,
-  links
+  charLimit,
+  links,
+  current
 }

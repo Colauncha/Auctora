@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Loader from "../../assets/loader";
 import style from "./css/auth.module.css";
-import { links } from "../../utils";
+import { current } from "../../utils";
 
 const AuthFormSginUp = ({ heading }) => {
   const { isMobile } = useModeStore();
@@ -22,7 +22,7 @@ const AuthFormSginUp = ({ heading }) => {
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    let endpoint = `${links.local}users/register`;
+    let endpoint = `${current}users/register`;
 
     if (password !== confirmPass) {
       setTimeout(() => {

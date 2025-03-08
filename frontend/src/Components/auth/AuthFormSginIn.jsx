@@ -8,7 +8,7 @@ import Loader from "../../assets/loader";
 import {useState} from "react"
 import useAuthStore from "../../Store/AuthStore";
 import style from "./css/auth.module.css";
-import { links } from "../../utils";
+import { current } from "../../utils";
 
 const AuthFormSginIn = ({ heading }) => {
   const { isMobile } = useModeStore();
@@ -32,7 +32,7 @@ const AuthFormSginIn = ({ heading }) => {
     }
 
     console.log(JSON.stringify(data))
-    let endpoint = `${links.local}users/login`;
+    let endpoint = `${current}users/login`;
 
     try {
       const response = await fetch(endpoint, {

@@ -104,6 +104,7 @@
     justify-content: space-between;
     align-items: start;
     width: 95%;
+    height: 50%;
     padding: 2%;
     border-bottom: 3px solid #f0f0f080;
     background-color: #f0f0f0f0;
@@ -145,6 +146,110 @@
 .wallet > Button {
     width: 100%;
 }
+
+
+/* ****** */
+/* Bottom */
+/* ****** */
+
+.bottom {
+    display: flex;
+    flex: row;
+    width: 95%;
+    height: 40%;
+    justify-content: space-between;
+    font-size: small;
+    font-weight: 500;
+}
+
+.bottom > div {
+    display: flex;
+    flex-direction: column;
+    border-radius: 15px;
+}
+
+.bottomLeft {
+    background-color: #f0f0f0f0;
+    border-bottom: 3px solid #f0f0f080;
+    align-items: center;
+    justify-content: space-evenly;
+    border: #7d2435;
+    height: 94%;
+    width: 60%;
+    padding: 15px;
+}
+
+.bottomLeftButton {
+    width: 100% !important;
+    height: 25px !important;
+    border-radius: 15px !important;
+    margin-top: 5px;
+}
+
+.bottomLeft > h1 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #7d2435;
+    align-self: flex-start;
+    padding-left: 15px;
+}
+
+.bottomLeft > h1 > span {
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-decoration: underline;
+    cursor: pointer;
+    padding-left: 10px;
+}
+
+.bottomLeft > table {
+    width: 95%;
+    text-align: left;
+    overflow-y: auto;
+    border-bottom: 1px solid #7d2435cc;
+}
+
+.bottomLeft > table > thead {
+    font-weight: 600;
+    color: #ffffffaa;
+    background-color: #7d2435;
+}
+
+.bottomLeft > table > tbody > tr {
+    transition: background-color 0.3s;
+    cursor: pointer;
+}
+
+.bottomLeft > table > tbody > tr:hover {
+    background-color: #7d243533;
+    /* color: #ffffffcc; */
+}
+
+.bottomRight {
+    gap: 5px;
+    width: 38%;
+}
+
+.bottomRightRating {
+    height: 30%;
+    background-color: #f0f0f0f0;
+    border-radius: 15px;
+    border-bottom: 3px solid #f0f0f080;
+    align-content: center;
+    justify-items: center;
+    padding: 10px;
+}
+
+.bottomRightBids {
+    height: calc(64% - 5px);
+    background-color: #f0f0f0f0;
+    border-radius: 15px;
+    border-bottom: 3px solid #f0f0f080;
+    align-content: center;
+    justify-items: center;
+    padding: 10px;
+}
+
 
 
 /* ******* */
