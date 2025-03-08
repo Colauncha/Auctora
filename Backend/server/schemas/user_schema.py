@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 from uuid import UUID
 from fastapi import Query
 from pydantic import BaseModel, Field, ConfigDict
@@ -39,23 +39,15 @@ class GetUsersSchemaPublic(BaseModel):
         examples=[app_configs.test_user.EMAIL]
     )
     email_verified: Optional[bool] = Field(default=False)
+    rating: Optional[float] = Field(default=0.00)
+    kyc_verified: Optional[bool] = Field(default=False)
+    address: Optional[str] = Field(default=None)
     role: Optional[UserRoles] = Field(
         description='User roles',
         examples=[UserRoles.CLIENT]
     )
 
     model_config = {"from_attributes": True}
-
-
-class GetUserSchema(GetUsersSchemaPublic):
-    wallet: float = Field(
-        description="User's wallet balance",
-        examples=[1000.00]
-    )
-    available_balance: float = Field(
-        description="User's available balance",
-        examples=[900.00]
-    )
 
 
 class CreateUserSchema(BaseModel):
@@ -139,16 +131,28 @@ class ChangePasswordSchema(BaseModel):
     confirm_password: str = Field(min_length=8, max_length=32)
 
 
+# Bank Account related
+class AccountDetailsSchema(BaseModel):
+    model_config = {"from_attributes": True, "extra": "ignore"}
+    acct_no: str
+    bank_code: str
+    bank_name: str
+    acct_name: str
+    recipient_code: str
+    id: Union[str, UUID]
+
+
+# Notification related
 class CreateNotificationSchema(BaseModel):
     title: str
     message: str
-    user_id: UUID
+    user_id: Union[str, UUID]
 
     model_config = {"from_attributes": True}
 
 
 class GetNotificationsSchema(CreateNotificationSchema):
-    id: UUID
+    id: Union[str, UUID]
     read: bool = False
 
 
@@ -156,20 +160,21 @@ class UpdateNotificationSchema(BaseModel):
     read: bool = True
 
 
+# Wallet related
 class WalletTransactionSchema(BaseModel):
-    model_config = {"from_attributes": True}
-    user_id: str
+    model_config = {"from_attributes": True, "extra": "ignore"}
+    user_id: Union[str, UUID]
     amount: float
     description: str
     transaction_type: TransactionTypes
     status: TransactionStatus
-    reference_id: str
+    reference_id: Optional[Union[str, UUID]]
 
 
 class VerifyTransactionData(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     email: Optional[str] = Field(default=None)
-    amount: float
+    amount: Optional[float] = Field(default=None)
     user_id: Optional[str] = Field(default=None)
     reference_id: str
 
@@ -180,10 +185,20 @@ class AuthorizationURL(BaseModel):
     access_code: str
     reference: str
 
+
 class InitializePaymentRes(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
     status: bool
     message: str
     data: Optional[AuthorizationURL] = Field(default=None)
     code: Optional[str] = Field(default=None)
     type: Optional[str] = Field(default=None)
+
+
+class TransferRecipientData(BaseModel):
+
+    type: Optional[str] = Field(default="nuban")
+    name: Optional[str] = Field(default=None)
+    account_number: str
+    bank_code: str
+    currency: Optional[str] = Field(default="NGN")

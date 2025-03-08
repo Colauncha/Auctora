@@ -2,6 +2,7 @@ from sqlalchemy import (
     UUID,
     Boolean,
     Column,
+    DateTime,
     Float,
     ForeignKey,
     String,
@@ -31,10 +32,28 @@ class Users(BaseModel):
     hash_password = Column(String, nullable=False)
     email = Column(String, index=True, unique=True, nullable=False)
     email_verified = Column(Boolean, default=False)
+
+    # Wallet & account INFO
     wallet = Column(Float, nullable=True, default=0.00)
     available_balance = Column(Float, nullable=True, default=0.00)
     auctioned_amount = Column(Float, nullable=True, default=0.00)
+    acct_no = Column(String, nullable=True)
+    acct_name = Column(String, nullable=True)
+    bank_code = Column(String, nullable=True)
+    bank_name = Column(String, nullable=True)
+    recipient_code = Column(String, nullable=True)
+
+    # Address & KYC INFO
+    address = Column(String, nullable=True)
+    city = Column(String, nullable=True)
+    state = Column(String, nullable=True)
+    country = Column(String, nullable=True)
     kyc_verified = Column(Boolean, default=False)
+    kyc_id_type = Column(String, nullable=True)
+    kyc_id_number = Column(String, nullable=True)
+
+    # Additional INFO
+    rating = Column(Float, nullable=True, default=0.00)
     role = Column(
         ENUM(
             UserRoles, name='userroles',

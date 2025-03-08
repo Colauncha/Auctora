@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from sqlalchemy import (
     UUID, Column, ForeignKey,
-    Boolean, DateTime, Index, String,
+    Boolean, DateTime, Index, Integer, String,
     Float
 )
 from sqlalchemy.dialects.postgresql import ENUM
@@ -23,6 +23,7 @@ class Auctions(BaseModel):
     buy_now_price = Column(Float, nullable=True)
     start_date = Column(DateTime(timezone=True), default=datetime.now(tz=timezone.utc), index=True)
     end_date = Column(DateTime(timezone=True), index=True)
+    watchers = Column(Integer, nullable=True, default=0)
     status = Column(
         ENUM(
             AuctionStatus, name='auction_status', create_type=True,

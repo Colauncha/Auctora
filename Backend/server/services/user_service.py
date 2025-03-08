@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 from sqlalchemy.orm import Session
 from server.models.users import Users
-from server.enums.user_enums import UserRoles
+from server.enums.user_enums import TransactionStatus, TransactionTypes, UserRoles
 from passlib.context import CryptContext
 from server.config.database import get_db
 from server.repositories import DBAdaptor
@@ -20,7 +20,8 @@ from server.schemas import (
     ChangePasswordSchema, PagedResponse,
     PagedQuery, GetUsers, GetNotificationsSchema,
     NotificationQuery, CreateNotificationSchema,
-    WalletTransactionSchema
+    WalletTransactionSchema, WalletHistoryQuery,
+    InitializePaymentRes, AccountDetailsSchema,
 )
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
@@ -103,30 +104,95 @@ class UserWalletTransactionServices:
         self.user_repo = DBAdaptor(db).user_repo
         self.notification = UserNotificationServices(db)
 
+    async def init_transaction(
+            self,
+            data: InitializePaymentRes,
+            user: GetUserSchema,
+            amount: float
+        ):
+        try:
+            wallet_data = WalletTransactionSchema.model_validate({
+                "user_id": user.id,
+                "status": TransactionStatus.PENDING,
+                "transaction_type": TransactionTypes.FUNDING,
+                "description": f"Funding of {amount} pending",
+                "amount": amount,
+                "reference_id": data.data.reference
+            })
+            _ = await self.repo.add(wallet_data.model_dump())
+            return True
+        except Exception as e:
+            raise e
+
     async def create(self, transaction, extra):
         try:
             transaction = WalletTransactionSchema(**transaction, **extra)
+            user = await self.user_repo.get_by_id(transaction.user_id)
+            notify = False
+
+            print(transaction, user)
             NOTIF_TITLE = f"Funding Account {transaction.status.value}"
             NOTIF_MESSAGE = (
-                f"Your attempt to credit your wallet with N{transaction.amount} "
-                f"has {transaction.status.value}"
+            f"Your attempt to credit your wallet with N{transaction.amount} "
+            f"has {transaction.status.value}"
             )
-            exist = await self.repo.get_by_attr({'reference_id': transaction.reference_id})
-            if exist:
-                return
-            _ = await self.user_repo.fund_wallet(transaction)
-            user = await self.user_repo.get_by_id(transaction.user_id)
-            pub_data = transaction.model_dump()
-            pub_data['email'] = user.email
-            _ = await self.notification.create(
-                CreateNotificationSchema(
-                    title=NOTIF_TITLE,
-                    message=NOTIF_MESSAGE,
-                    user_id=user.id
+
+            exist = await self.repo.get_by_attr(
+                {'reference_id': transaction.reference_id}
+            )
+
+            print(exist)
+            if transaction.status == TransactionStatus.COMPLETED:
+                if exist and exist.status == transaction.status:
+                    return
+                elif exist and exist.status != transaction.status:
+                    _ = await self.user_repo.fund_wallet(
+                        transaction, update=True, exist=exist
+                    )
+                    notify = True
+                elif not exist:
+                    _ = await self.user_repo.fund_wallet(transaction)
+                    notify = True
+
+            else:
+                if exist and exist.status == transaction.status:
+                    return
+                elif exist and exist.status != transaction.status:
+                    _ = await self.repo.save(exist, transaction.model_dump())
+                else:
+                    _ = await self.repo.add(transaction.model_dump())
+                    notify = True
+            
+
+            if notify:
+                pub_data = transaction.model_dump()
+                pub_data['email'] = user.email
+                _ = await self.notification.create(
+                    CreateNotificationSchema(
+                        title=NOTIF_TITLE,
+                        message=NOTIF_MESSAGE,
+                        user_id=user.id
+                    )
                 )
-            )
-            await publish_fund_account(pub_data)
+                # await publish_fund_account(pub_data)
             return
+        except Exception as e:
+            raise e
+
+    async def list(self, filter: WalletHistoryQuery):
+        try:
+            filter = filter.model_dump(exclude_none=True)
+            history = await self.repo.get_all(filter=filter)
+            if not history:
+                raise ExcRaiser404(message='No Transaction found')
+            valid_history = [
+                WalletTransactionSchema
+                .model_validate(transaction)
+                .model_dump()
+                for transaction in history.data
+            ]
+            history.data = valid_history
+            return history
         except Exception as e:
             raise e
 
@@ -239,7 +305,8 @@ class UserServices:
                 return data
 
         except Exception as e:
-            if type(e) == ExcRaiser:
+            if issubclass(type(e), ExcRaiser):
+                print(e)
                 raise e
             raise ExcRaiser(
                 message="Unable to create User",
@@ -277,6 +344,18 @@ class UserServices:
             if type(e) == ExcRaiser:
                 raise e
             raise ExcRaiser500()
+        
+    async def add_recipient_code(
+        self,
+        data: AccountDetailsSchema,
+        user: GetUserSchema
+    ) -> AccountDetailsSchema:
+        try:
+            data = data.model_dump(exclude={'id'})
+            res = await self.repo.update(user, data)
+            return AccountDetailsSchema.model_validate(*res)
+        except Exception as e:
+            raise e
 
     async def retrieve(self, id) -> GetUserSchema:
         try:

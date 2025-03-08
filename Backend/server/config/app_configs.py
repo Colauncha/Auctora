@@ -77,7 +77,9 @@ class AppConfig(BaseSettings):
     ENV: str
     paystack: PayStack = PayStack()
     DEBUG: bool = True if ENV in ["development", "test"] else False
-    CORS_ALLOWED: list[str] | str = ["http://localhost:5173"]
+    CORS_ALLOWED: list[str] | str = [
+        "http://localhost:5173", "https://auctora.vercel.app/"
+    ]
 
 
 app_configs = AppConfig()

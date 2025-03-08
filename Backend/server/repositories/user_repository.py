@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from server.repositories.repository import Repository
 from server.models.users import Users, Notifications, WalletTransactions
-from server.schemas.user_schema import GetUserSchema, WalletTransactionSchema
+from server.schemas import GetUserSchema, WalletTransactionSchema
 from server.middlewares.exception_handler import ExcRaiser, ExcRaiser404
 from sqlalchemy.exc import SQLAlchemyError
 from server.enums.user_enums import TransactionStatus, TransactionTypes
@@ -147,7 +147,12 @@ class UserRepository(Repository):
                 detail=str(e)
             )
         
-    async def fund_wallet(self, transaction: WalletTransactionSchema):
+    async def fund_wallet(
+            self,
+            transaction: WalletTransactionSchema,
+            update: bool = False,
+            exist: WalletTransactions = None
+    ):
         try:
             with self.db.begin(nested=True):
                 user = await self.get_by_id(transaction.user_id)
@@ -155,7 +160,11 @@ class UserRepository(Repository):
                     raise ExcRaiser404(message="User not found")
                 user.wallet += transaction.amount
                 user.available_balance += transaction.amount
-            await self.wallet_transaction.add(transaction.model_dump())
+
+            if update:
+                await self.wallet_transaction.save(exist, transaction.model_dump())
+            else:
+                await self.wallet_transaction.add(transaction.model_dump())
         except (Exception, SQLAlchemyError) as e:
             self.db.rollback()
             raise ExcRaiser(
