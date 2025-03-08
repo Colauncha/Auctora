@@ -25,7 +25,7 @@ from server.schemas import (
     WalletTransactionSchema, VerifyTransactionData,
     InitializePaymentRes, GetUsersSchemaPublic,
     WalletHistoryQuery, TransferRecipientData,
-    AccountDetailsSchema,
+    AccountDetailsSchema
 )
 from server.services import (
     UserServices,

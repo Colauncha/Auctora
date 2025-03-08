@@ -50,23 +50,6 @@ class GetUsersSchemaPublic(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class GetUserSchema(GetUsersSchemaPublic):
-    acct_no: Optional[str]
-    acct_name: Optional[str]
-    bank_code: Optional[str]
-    bank_name: Optional[str]
-    recipient_code: Optional[str]
-
-    wallet: float = Field(
-        description="User's wallet balance",
-        examples=[1000.00]
-    )
-    available_balance: float = Field(
-        description="User's available balance",
-        examples=[900.00]
-    )
-
-
 class CreateUserSchema(BaseModel):
     username: Optional[str] = Field(
         default=None,

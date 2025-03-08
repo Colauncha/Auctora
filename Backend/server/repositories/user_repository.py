@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from server.repositories.repository import Repository
 from server.models.users import Users, Notifications, WalletTransactions
-from server.schemas.user_schema import GetUserSchema, WalletTransactionSchema
+from server.schemas import GetUserSchema, WalletTransactionSchema
 from server.middlewares.exception_handler import ExcRaiser, ExcRaiser404
 from sqlalchemy.exc import SQLAlchemyError
 from server.enums.user_enums import TransactionStatus, TransactionTypes

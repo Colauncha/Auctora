@@ -64,6 +64,24 @@ class GetUsers(GetUsersSchemaPublic):
     auctions: Optional[list[GetAuctionSchema]] = Field(default=[])
 
 
+class GetUserSchema(GetUsersSchemaPublic):
+    acct_no: Optional[str]
+    acct_name: Optional[str]
+    bank_code: Optional[str]
+    bank_name: Optional[str]
+    recipient_code: Optional[str]
+    auctions: Optional[list[GetAuctionSchema]] = Field(default=None)
+
+    wallet: float = Field(
+        description="User's wallet balance",
+        examples=[1000.00]
+    )
+    available_balance: float = Field(
+        description="User's available balance",
+        examples=[900.00]
+    )    
+
+
 # Notification related
 class NotificationQuery(PagedQuery):
     user_id: Optional[UUID] = Query(default=None, description="User ID")
