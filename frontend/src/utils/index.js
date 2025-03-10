@@ -3,7 +3,7 @@ const links = {
   local: 'http://localhost:8000/api/',
 }
 
-const current = links.local;
+const current = links.live;
 
 const capitalize = (s) => {
   if (typeof s !== 'string') return ''
