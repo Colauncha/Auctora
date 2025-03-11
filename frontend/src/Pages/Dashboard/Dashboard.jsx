@@ -114,7 +114,7 @@ const Dashboard = () => {
   return (
     <>
       <div className={style.container}>
-        <div className={style.sandwich}>
+        <div className={style.sidebar}>
           <div className={style.avatar}>
             <Avatar imageUrl={user?.image ? user.image.public_url : null} username={user.username ? user.username : user.email} />
             <div className={style.avatarAfter}></div>

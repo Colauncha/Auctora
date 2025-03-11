@@ -8,7 +8,7 @@
 }
 
 /* Left side of the dashboard */
-.sandwich {
+.sidebar {
     display: flex;
     flex-direction: column;
     align-items: center;
