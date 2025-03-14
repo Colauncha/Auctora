@@ -105,17 +105,18 @@ class UserWalletTransactionServices:
         self.notification = UserNotificationServices(db)
 
     async def init_transaction(
-            self,
-            data: InitializePaymentRes,
-            user: GetUserSchema,
-            amount: float
-        ):
+        self,
+        data: InitializePaymentRes ,
+        user: GetUserSchema,
+        amount: float,
+        t_type: TransactionTypes = TransactionTypes.FUNDING
+    ):
         try:
             wallet_data = WalletTransactionSchema.model_validate({
                 "user_id": user.id,
                 "status": TransactionStatus.PENDING,
-                "transaction_type": TransactionTypes.FUNDING,
-                "description": f"Funding of {amount} pending",
+                "transaction_type": t_type,
+                "description": f"{t_type} of {amount} pending",
                 "amount": amount,
                 "reference_id": data.data.reference
             })
@@ -195,11 +196,18 @@ class UserWalletTransactionServices:
             return history
         except Exception as e:
             raise e
+        
+    async def withdraw(self, user: GetUserSchema, amount: float) -> bool:
+        try:
+
+            ...
+        except Exception as e:
+            raise e
 
 
-###############################################################################
-################################ User Services ################################
-###############################################################################
+##############################################################################
+################################ User Services ###############################
+##############################################################################
 
 class UserServices:
     def __init__(self, db: Session):

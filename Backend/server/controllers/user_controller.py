@@ -267,7 +267,6 @@ async def list(
     db: Session = Depends(get_db)
 ) -> PagedResponse:
     filter.user_id = user.id
-    print(filter)
     result = await UserWalletTransactionServices(db).list(filter)
     return result
 
@@ -279,7 +278,7 @@ async def get_gateway_url(
     amount: int,
     db: Session = Depends(get_db)
 ) -> InitializePaymentRes:
-    url = f"{app_configs.paystack.PAYSTACK_URL}/transaction/initialize"
+    url = f"{app_configs.paystack.URL}/transaction/initialize"
     headers = {
         "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}",
         "Content-Type": "application/json"
@@ -312,7 +311,7 @@ async def verify_funding(
     extra = {
         'transaction_type': TransactionTypes.FUNDING,
     }
-    paystack_url = app_configs.paystack.PAYSTACK_URL
+    paystack_url = app_configs.paystack.URL
     url = f"{paystack_url}/transaction/verify/{data.reference_id}"
     headers = {
         "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}"
@@ -409,7 +408,7 @@ async def resolve_acct_number(
     account_number: str,
     bank_code: str
 ) -> APIResponse:
-    url = f"{app_configs.paystack.PAYSTACK_URL}/bank/resolve"
+    url = f"{app_configs.paystack.URL}/bank/resolve"
     headers = {
         "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}"
     }
@@ -429,8 +428,8 @@ async def transfer_recipient(
     data: TransferRecipientData,
     db: Session = Depends(get_db)
 ) -> Union[APIResponse, dict]:
-    url_resolve = f"{app_configs.paystack.PAYSTACK_URL}/bank/resolve"
-    url_tr = f"{app_configs.paystack.PAYSTACK_URL}/transferrecipient"
+    url_resolve = f"{app_configs.paystack.URL}/bank/resolve"
+    url_tr = f"{app_configs.paystack.URL}/transferrecipient"
     headers = {
         "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}",
         "Content-Type": "application/json"
@@ -474,7 +473,39 @@ async def withdraw(
     amount: int,
     db: Session = Depends(get_db)
 ) -> APIResponse:
-    pass
+    if user.recipient_code is None:
+        raise ExcRaiser400(detail="Recipient code not set")
+
+    url = f"{app_configs.paystack.URL}/transfer"
+    headers = {
+        "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "source": "balance",
+        "amount": amount * 100,  # Convert to kobo
+        "recipient": user.recipient_code,
+        "reason": "Wallet withdrawal"
+    }
+
+    response = requests.post(url, json=data, headers=headers)
+    res_data = response.json()
+
+    # TODO: save transaction to db
+    data = InitializePaymentRes.model_validate(res_data)
+    print(res_data)
+
+    if res_data.get('status') is True:
+        result = await UserWalletTransactionServices(db).init_transaction(
+            data, user, amount, TransactionTypes.WITHDRAWAL
+        )
+
+    return APIResponse(
+        data=data.data if data.status == True else None,
+        message=data.message,
+        success=data.status,
+        status_code=response.status_code
+    )
 
 
 route.include_router(notif_route)
