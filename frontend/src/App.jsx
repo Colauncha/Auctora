@@ -25,6 +25,12 @@ import ProtectedRoute from "./Pages/ProtectedRoute/ProtectedRoute";
 import AddProduct from "./Pages/Dashboard/AddProduct";
 import ProductPhoto from "./Pages/Dashboard/AddProduct/ProductPhoto";
 import Dashboard from "./Pages/Dashboard/Dashboard";
+import Description from "./Pages/Sell/AddProduct/Description";
+import Categories from "./Pages/Sell/AddProduct/Categories";
+import Delivery from "./Pages/Sell/AddProduct/Delivery";
+import Photos from "./Pages/Sell/AddProduct/Photos";
+import Products from "./Pages/Sell/AddProduct/Products";
+
 
 const App = () => {
   return (
@@ -51,6 +57,13 @@ const App = () => {
         <Route path="/address-verification" element={<AddressVerification />} />
         <Route path="/bank-verification" element={<BankVerification />} />
         <Route path="/verification-loading" element={<VerificationLoading />} />
+        {/* AddProduct */}
+        <Route path="/description" element={<Description />} />
+        <Route path="/categories" element={<Categories />} />
+        <Route path="/delivery" element={<Delivery />} />
+        <Route path="/photos" element={<Photos />} />
+        <Route path="/products" element={<Products />} />
+        {/* <Route path="/sign-in" element={<SignIn />} /> */}
 
         {/* Protected Routes */}
         <Route
