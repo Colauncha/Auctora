@@ -79,6 +79,7 @@ class AuctionServices:
             if extra:
                 filter.update(extra)
             result = await self.repo.get_all(filter)
+            result = [GetAuctionSchema.model_validate(r) for r in result.data]
             return result
         except Exception as e:
             if issubclass(type(e), ExcRaiser):

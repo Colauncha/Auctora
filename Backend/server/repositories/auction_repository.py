@@ -20,5 +20,10 @@ class AuctionRepository(Repository):
         except Exception as e:
             raise e
 
-    async def get_all(self, filter = None, relative = False):
-        return await super().get_all(filter, relative)
+    async def get_all(
+        self,
+        filter = None,
+        relative = False,
+        sort = 'watchers_count'
+    ):
+        return await super().get_all(filter, relative, sort)

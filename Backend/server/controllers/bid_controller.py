@@ -1,6 +1,6 @@
 import json
 from fastapi import (
-    APIRouter, Depends,
+    APIRouter, Depends, Request,
     WebSocket, WebSocketDisconnect,
     WebSocketException, status,
 )
@@ -99,8 +99,13 @@ async def ws_create(
     await wsmanager.connect(id, ws)
     redis = await redis_store.get_async_redis()
     prev_bids = await redis.get(f'auction:{id}')
-    await wsmanager.send_data(json.loads(prev_bids), ws)
+    if prev_bids:
+        await wsmanager.send_data(json.loads(prev_bids), ws)
+    else:
+        await wsmanager.send_data([], ws)
     try:
+        watcher = ws.client.host
+        await BidServices(db).add_watcher(id, watcher)
         while True:
             data = await ws.receive_json(mode="text")
             if data.get('type') != 'websocket.disconnect':
