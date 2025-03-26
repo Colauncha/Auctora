@@ -61,6 +61,7 @@ class UpdateItemSchema(CreateItemSchema):
 
 class GetItemSchema(UpdateItemSchema):
     id: UUID
+    users_id: UUID
 
 
 class CreateCategorySchema(BaseModel):
