@@ -95,6 +95,14 @@ class UpdateUserSchema(BaseModel):
     phone_number: Optional[str] = None
 
 
+class UpdateUserAddressSchema(BaseModel):
+    model_config = {"from_attributes": True}
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = Field(default="Nigeria")
+
+
 class LoginSchema(BaseModel):
     model_config = {"from_attributes": True}
     identifier: str = Field(

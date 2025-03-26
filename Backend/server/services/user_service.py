@@ -22,6 +22,7 @@ from server.schemas import (
     NotificationQuery, CreateNotificationSchema,
     WalletTransactionSchema, WalletHistoryQuery,
     InitializePaymentRes, AccountDetailsSchema,
+    UpdateUserAddressSchema
 )
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
@@ -463,6 +464,23 @@ class UserServices:
                 message="Update not successful",
                 detail=exc.__repr__()
             )
+
+    async def update_address(
+        self,
+        user: GetUserSchema,
+        data: UpdateUserAddressSchema
+    ):
+        try:
+            if not user:
+                raise HTTPException(
+                    status_code=400, detail="Not authenticated"
+                )
+            _data = data.model_dump(exclude_unset=True, exclude_none=True)
+            result = await self.repo.update(user, _data)
+            if result:
+                return True
+        except Exception as e:
+            raise e
         
     async def get_reset_token(self, email: str):
         try:

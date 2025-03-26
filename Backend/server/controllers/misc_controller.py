@@ -167,7 +167,7 @@ async def cities(state: str) -> APIResponse[list]:
             "Oyun", "Pategi"
         ],
         "lagos": [
-            "Lagos", "Ikeja", "Epe", "Badagry", "Agege", "Ajeromi-Ifelodun", "Alimosho", "Amuwo-Odofin",
+            "Ikeja", "Epe", "Badagry", "Agege", "Ajeromi-Ifelodun", "Alimosho", "Amuwo-Odofin",
             "Apapa", "Eti-Osa", "Ibeju-Lekki", "Ifako-Ijaiye", "Ikorodu", "Kosofe", "Lagos Island",
             "Mushin", "Ojo", "Oshodi-Isolo", "Somolu", "Surulere"
         ],
