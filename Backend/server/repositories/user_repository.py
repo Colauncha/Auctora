@@ -173,6 +173,12 @@ class UserRepository(Repository):
                 detail=str(e)
             )
 
+    async def withdraw(self):
+        try:
+            ...
+        except Exception as e:
+            raise e
+
 
 class UserNotificationRepository(Repository):
     def __init__(self, db):

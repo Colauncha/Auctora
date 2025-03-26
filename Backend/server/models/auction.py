@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from sqlalchemy import (
-    UUID, Column, ForeignKey,
-    Boolean, DateTime, Index, Integer, String,
-    Float
+    JSON, UUID, Column, ForeignKey,
+    Boolean, DateTime, Index, String,
+    Float, Integer
 )
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import relationship
@@ -23,7 +23,8 @@ class Auctions(BaseModel):
     buy_now_price = Column(Float, nullable=True)
     start_date = Column(DateTime(timezone=True), default=datetime.now(tz=timezone.utc), index=True)
     end_date = Column(DateTime(timezone=True), index=True)
-    watchers = Column(Integer, nullable=True, default=0)
+    watchers = Column(JSON, nullable=True, default=[])
+    watchers_count = Column(Integer, nullable=True, default=0)
     status = Column(
         ENUM(
             AuctionStatus, name='auction_status', create_type=True,

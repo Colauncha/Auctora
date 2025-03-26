@@ -55,14 +55,14 @@ class CloudinaryConfig(BaseSettings):
 
 class PayStack(BaseSettings):
     SECRET_KEY: str
-    PAYSTACK_URL: str
+    URL: str
     PAYSTACK_IP_WL: list[str] = [
         "52.31.139.75",
         "52.49.173.169",
         "52.214.14.220"
     ]
     model_config = {}
-    model_config['env_prefix'] = 'TEST_' if ENV == 'development' else 'PAYSTACK'
+    model_config['env_prefix'] = 'TEST_' if ENV == 'development' else 'PAYSTACK_'
 
 
 class AppConfig(BaseSettings):
@@ -78,7 +78,7 @@ class AppConfig(BaseSettings):
     paystack: PayStack = PayStack()
     DEBUG: bool = True if ENV in ["development", "test"] else False
     CORS_ALLOWED: list[str] | str = [
-        "http://localhost:5173", "https://auctora.vercel.app/"
+        "http://localhost:5173", "https://auctora.vercel.app"
     ]
 
 

@@ -110,7 +110,13 @@ class Repository:
         except Exception as e:
             raise e
         
-    async def get_all(self, filter: dict = None, relative: bool = False) -> PagedResponse:
+    async def get_all(
+        self,
+        filter: dict = None,
+        relative: bool = False,
+        sort: str = 'created_at',
+#        order: str = 'desc'
+    ) -> PagedResponse:
     
         page = filter.pop('page') if (filter and filter.get('page')) else 1
         per_page = filter.pop('per_page') if (filter and filter.get('per_page')) else 10
@@ -125,6 +131,7 @@ class Repository:
             else:
                 query = self.db.query(QueryModel)
                 total = query.count()
+            query = query.order_by(getattr(QueryModel, sort))
             results = query.limit(limit).offset(offset).all()
         except Exception as e:
             raise e

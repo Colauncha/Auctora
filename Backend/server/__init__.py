@@ -40,12 +40,14 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
 
     @app.get("/", include_in_schema=False)
     def redirect():
-        return RedirectResponse(url=app_configs.SWAGGER_DOCS_URL, status_code=302)
-    
+        return RedirectResponse(
+            url=app_configs.SWAGGER_DOCS_URL, status_code=302
+        )
+
     @app.get("/status", include_in_schema=False)
     def status():
         return {'status': 'running'}
-    
+
     app.exception_handlers = {
         ExcRaiser: exception_handler,
         RequestValidationError: request_validation_error_handler,
@@ -80,14 +82,16 @@ def create_admin():
         role = UserRoles.ADMIN
 
         if password != confirm_pass:
-            raise Exception({'message':'Password Mismatch'})
-        
+            raise Exception({'message': 'Password Mismatch'})
+
         exist_email = db.query(Users).filter(Users.email == email).first()
-        exist_uname = db.query(Users).filter(Users.username == username).first()
+        exist_uname = db.query(Users).filter(
+            Users.username == username
+        ).first()
         print(exist_email, exist_uname)
         if (exist_email or exist_uname):
-            raise Exception({'message':'Username or Email already exist'})
-        
+            raise Exception({'message': 'Username or Email already exist'})
+
         admin = CreateUserSchema.model_validate({
             'username': username,
             'email': email,

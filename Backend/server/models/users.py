@@ -20,7 +20,6 @@ from server.enums.user_enums import (
 )
 
 
-
 class Users(BaseModel):
     __tablename__ = 'users'
     __mapper_args__ = {'polymorphic_identity': 'users'}

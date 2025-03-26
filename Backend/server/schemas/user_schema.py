@@ -181,7 +181,7 @@ class VerifyTransactionData(BaseModel):
 
 class AuthorizationURL(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    authorization_url: str
+    authorization_url: Optional[str] = Field(default=None)
     access_code: str
     reference: str
 

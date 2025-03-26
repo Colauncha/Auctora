@@ -7,6 +7,9 @@ from server.controllers.items_controller import route as item_route
 from server.controllers.auction_controller import route as auction_route
 from server.controllers.bid_controller import route as bid_route
 from server.controllers.misc_controller import route as misc_route
+from server.controllers.landing_page_controller import (
+    router as landing_page_router
+)
 
 
 routes = APIRouter(prefix=app_configs.URI_PREFIX)
@@ -19,3 +22,4 @@ routes.include_router(sub_route)
 routes.include_router(item_route)
 routes.include_router(auction_route)
 routes.include_router(misc_route)
+routes.include_router(landing_page_router)

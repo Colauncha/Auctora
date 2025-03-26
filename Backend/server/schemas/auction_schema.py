@@ -1,7 +1,6 @@
-from fastapi import Query
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from server.enums.auction_enums import AuctionStatus
 from server.schemas import GetItemSchema, CreateItemSchema
 from uuid import UUID
@@ -62,6 +61,7 @@ class GetAuctionSchema(CreateAuctionSchema):
     id: UUID
     participants: Optional[list[AuctionParticipantsSchema]] = Field(default=[])
     item: Optional[list[GetItemSchema]] = Field(default=[])
+    watchers_count: Optional[int] = Field(default=0)
 
     model_config = {
         'from_attributes': True

@@ -1,18 +1,21 @@
-from apscheduler.schedulers.background import BackgroundScheduler
-from sqlalchemy.orm import Session
+import asyncio
 from datetime import datetime, timezone
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from sqlalchemy.orm import Session
+
 from ..models.auction import Auctions
 from ..config.database import get_db
 from ..enums.auction_enums import AuctionStatus
+from ..services.auction_service import AuctionServices
 
 
 # Scheduler instance
-scheduler = BackgroundScheduler()
+scheduler = AsyncIOScheduler()
 
-
-def update_status():
+async def update_status():
     session: Session = next(get_db())
     try:
+        update = False
         # Query events where the status needs updating
         events = session.query(Auctions).filter(
             (Auctions.status == AuctionStatus.PENDING and Auctions.start_date <= datetime.now()) |
@@ -21,7 +24,6 @@ def update_status():
 
         for event in events:
             current_time = datetime.now(timezone.utc)
-            update = False
             if event.status == AuctionStatus.PENDING and current_time >= event.start_date:
                 print(f"♻ Updating status for event {event.id} to {AuctionStatus.ACTIVE}")
                 event.status = AuctionStatus.ACTIVE
@@ -30,8 +32,7 @@ def update_status():
             elif event.status == AuctionStatus.ACTIVE and current_time >= event.end_date:
                 print(f"♻ Updating status for event {event.id} to {AuctionStatus.COMPLETED}")
                 event.status = AuctionStatus.COMPLETED
-                # TODO: Notify participants and winner here
-                # 
+                await AuctionServices(session).close(event.id)
                 print('✅ Event status updated')
                 update = True
 
@@ -46,16 +47,20 @@ def update_status():
     finally:
         session.close()
 
-# Schedule the job to run every minute (or any interval you need)
-scheduler.add_job(update_status, 'interval', seconds=15)
-
-# Start the scheduler
-scheduler.start()
-
 # Keep the script running
-try:
-    print("⏳ Scheduler started. Press Ctrl+C to exit.")
-    while True:
-        pass
-except (KeyboardInterrupt, SystemExit):
-    scheduler.shutdown()
+async def main():
+    scheduler.add_job(update_status, 'interval', seconds=15)
+    scheduler.start()
+    try:
+        print("⏳ Scheduler started. Press Ctrl+C to exit.")
+        while True:
+            await asyncio.sleep(1)
+    except (KeyboardInterrupt, SystemExit):
+        scheduler.shutdown()
+
+
+if __name__ == '__main__':
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        print("\n❌ Scheduler stopped")

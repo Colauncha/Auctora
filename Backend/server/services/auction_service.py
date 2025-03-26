@@ -68,11 +68,18 @@ class AuctionServices:
                 raise e
             raise e
 
-    async def list(self, filter: PagedQuery) -> PagedResponse[list[GetAuctionSchema]]:
+    async def list(
+            self,
+            filter: PagedQuery,
+            extra: dict = None
+        ) -> PagedResponse[list[GetAuctionSchema]]:
         try:
             filter = filter.model_dump(exclude_unset=True)
             filter['private'] = False
+            if extra:
+                filter.update(extra)
             result = await self.repo.get_all(filter)
+            result = [GetAuctionSchema.model_validate(r) for r in result.data]
             return result
         except Exception as e:
             if issubclass(type(e), ExcRaiser):

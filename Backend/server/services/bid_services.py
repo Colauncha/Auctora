@@ -166,7 +166,12 @@ class BidServices:
         except Exception as e:
             raise e
         
-    async def create_ws(self, data: CreateBidSchema, wsmanager: WSManager, ws: WebSocket):
+    async def create_ws(
+        self,
+        data: CreateBidSchema,
+        wsmanager: WSManager,
+        ws: WebSocket,
+    ):
         try:
             bid = await self.create(data)
             if bid:
@@ -176,7 +181,11 @@ class BidServices:
                     auction.bids, key=lambda x: x.amount, reverse=True
                 )
                 prev_bids = json.dumps([
-                        {'id': str(pb.user_id), 'username': pb.username, 'amount': pb.amount}
+                        {
+                            'id': str(pb.user_id),
+                            'username': pb.username,
+                            'amount': pb.amount
+                        }
                         for pb in prev_bids
                     ])
                 _ = await redis.set(f'auction:{auction.id}', prev_bids)
@@ -190,6 +199,25 @@ class BidServices:
                 message=str(e),
                 websocket=ws
             )
+
+    async def add_watcher(self, auction_id: str, watcher: str):
+        try:
+            auction = await self.auction_repo.get_by_id(auction_id)
+            if auction.status in [AuctionStatus.COMPLETED, AuctionStatus.CANCLED]:
+                return False
+            watchers: list = auction.watchers or []
+
+            if watcher in watchers:
+                return True
+
+            watchers.append(watcher)
+            lent = len(watchers)
+            await self.auction_repo.update(auction, {
+                'watchers': watchers, 'watchers_count': lent}
+            )
+            return True
+        except Exception as e:
+            raise e
 
     async def update(
             self, amount: float,
