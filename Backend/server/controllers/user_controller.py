@@ -293,9 +293,9 @@ async def get_gateway_url(
     amount: int,
     db: Session = Depends(get_db)
 ) -> InitializePaymentRes:
-    url = f"{app_configs.paystack.URL}/transaction/initialize"
+    url = f"{app_configs.paystack.PAYSTACK_URL}/transaction/initialize"
     headers = {
-        "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}",
+        "Authorization": f"Bearer {app_configs.paystack.PAYSTACK_SECRET_KEY}",
         "Content-Type": "application/json"
     }
     data = {
@@ -326,10 +326,10 @@ async def verify_funding(
     extra = {
         'transaction_type': TransactionTypes.FUNDING,
     }
-    paystack_url = app_configs.paystack.URL
+    paystack_url = app_configs.paystack.PAYSTACK_URL
     url = f"{paystack_url}/transaction/verify/{data.reference_id}"
     headers = {
-        "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}"
+        "Authorization": f"Bearer {app_configs.paystack.PAYSTACK_SECRET_KEY}"
     }
     response_types = {
         'success': ['success'],
@@ -368,7 +368,7 @@ async def paystack_webhook(
     
     signature = request.headers.get("x-paystack-signature")
     ip = request.client.host
-    secret = app_configs.paystack.SECRET_KEY.encode()
+    secret = app_configs.paystack.PAYSTACK_SECRET_KEY.encode()
 
     if ip not in app_configs.paystack.PAYSTACK_IP_WL:
         raise ExcRaiser400(detail="IP not allowed")
@@ -423,9 +423,9 @@ async def resolve_acct_number(
     account_number: str,
     bank_code: str
 ) -> APIResponse:
-    url = f"{app_configs.paystack.URL}/bank/resolve"
+    url = f"{app_configs.paystack.PAYSTACK_URL}/bank/resolve"
     headers = {
-        "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}"
+        "Authorization": f"Bearer {app_configs.paystack.PAYSTACK_SECRET_KEY}"
     }
     params = {
         "account_number": account_number,
@@ -443,10 +443,10 @@ async def transfer_recipient(
     data: TransferRecipientData,
     db: Session = Depends(get_db)
 ) -> Union[APIResponse, dict]:
-    url_resolve = f"{app_configs.paystack.URL}/bank/resolve"
-    url_tr = f"{app_configs.paystack.URL}/transferrecipient"
+    url_resolve = f"{app_configs.paystack.PAYSTACK_URL}/bank/resolve"
+    url_tr = f"{app_configs.paystack.PAYSTACK_URL}/transferrecipient"
     headers = {
-        "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}",
+        "Authorization": f"Bearer {app_configs.paystack.PAYSTACK_SECRET_KEY}",
         "Content-Type": "application/json"
     }
     params = {
@@ -493,7 +493,7 @@ async def withdraw(
 
     url = f"{app_configs.paystack.URL}/transfer"
     headers = {
-        "Authorization": f"Bearer {app_configs.paystack.SECRET_KEY}",
+        "Authorization": f"Bearer {app_configs.paystack.PAYSTACK_SECRET_KEY}",
         "Content-Type": "application/json"
     }
     data = {
