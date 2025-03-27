@@ -54,15 +54,14 @@ class CloudinaryConfig(BaseSettings):
 
 
 class PayStack(BaseSettings):
-    SECRET_KEY: str
-    URL: str
+    PAYSTACK_SECRET_KEY: str
+    PAYSTACK_URL: str
     PAYSTACK_IP_WL: list[str] = [
         "52.31.139.75",
         "52.49.173.169",
         "52.214.14.220"
     ]
     model_config = {}
-    model_config['env_prefix'] = 'TEST_' if ENV == 'development' else 'PAYSTACK_'
 
 
 class AppConfig(BaseSettings):
