@@ -1,3 +1,4 @@
+import datetime
 from typing import Optional, Union
 from uuid import UUID
 from fastapi import Query
@@ -162,6 +163,7 @@ class CreateNotificationSchema(BaseModel):
 class GetNotificationsSchema(CreateNotificationSchema):
     id: Union[str, UUID]
     read: bool = False
+    created_at: datetime.datetime
 
 
 class UpdateNotificationSchema(BaseModel):

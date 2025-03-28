@@ -177,7 +177,7 @@ async def update_user(
     id: str = None,
     db: Session = Depends(get_db)
 ) -> APIResponse[bool]:
-    id = id if user.role == UserRoles.ADMIN else user.id
+    id = id if (user.role == UserRoles.ADMIN and id) else user.id
     user_ = await UserServices(db).retrieve(id)
     valid_user = GetUserSchema.model_validate(user_)
     result = await UserServices(db).update_user(valid_user, data)
