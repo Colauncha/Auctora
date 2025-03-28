@@ -4,7 +4,7 @@ from server.config import get_db
 from server.schemas import (
     APIResponse, UpdateAuctionSchema,
     GetAuctionSchema, CreateAuctionSchema,
-    PagedQuery, PagedResponse,
+    PagedQuery, PagedResponse, AuctionQueryScalar,
 )
 from server.services.auction_service import AuctionServices
 from server.middlewares.auth import (
@@ -30,10 +30,8 @@ async def create(
 
 
 @route.get('/')
-# @permissions(permission_level=Permissions.AUTHENTICATED)
 async def list(
-    # user: current_user,
-    filter: PagedQuery = Depends(PagedQuery),
+    filter: AuctionQueryScalar = Depends(),
     db: Session = Depends(get_db)
 ) -> PagedResponse[list[GetAuctionSchema]]:
     result = await AuctionServices(db).list(filter)

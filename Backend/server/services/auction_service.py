@@ -14,7 +14,8 @@ from server.services.user_service import (
 from server.schemas import (
     GetAuctionSchema, AuctionParticipantsSchema,
     CreateNotificationSchema, CreateAuctionParticipantsSchema,
-    PagedQuery, PagedResponse, GetUserSchema, CreatePaymentSchema
+    PagedQuery, PagedResponse, GetUserSchema, CreatePaymentSchema,
+    AuctionQueryScalar
 )
 
 
@@ -74,12 +75,13 @@ class AuctionServices:
             extra: dict = None
         ) -> PagedResponse[list[GetAuctionSchema]]:
         try:
-            filter = filter.model_dump(exclude_unset=True)
+            filter = filter.model_dump(exclude_unset=True, exclude_none=True)
             filter['private'] = False
             if extra:
                 filter.update(extra)
+            print(filter)
             result = await self.repo.get_all(filter)
-            result = [GetAuctionSchema.model_validate(r) for r in result.data]
+            result.data = [GetAuctionSchema.model_validate(r) for r in result.data]
             return result
         except Exception as e:
             if issubclass(type(e), ExcRaiser):
