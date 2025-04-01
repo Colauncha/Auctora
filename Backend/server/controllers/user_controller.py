@@ -367,29 +367,31 @@ async def paystack_webhook(
 ) -> APIResponse:
 
     print("Webhook received")
-    signature = request.headers.get("x-paystack-signature")
+    # signature = request.headers.get("x-paystack-signature")
     ip = request.client.host
-    secret = app_configs.paystack.PAYSTACK_SECRET_KEY.encode()
+    # secret = app_configs.paystack.PAYSTACK_SECRET_KEY.encode()
 
-    print(f"IP: {ip}")
-    print(f"Signature: {signature}")
-    if ip not in app_configs.paystack.PAYSTACK_IP_WL:
-        raise ExcRaiser400(detail="IP not allowed")
+    # print(f"IP: {ip}")
+    # print(f"Signature: {signature}")
+    # if ip not in app_configs.paystack.PAYSTACK_IP_WL:
+    #     raise ExcRaiser400(detail="IP not allowed")
  
-    if not signature:
-        raise ExcRaiser400(detail="Signature missing")
+    # if not signature:
+    #     raise ExcRaiser400(detail="Signature missing")
 
     data_bytes = await request.body()
     data_json = await request.json()
-    hash_obj = hmac.new(secret, data_bytes, hashlib.sha512).hexdigest()
+    # hash_obj = hmac.new(secret, data_bytes, hashlib.sha512).hexdigest()
 
-    if not hmac.compare_digest(hash_obj.lower(), signature.lower()):
-        raise ExcRaiser400(detail="Invalid signature")
+    # if not hmac.compare_digest(hash_obj.lower(), signature.lower()):
+    #     raise ExcRaiser400(detail="Invalid signature")
 
     ...
-    print("HMAC verified")
+    # print("HMAC verified")
     data = PaystackWebhookSchema.model_validate(json.loads(data_bytes))
     meta = data_json.get('data').get('metadata')
+    print(data_json)
+    print(meta)
 
     extra = {
         'transaction_type': TransactionTypes.FUNDING,
