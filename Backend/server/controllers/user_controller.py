@@ -365,11 +365,14 @@ async def paystack_webhook(
     request: Request,
     db: Session = Depends(get_db)
 ) -> APIResponse:
-    
+
+    print("Webhook received")
     signature = request.headers.get("x-paystack-signature")
     ip = request.client.host
     secret = app_configs.paystack.PAYSTACK_SECRET_KEY.encode()
 
+    print(f"IP: {ip}")
+    print(f"Signature: {signature}")
     if ip not in app_configs.paystack.PAYSTACK_IP_WL:
         raise ExcRaiser400(detail="IP not allowed")
  
@@ -384,7 +387,7 @@ async def paystack_webhook(
         raise ExcRaiser400(detail="Invalid signature")
 
     ...
-
+    print("HMAC verified")
     data = PaystackWebhookSchema.model_validate(json.loads(data_bytes))
     meta = data_json.get('data').get('metadata')
 
@@ -393,6 +396,7 @@ async def paystack_webhook(
     }
 
     # Split event string e.g 'charge.success' == ['charge', 'success']
+    print(data.event)
     event, subevent = data.event.split('.')
     if event == 'charge':
         tranx = {
@@ -410,6 +414,7 @@ async def paystack_webhook(
         )
         _ = await UserWalletTransactionServices(db).create(tranx, extra)
 
+        print("Transaction created")
     elif event == 'transfer':
         if subevent == 'success':
             ...
