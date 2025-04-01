@@ -371,6 +371,8 @@ async def paystack_webhook(
     ip = request.client.host
     secret = app_configs.paystack.PAYSTACK_SECRET_KEY.encode()
 
+    print(f"IP: {ip}")
+    print(f"Signature: {signature}")
     if ip not in app_configs.paystack.PAYSTACK_IP_WL:
         raise ExcRaiser400(detail="IP not allowed")
  
@@ -410,6 +412,7 @@ async def paystack_webhook(
         extra['description'] = (
             f"{data.data.get('message')}: transaction {extra['status'].value}"
         )
+        print(tranx, extra)
         _ = await UserWalletTransactionServices(db).create(tranx, extra)
 
         print("Funding transaction completed")
