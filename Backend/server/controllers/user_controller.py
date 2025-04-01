@@ -412,6 +412,7 @@ async def paystack_webhook(
         extra['description'] = (
             f"{data.data.message}: transaction {extra['status'].value}"
         )
+        print(tranx, extra)
         _ = await UserWalletTransactionServices(db).create(tranx, extra)
 
         print("Transaction created")
