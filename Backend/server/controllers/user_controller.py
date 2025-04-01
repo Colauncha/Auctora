@@ -403,19 +403,19 @@ async def paystack_webhook(
             "user_id": meta.get('user_id'),
             "email": meta.get('email'),
             "amount": meta.get('amount'),
-            "reference_id": data.data.reference
+            "reference_id": data.data.get('reference')
         }
         if subevent == 'success':
             extra["status"] = TransactionStatus.COMPLETED
         else:
             extra["status"] = TransactionStatus.FAILED
         extra['description'] = (
-            f"{data.data.message}: transaction {extra['status'].value}"
+            f"{data.data.get('message')}: transaction {extra['status'].value}"
         )
         print(tranx, extra)
         _ = await UserWalletTransactionServices(db).create(tranx, extra)
 
-        print("Transaction created")
+        print("Funding transaction completed")
     elif event == 'transfer':
         if subevent == 'success':
             ...
