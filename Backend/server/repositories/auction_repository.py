@@ -67,7 +67,7 @@ class AuctionRepository(Repository):
                     query = query.filter(getattr(QueryModel, key) == value)
 
             if hasattr(QueryModel, sort):
-                query = query.order_by(getattr(QueryModel, sort))
+                query = query.order_by(getattr(QueryModel, sort).desc())
 
             if cat_id:
                 query = query.filter(QueryModel.item.any(category_id=cat_id))
