@@ -367,31 +367,27 @@ async def paystack_webhook(
 ) -> APIResponse:
 
     print("Webhook received")
-    # signature = request.headers.get("x-paystack-signature")
+    signature = request.headers.get("x-paystack-signature")
     ip = request.client.host
-    # secret = app_configs.paystack.PAYSTACK_SECRET_KEY.encode()
+    secret = app_configs.paystack.PAYSTACK_SECRET_KEY.encode()
 
-    # print(f"IP: {ip}")
-    # print(f"Signature: {signature}")
-    # if ip not in app_configs.paystack.PAYSTACK_IP_WL:
-    #     raise ExcRaiser400(detail="IP not allowed")
+    if ip not in app_configs.paystack.PAYSTACK_IP_WL:
+        raise ExcRaiser400(detail="IP not allowed")
  
-    # if not signature:
-    #     raise ExcRaiser400(detail="Signature missing")
+    if not signature:
+        raise ExcRaiser400(detail="Signature missing")
 
     data_bytes = await request.body()
     data_json = await request.json()
-    # hash_obj = hmac.new(secret, data_bytes, hashlib.sha512).hexdigest()
+    hash_obj = hmac.new(secret, data_bytes, hashlib.sha512).hexdigest()
 
-    # if not hmac.compare_digest(hash_obj.lower(), signature.lower()):
-    #     raise ExcRaiser400(detail="Invalid signature")
+    if not hmac.compare_digest(hash_obj.lower(), signature.lower()):
+        raise ExcRaiser400(detail="Invalid signature")
 
     ...
-    # print("HMAC verified")
+    print("HMAC verified")
     data = PaystackWebhookSchema.model_validate(json.loads(data_bytes))
     meta = data_json.get('data').get('metadata')
-    print(data_json)
-    print(meta)
 
     extra = {
         'transaction_type': TransactionTypes.FUNDING,
@@ -405,19 +401,18 @@ async def paystack_webhook(
             "user_id": meta.get('user_id'),
             "email": meta.get('email'),
             "amount": meta.get('amount'),
-            "reference_id": data.data.reference
+            "reference_id": data.data.get('reference')
         }
         if subevent == 'success':
             extra["status"] = TransactionStatus.COMPLETED
         else:
             extra["status"] = TransactionStatus.FAILED
         extra['description'] = (
-            f"{data.data.message}: transaction {extra['status'].value}"
+            f"{data.data.get('message')}: transaction {extra['status'].value}"
         )
-        print(tranx, extra)
         _ = await UserWalletTransactionServices(db).create(tranx, extra)
 
-        print("Transaction created")
+        print("Funding transaction completed")
     elif event == 'transfer':
         if subevent == 'success':
             ...
