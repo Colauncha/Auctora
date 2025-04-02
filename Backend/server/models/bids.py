@@ -10,7 +10,7 @@ class Bids(BaseModel):
     __mapper_args__ = {'polymorphic_identity': 'bids'}
     auction_id = Column(UUID(as_uuid=True), ForeignKey('auctions.id', ondelete='CASCADE'), index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), index=True)
-    username = Column(String, unique=True, nullable=True)
+    username = Column(String, unique=False, nullable=True)
     amount = Column(Float, nullable=False)
 
     # relationships
