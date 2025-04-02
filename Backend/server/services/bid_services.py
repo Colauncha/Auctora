@@ -34,7 +34,9 @@ class BidServices:
     async def list(self, filter: dict) -> list[GetBidSchema]:
         try:
             bids = await self.repo.get_all(filter=filter)
-            return [GetBidSchema.model_validate(bid) for bid in bids]
+            print(bids)
+            bids.data = [GetBidSchema.model_validate(bid) for bid in bids.data]
+            return bids
         except Exception as e:
             raise e
 
