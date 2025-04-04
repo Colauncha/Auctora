@@ -39,9 +39,7 @@ async def list(
 
 
 @route.get('/{id}')
-@permissions(permission_level=Permissions.CLIENT)
 async def retrieve(
-    user: current_user,
     id: str,
     db: Session = Depends(get_db)
 ) -> APIResponse[GetAuctionSchema]:
