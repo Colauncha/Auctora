@@ -1,11 +1,18 @@
+import logging
 from asyncio import run, sleep
 import json
 from server.config import redis_store
 from server.utils.email_context import Emailer
 
+# Configure logging
+logging.basicConfig(
+    filename='biddius_events.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 async def send_otp_mail(data):
-    print('📨 Sending OTP mail 📫')
+    logging.info('📨 Sending OTP mail 📫')
     async with Emailer(
         subject='OTP Verification',
         template_name="otp_template.html",
@@ -14,20 +21,20 @@ async def send_otp_mail(data):
     ) as emailer:
         await emailer.send_message()
 
-    print(f'♻ Type: {type(data)} -- {data}')
-    print('➡ sent ✅')
+    logging.info(f'♻ Type: {type(data)} -- {data}')
+    logging.info('➡ sent ✅')
 
 
 async def send_bid_placed_mail(data):
-    print('📨 Sending Bid placed mail 📫')
+    logging.info('📨 Sending Bid placed mail 📫')
     ...  # some code
     await sleep(0.5)
-    print(f'♻ Type: {type(data)} -- {data}')
-    print('➡ sent ✅')
+    logging.info(f'♻ Type: {type(data)} -- {data}')
+    logging.info('➡ sent ✅')
 
 
 async def send_reset_token_mail(data):
-    print('📨 Sending Reset token mail 📫')
+    logging.info('📨 Sending Reset token mail 📫')
     async with Emailer(
         subject='Reset Password',
         template_name="reset_token_template.html",
@@ -36,36 +43,36 @@ async def send_reset_token_mail(data):
     ) as emailer:
         await emailer.send_message()
 
-    print(f'♻ Type: {type(data)} -- {data}')
-    print('➡ sent ✅')
+    logging.info(f'♻ Type: {type(data)} -- {data}')
+    logging.info('➡ sent ✅')
 
 
 async def send_outbid_mail(data):
-    print('📨 Sending Outbid mail 📫')
+    logging.info('📨 Sending Outbid mail 📫')
     ...  # some code
     await sleep(0.5)
-    print(f'♻ Type: {type(data)} -- {data}')
-    print('➡ sent ✅')
+    logging.info(f'♻ Type: {type(data)} -- {data}')
+    logging.info('➡ sent ✅')
 
 
 async def send_auction_created_mail(data):
-    print('📨 Sending Auction Created mail 📫')
+    logging.info('📨 Sending Auction Created mail 📫')
     ...  # some code
     await sleep(0.5)
-    print(f'♻ Type: {type(data)} -- {data}')
-    print('➡ sent ✅')
+    logging.info(f'♻ Type: {type(data)} -- {data}')
+    logging.info('➡ sent ✅')
 
 
 async def send_win_auction_mail(data):
-    print('📨 Sending Auction Created mail 📫')
+    logging.info('📨 Sending Auction Created mail 📫')
     ...  # some code
     await sleep(0.5)
-    print(f'♻ Type: {type(data)} -- {data}')
-    print('➡ sent ✅')
+    logging.info(f'♻ Type: {type(data)} -- {data}')
+    logging.info('➡ sent ✅')
 
 
 async def send_fund_account_mail(data):
-    print('📨 Sending Funding account mail 📫')
+    logging.info('📨 Sending Funding account mail 📫')
     async with Emailer(
         subject='Transaction Receipt',
         template_name="funding_account_template.html",
@@ -77,8 +84,8 @@ async def send_fund_account_mail(data):
     ) as emailer:
         await emailer.send_message()
     await sleep(0.5)
-    print(f'♻ Type: {type(data)} -- {data}')
-    print('➡ sent ✅')
+    logging.info(f'♻ Type: {type(data)} -- {data}')
+    logging.info('➡ sent ✅')
 
 
 channels = {
@@ -101,7 +108,7 @@ async def listner():
     while True:
         message = await sub.get_message(ignore_subscribe_messages=True)
         if message:
-            print(f'➡ INFO: {message}')
+            logging.info(f'➡ INFO: {message}')
             channel = message.get('channel')
             data = json.loads(message.get('data'))
             task = channels.get(channel, 'OTP-sender')
@@ -109,11 +116,10 @@ async def listner():
         await sleep(0.2)
 
 
-
 if __name__ == '__main__':
     try:
-        print("➡ Listening for messages from publishers 📬")
+        logging.info("➡ Listening for messages from publishers 📬")
         run(listner())
     except KeyboardInterrupt:
-        print("\n➡ Exiting subscriber ⛔")
+        logging.info("\n➡ Exiting subscriber ⛔")
         exit(0)

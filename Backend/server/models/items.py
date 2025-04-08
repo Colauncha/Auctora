@@ -15,8 +15,17 @@ class Items(BaseModel):
     __tablename__ = 'items'
     __mapper_args__ = {'polymorphic_identity': 'items'}
 
-    users_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False) # change to users_id
-    auction_id = Column(UUID(as_uuid=True), ForeignKey('auctions.id', ondelete='CASCADE'), nullable=True)
+    users_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('users.id', ondelete='SET DEFAULT'),
+        nullable=False,
+        default="335ffd00-da75-473b-8c58-c99eebf84bbf"
+    ) # change to users_id
+    auction_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('auctions.id', ondelete='CASCADE'),
+        nullable=True
+    )
     name = Column(String, nullable=False)
     description = Column(String, nullable=False)
     image_link = Column(JSON, nullable=True)
@@ -28,8 +37,16 @@ class Items(BaseModel):
     height = Column(Float, nullable=True)
     width = Column(Float, nullable=True)
     length = Column(Float, nullable=True)
-    category_id = Column(String, ForeignKey('categories.id'), nullable=False)
-    sub_category_id = Column(String, ForeignKey('subcategories.id'), nullable=False)
+    category_id = Column(
+        String,
+        ForeignKey('categories.id'),
+        nullable=False
+    )
+    sub_category_id = Column(
+        String,
+        ForeignKey('subcategories.id'),
+        nullable=False
+    )
 
     category = relationship("Categories", back_populates="items")
     sub_categories = relationship("Subcategory", back_populates="items")
