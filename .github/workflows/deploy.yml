@@ -21,9 +21,12 @@ jobs:
         key: ${{ secrets.BIDDIUS_SERVER_KEY }}
         script: |
           sudo systemctl stop biddiusApi
+          sudo systemctl stop biddiusEventListner
+          
           cd ~/biddius/Backend/Backend && ls -la;
 
           git pull origin main
 
           sudo systemctl restart biddiusApi
+          sudo systemctl restart biddiusEventListner
         shell: bash -l {0}
