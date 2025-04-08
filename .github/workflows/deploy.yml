@@ -1,0 +1,188 @@
+CLI and DevOps snippets/codes
+Some nice code snippets for easy cli navigations.
+
+To show IPv4 and IPv6 addresses
+ip addr show eth0 | grep inet | awk '{ print $2; }' | sed 's/\/.*$//'
+Resource usage
+# memory, cpu and others
+top
+
+# disk usage
+df
+ssh setup
+# Create new ssh key
+ssh-keygen -t rsa
+
+# Send key to server
+ssh-copy-id -i ~/.ssh/key user@IP_address
+Setup new server
+Install git
+sudo apt update;
+sudo apt upgrade -y;
+
+sudo apt install git;
+Install node and npm
+# Grab installer from repo
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+# Export key and others
+export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+# install lts
+nvm install --lts
+
+# or install specific version
+nvm install 20
+
+# Confirm versions
+node -v
+npm -v
+Install Nginx
+sudo apt update
+sudo apt install nginx -y
+
+# To check status
+sudo systemctl status nginx
+
+# Enable startup on boot
+sudo systemctl enable nginx
+
+Install UFW
+sudo apt update
+sudo apt install ufw -y
+
+# Check status
+sudo ufw status
+
+# Set default policies
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+
+# Allow necessary services
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+
+# Enable
+sudo ufw enable
+
+Install certbot
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d yourdomain.com -d another.yourdomain.com
+
+Setup webapp [uvicorn]
+sudo apt update
+sudo apt install python3-pip python3-venv
+pip install fastapi uvicorn[standard]
+
+# create app.service file
+sudo nano /etc/systemd/system/app.service
+
+`
+[Unit]
+Description=Uvicorn instance to serve FastAPI app
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/path/to/myapp/directory # point to the directory containing the app (asgi app)
+ExecStart=/path/to/virtualenv/bin/uvicorn app:app --host 127.0.0.1 --port 8000
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+`
+
+# Start and enable service
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl start app
+sudo systemctl enable app
+
+Example nginx config
+# create custom config
+sudo nano /etc/nginx/conf.d/biddius.com.conf
+
+# Extra
+# Edit /etc/ngin/nginx.conf to comment out 
+# include /etc/nginx/sites-enabled/*
+# line
+# Frontend configuration for biddius.com
+server {
+    listen 80;
+    server_name biddius.com www.biddius.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name biddius.com www.biddius.com;
+
+    ssl_certificate /etc/letsencrypt/live/biddius.com/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/biddius.com/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains";
+
+    root /var/www/html;
+    index index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+server {
+    listen 80;
+    server_name api.biddius.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name api.biddius.com;
+
+    ssl_certificate /etc/letsencrypt/live/biddius.com/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/biddius.com/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains";
+
+    location / {
+        proxy_pass http://localhost:8000; # Replace with your backend's address and port
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+CI/CD
+Example github actions file
+Deploy frontend application
+name: Deploy and Build Frontend on Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Deploy via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.BIDDIUS_HOST }}
+        username: ${{ secrets.BIDDIUS_SERVER_USER }}
+        key: ${{ secrets.BIDDIUS_SERVER_KEY }}
+        script: |
+          cd ~/biddius/Backend && ls -la;
+        shell: bash -l {0}
