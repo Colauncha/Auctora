@@ -20,5 +20,10 @@ jobs:
         username: ${{ secrets.BIDDIUS_SERVER_USER }}
         key: ${{ secrets.BIDDIUS_SERVER_KEY }}
         script: |
-          cd ~/biddius/Backend && ls -la;
+          sudo systemctl stop biddiusApi
+          cd ~/biddius/Backend/Backend && ls -la;
+
+          git pull origin main
+
+          sudo systemctl restart biddiusApi
         shell: bash -l {0}
