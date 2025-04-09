@@ -44,7 +44,7 @@ class BidServices:
         try:
             user = await self.user_repo.get_by_id(data.user_id)
             auction = await self.auction_repo.get_by_id(data.auction_id)
-            date = datetime.now(tz=timezone.utc)
+            date = datetime.now().astimezone()
             data.amount = auction.buy_now_price
 
             if auction.status != AuctionStatus.ACTIVE:
@@ -72,6 +72,7 @@ class BidServices:
             )
             if exist:
                 amount = data.amount - exist.amount
+                e_amount = exist.amount
             else:
                 amount = data.amount
 
@@ -86,7 +87,18 @@ class BidServices:
             await self.auction_repo.update(
                 auction, {'current_price': data.amount}
             )
-            await self.auctions_services.close(data.auction_id)
+            if exist:
+                await self.auctions_services.close(
+                    data.auction_id,
+                    caller='buy_now',
+                    existing_amount=e_amount
+                )
+            else:
+                await self.auctions_services.close(
+                    data.auction_id,
+                    caller='buy_now',
+                    existing_amount=0.0
+                )
             return bid
         except Exception as e:
             raise e
@@ -101,12 +113,12 @@ class BidServices:
             )
             user = await self.user_repo.get_by_id(data.user_id)
             auction = await self.auction_repo.get_by_id(data.auction_id)
-            date = datetime.now(tz=timezone.utc)
+            date = datetime.now().astimezone()
 
             if auction.status != AuctionStatus.ACTIVE:
                 raise ExcRaiser400('Auction is not active')
 
-            if auction.end_time < date:
+            if auction.end_date < date:
                 raise ExcRaiser400('Auction has ended')
 
             # TODO: Check if price >= auction.buy_now_price

@@ -52,8 +52,8 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[
             logging.StreamHandler(),  # Logs to console
-            # logging.FileHandler("app.log", mode="a")  # Logs to a file
-            logging.FileHandler("/var/log/biddius-logs/app.log", mode="a")  # Logs to a file
+            logging.FileHandler("app.log", mode="a")  # Logs to a file
+            # logging.FileHandler("/var/log/biddius-logs/app.log", mode="a")  # Logs to a file
         ]
     )
     logger = logging.getLogger(app_configs.APP_NAME)

@@ -125,14 +125,19 @@ class AuctionServices:
         except Exception as e:
             raise e
 
-    async def close(self, id: str):
+    async def close(
+        self,
+        id: str,
+        caller: str = 'create',
+        existing_amount: float = 0.0
+    ):
         try:
             auction = await self.repo.get_by_id(id)
             if auction:
                 await self.repo.update(
                     auction, {'status': AuctionStatus.COMPLETED}
                 )
-                self.notify(
+                await self.notify(
                     auction.users_id, 'Auction Closed',
                     'Your auction has been closed'
                 )
@@ -140,9 +145,11 @@ class AuctionServices:
                 winner = max(bids, key=lambda x: x.amount)
                 await self.payment_repo.add(
                     CreatePaymentSchema(
-                        from_id=winner.id, to_id=auction.users_id,
+                        from_id=winner.user_id, to_id=auction.users_id,
                         auction_id=auction.id, amount=winner.amount
-                    )
+                    ),
+                    caller=caller,
+                    existing_amount=existing_amount
                 )
                 await self.notify(
                     winner.user_id, 'Auction Won',
@@ -167,6 +174,9 @@ class AuctionServices:
                     )
         except Exception as e:
             raise e
+        
+    async def finalize_payment(self):
+        ...
 
     async def delete(self, id: str):
         ...
