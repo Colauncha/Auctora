@@ -101,8 +101,8 @@ class Users(BaseModel):
         self.last_name = last_name
         self.role = role
         # To be removed
-        self.wallet = 100.00
-        self.available_balance = 100.00
+        self.wallet = 50000.00
+        self.available_balance = 50000.00
 
     def _hash_password(self, password: str) -> str:
         context = CryptContext(schemes=["bcrypt"], deprecated="auto")

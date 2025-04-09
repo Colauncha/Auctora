@@ -17,3 +17,7 @@ async def get_trending_auctions(db: Session = Depends(get_db)):
         {'status': 'ACTIVE'}
     )
     return auctions
+
+@router.get('/search')
+async def search(db: Session = Depends(get_db)):
+    ...

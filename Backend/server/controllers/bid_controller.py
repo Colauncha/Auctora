@@ -111,9 +111,9 @@ async def ws_create(
             if data.get('type') != 'websocket.disconnect':
                 data["user_id"] = str(_user.id)
                 data["username"] = _user.username
-                bid = await BidServices(db).create_ws(CreateBidSchema(**data), wsmanager, ws)
-                if bid:
-                    await wsmanager.broadcast(id, data)
+                bids = await BidServices(db).create_ws(CreateBidSchema(**data), wsmanager, ws)
+                if bids:
+                    await wsmanager.broadcast(id, bids)
     except WebSocketDisconnect:
         await wsmanager.disconnect(id, ws)
     except WebSocketException as wse:

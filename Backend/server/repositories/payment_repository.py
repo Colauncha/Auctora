@@ -13,7 +13,12 @@ class PaymentRepository(Repository):
         super().__init__(db, Payments)
         self._Model = Payments
 
-    async def add(self, data: CreatePaymentSchema) -> GetPaymentSchema:
+    async def add(
+        self,
+        data: CreatePaymentSchema,
+        caller: str = 'create',
+        existing_amount: float = 0.0
+    ) -> GetPaymentSchema:
         try:
             with self.db.begin(nested=True):
                 buyer = self.db.query(Users).filter(
@@ -26,12 +31,17 @@ class PaymentRepository(Repository):
                     raise ExcRaiser404(message="Payer not found")
                 if not seller:
                     raise ExcRaiser404(message="Recipient not found")
-                buyer.auctioned_amount -= data.amount
+                if caller == 'create':
+                    buyer.auctioned_amount -= data.amount
+                elif caller == 'buy_now':
+                    buyer.auctioned_amount -= existing_amount
+                    buyer.available_balance -= (data.amount - existing_amount)
+                    buyer.wallet -= data.amount
                 entity = self._Model(
                     from_id=buyer.id, to_id=seller.id,
                     auction_id=data.auction_id, amount=data.amount
                 )
                 self.db.add(entity)
-            return GetPaymentSchema(entity)
+            return entity
         except Exception as e:
             raise e
