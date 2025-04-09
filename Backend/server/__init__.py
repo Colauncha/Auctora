@@ -2,10 +2,12 @@
 Copyright (c) 12/2024 - iyanuajimobi12@gmail.com
 """
 
+import logging
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from fastapi.logger import logger as fastapi_logger
 from server.config import app_configs, init_db, get_db
 from server.controllers import routes
 from server.middlewares.exception_handler import (
@@ -21,6 +23,20 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
     """
     The create_app function is the entry point for our application.
     """
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.StreamHandler(),  # Logs to console
+            logging.FileHandler("/var/log/biddius-logs/app.log", mode="a")  # Logs to a file
+        ]
+    )
+    logger = logging.getLogger(app_name)
+    fastapi_logger.handlers = logger.handlers  # Share handlers with FastAPI logger
+    fastapi_logger.setLevel(logging.INFO)
+
+    logger.info("Starting application...")
 
     # inject global dependencies
     app = FastAPI(
@@ -40,12 +56,14 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
 
     @app.get("/", include_in_schema=False)
     def redirect():
+        logger.info("Redirecting to Swagger docs...")
         return RedirectResponse(
             url=app_configs.SWAGGER_DOCS_URL, status_code=302
         )
 
     @app.get("/status", include_in_schema=False)
     def status():
+        logger.info("Status endpoint called.")
         return {'status': 'running ✅'}
 
     app.exception_handlers = {
@@ -58,6 +76,7 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
     }
     app.include_router(routes)
     init_db()
+    logger.info("Application setup complete.")
     return app
 
 

@@ -6,7 +6,7 @@ from server.utils.email_context import Emailer
 
 # Configure logging
 logging.basicConfig(
-    filename='biddius_events.log',
+    filename='/var/log/biddius-logs/biddius_events.log',
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )

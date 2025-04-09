@@ -14,6 +14,6 @@ async def get_trending_auctions(db: Session = Depends(get_db)):
     filter = PagedQuery(page=1, per_page=12)
     auctions = await AuctionServices(db).list(
         filter,
-        {'status': 'ACTIVE', 'status': 'PENDING'}
+        {'status': 'ACTIVE'}
     )
     return auctions
