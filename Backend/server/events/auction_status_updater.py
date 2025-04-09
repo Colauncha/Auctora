@@ -10,8 +10,8 @@ from ..enums.auction_enums import AuctionStatus
 from ..services.auction_service import AuctionServices
 
 # Configure logging
-# LOG_FILE_PATH = '/var/log/biddius-logs/auction_updater.log'
-LOG_FILE_PATH = 'auction_updater.log'
+LOG_FILE_PATH = '/var/log/biddius-logs/auction_updater.log'
+# LOG_FILE_PATH = 'auction_updater.log'
 logging.basicConfig(
     filename=LOG_FILE_PATH,
     level=logging.INFO,
