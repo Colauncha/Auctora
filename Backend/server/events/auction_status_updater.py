@@ -10,8 +10,8 @@ from ..enums.auction_enums import AuctionStatus
 from ..services.auction_service import AuctionServices
 
 # Configure logging
-LOG_FILE_PATH = '/var/log/biddius-logs/auction_updater.log'
-# LOG_FILE_PATH = 'auction_updater.log'
+# LOG_FILE_PATH = '/var/log/biddius-logs/auction_updater.log'
+LOG_FILE_PATH = 'auction_updater.log'
 logging.basicConfig(
     filename=LOG_FILE_PATH,
     level=logging.INFO,
@@ -24,6 +24,7 @@ scheduler = AsyncIOScheduler()
 
 async def update_status():
     session: Session = next(get_db())
+    count = 1
     try:
         update = False
         # Query events where the status needs updating
@@ -51,7 +52,9 @@ async def update_status():
             session.commit()
             logger.info("🔄 Status updated successfully")
         else:
-            logger.info("🔄 No events to update")
+            pass
+            # logger.info("🔄 No events to update")
+
     except Exception as e:
         logger.error(f"Error updating status: {e}")
     finally:
