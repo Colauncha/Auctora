@@ -18,6 +18,29 @@ from server.middlewares.exception_handler import (
     exception_handler, db_exception_handler,
 )
 
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+import time
+
+
+class LoggingMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, logger):
+        super().__init__(app)
+        self.logger = logger
+
+    async def dispatch(self, request: Request, call_next):
+        start_time = time.time()
+        response = await call_next(request)
+        process_time = time.time() - start_time
+
+        self.logger.info(
+            f"{request.method} {request.url} - "
+            f"Status: {response.status_code} - "
+            f"Time: {process_time:.2f}s - "
+            f"Client: {request.client.host}"
+        )
+        return response
+
 
 def create_app(app_name: str = 'temporary') -> FastAPI:
     """
@@ -29,10 +52,11 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[
             logging.StreamHandler(),  # Logs to console
+            # logging.FileHandler("app.log", mode="a")  # Logs to a file
             logging.FileHandler("/var/log/biddius-logs/app.log", mode="a")  # Logs to a file
         ]
     )
-    logger = logging.getLogger(app_name)
+    logger = logging.getLogger(app_configs.APP_NAME)
     fastapi_logger.handlers = logger.handlers  # Share handlers with FastAPI logger
     fastapi_logger.setLevel(logging.INFO)
 
@@ -42,7 +66,6 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
     app = FastAPI(
         title=app_configs.APP_NAME.capitalize(),
         description=f"{app_configs.APP_NAME.capitalize()}'s Api Documentation",
-        docs_url=app_configs.SWAGGER_DOCS_URL,
         redoc_url=app_configs.SWAGGER_DOCS_URL+'2',
     )
 
@@ -52,6 +75,11 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+    )
+
+    app.add_middleware(
+        LoggingMiddleware,
+        logger=logger
     )
 
     @app.get("/", include_in_schema=False)
