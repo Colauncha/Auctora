@@ -194,16 +194,17 @@ class BidServices:
                 prev_bids = sorted(
                     auction.bids, key=lambda x: x.amount, reverse=True
                 )
-                prev_bids = json.dumps([
+                prev_bids = [
                         {
                             'id': str(pb.user_id),
                             'username': pb.username,
                             'amount': pb.amount
                         }
                         for pb in prev_bids
-                    ])
-                _ = await redis.set(f'auction:{auction.id}', prev_bids)
-                return bid
+                    ]
+                prev_bids_ = json.dumps(prev_bids)
+                _ = await redis.set(f'auction:{auction.id}', prev_bids_)
+                return prev_bids
             else:
                 await wsmanager.send_message('Unable to place bid', ws)
 
