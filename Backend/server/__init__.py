@@ -64,7 +64,7 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
     @app.get("/status", include_in_schema=False)
     def status():
         logger.info("Status endpoint called.")
-        return {'status': 'running'}
+        return {'status': 'running ✅'}
 
     app.exception_handlers = {
         ExcRaiser: exception_handler,

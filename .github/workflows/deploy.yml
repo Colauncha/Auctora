@@ -1,0 +1,34 @@
+name: Deploy Backend app on Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Deploy via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.BIDDIUS_HOST }}
+        username: ${{ secrets.BIDDIUS_SERVER_USER }}
+        key: ${{ secrets.BIDDIUS_SERVER_KEY }}
+        script: |
+          sudo systemctl stop biddiusApi
+          sudo systemctl stop biddiusEventListner
+          sudo systemctl stop biddiusAuctionUpdater
+          
+          cd ~/biddius/Backend/Backend && ls -la;
+
+          git pull origin main
+
+          sudo systemctl restart biddiusApi
+          sudo systemctl restart biddiusEventListner
+          sudo systemctl restart biddiusAuctionUpdater
+        shell: bash -l {0}
