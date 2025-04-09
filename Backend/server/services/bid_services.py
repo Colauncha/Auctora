@@ -103,16 +103,16 @@ class BidServices:
             auction = await self.auction_repo.get_by_id(data.auction_id)
             date = datetime.now(tz=timezone.utc)
 
-            # if auction.status != AuctionStatus.ACTIVE:
-            #     raise ExcRaiser400('Auction is not active')
+            if auction.status != AuctionStatus.ACTIVE:
+                raise ExcRaiser400('Auction is not active')
 
-            # if auction.end_time < date:
-            #     raise ExcRaiser400('Auction has ended')
+            if auction.end_time < date:
+                raise ExcRaiser400('Auction has ended')
 
             # TODO: Check if price >= auction.buy_now_price
-            # if auction.buy_now:
-            #   if data.amount >= auction.buy_now_price:
-            #       return await self.buy_now(data)
+            if auction.buy_now:
+              if data.amount >= auction.buy_now_price:
+                  return await self.buy_now(data)
 
             # Check if price is within 10% of buy_now_price
             if auction.buy_now:
