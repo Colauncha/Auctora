@@ -22,6 +22,7 @@ jobs:
         script: |
           sudo systemctl stop biddiusApi
           sudo systemctl stop biddiusEventListner
+          sudo systemctl stop biddiusAuctionUpdater
           
           cd ~/biddius/Backend/Backend && ls -la;
 
@@ -29,4 +30,5 @@ jobs:
 
           sudo systemctl restart biddiusApi
           sudo systemctl restart biddiusEventListner
+          sudo systemctl restart biddiusAuctionUpdater
         shell: bash -l {0}
