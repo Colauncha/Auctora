@@ -175,8 +175,14 @@ class AuctionServices:
         except Exception as e:
             raise e
         
-    async def finalize_payment(self):
-        ...
+    async def finalize_payment(self, entity):
+        try:
+            entity = CreatePaymentSchema.model_validate(entity)
+            res = await self.payment_repo.disburse(entity)
+            if res:
+                return True
+        except Exception as e:
+            raise e
 
     async def delete(self, id: str):
         ...

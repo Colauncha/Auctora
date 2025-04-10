@@ -37,5 +37,5 @@ class Payments(BaseModel):
     due_data = Column(
         DateTime(timezone=True),
         index=True,
-        default=datetime.now(tz=timezone.utc) + timedelta(days=3)
+        default=datetime.now(tz=timezone.utc) + timedelta(minutes=10)
     )
