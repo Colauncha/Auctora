@@ -32,6 +32,7 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
     app = FastAPI(
         title=app_configs.APP_NAME.capitalize(),
         description=f"{app_configs.APP_NAME.capitalize()}'s Api Documentation",
+        docs_url=app_configs.SWAGGER_DOCS_URL,
         redoc_url=app_configs.SWAGGER_DOCS_URL+'2',
     )
 
