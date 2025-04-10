@@ -5,8 +5,10 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.orm import Session
 
 from ..models.auction import Auctions
+from ..models.payment import Payments
 from ..config.database import get_db
 from ..enums.auction_enums import AuctionStatus
+from ..enums.payment_enums import PaymentStatus
 from ..services.auction_service import AuctionServices
 
 # Configure logging
@@ -60,9 +62,45 @@ async def update_status():
     finally:
         session.close()
 
+
+async def process_intra_payment():
+    session: Session = next(get_db())
+    update = False
+
+    try:
+        events = session.query(Payments).filter(
+            (Payments.status == 'PENDING' and Payments.due_data <= datetime.now()) 
+        ).with_for_update().all()
+        print(datetime.now().astimezone())
+        for event in events:
+            current_time = datetime.now().astimezone()
+            print(current_time >= event.due_data)
+            if event.status == PaymentStatus.PENDING and current_time >= event.due_data:
+                print(f'running event {event.id}...')
+                logger.info(
+                    f"♻ Updating status for payment {event.id} from {event.from_id} to {event.to_id}"
+                )
+                await AuctionServices(session).finalize_payment(event)
+                # event.status = 'COMPLETED'
+                print('Done')
+                logger.info('✅ Payment status updated')
+                update = True
+        
+        if update:
+            session.commit()
+            logger.info("🔄 Payment status updated successfully")
+        else:
+            pass
+    except Exception as e:
+        print(e.with_traceback())
+        logger.error(f"Error processing intra payment: {e}")
+    finally:
+        session.close()
+
 # Keep the script running
 async def main():
     scheduler.add_job(update_status, 'interval', seconds=15)
+    scheduler.add_job(process_intra_payment, 'interval', seconds=30)
     scheduler.start()
     try:
         logger.info("⏳ Scheduler started. Press Ctrl+C to exit.")
