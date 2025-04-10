@@ -23,43 +23,10 @@ from starlette.requests import Request
 import time
 
 
-class LoggingMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, logger):
-        super().__init__(app)
-        self.logger = logger
-
-    async def dispatch(self, request: Request, call_next):
-        start_time = time.time()
-        response = await call_next(request)
-        process_time = time.time() - start_time
-
-        self.logger.info(
-            f"{request.method} {request.url} - "
-            f"Status: {response.status_code} - "
-            f"Time: {process_time:.2f}s - "
-            f"Client: {request.client.host}"
-        )
-        return response
-
-
 def create_app(app_name: str = 'temporary') -> FastAPI:
     """
     The create_app function is the entry point for our application.
     """
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.StreamHandler(),  # Logs to console
-            logging.FileHandler("app.log", mode="a")  # Logs to a file
-        ]
-    )
-    logger = logging.getLogger(app_configs.APP_NAME)
-    fastapi_logger.handlers = logger.handlers  # Share handlers with FastAPI logger
-    fastapi_logger.setLevel(logging.INFO)
-
-    logger.info("Starting application...")
 
     # inject global dependencies
     app = FastAPI(
@@ -76,21 +43,14 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
         allow_headers=["*"],
     )
 
-    app.add_middleware(
-        LoggingMiddleware,
-        logger=logger
-    )
-
     @app.get("/", include_in_schema=False)
     def redirect():
-        logger.info("Redirecting to Swagger docs...")
         return RedirectResponse(
             url=app_configs.SWAGGER_DOCS_URL, status_code=302
         )
 
     @app.get("/status", include_in_schema=False)
     def status():
-        logger.info("Status endpoint called.")
         return {'status': 'running ✅'}
 
     app.exception_handlers = {
@@ -103,7 +63,6 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
     }
     app.include_router(routes)
     init_db()
-    logger.info("Application setup complete.")
     return app
 
 
