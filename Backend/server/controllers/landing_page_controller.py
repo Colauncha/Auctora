@@ -14,14 +14,7 @@ async def get_trending_auctions(db: Session = Depends(get_db)):
     redis = await redis_store.get_async_redis()
     trending_auctions = await redis.get('trending_auctions')
     if trending_auctions:
-        # print(trending_auctions)
-        filter = PagedQuery(page=1, per_page=20)
-        auctions = await AuctionServices(db).list(
-            filter,
-            {'status': 'ACTIVE'}
-        )
-        return auctions
-        # return PagedResponse.model_validate_json(trending_auctions)
+        return PagedResponse.model_validate_json(trending_auctions)
 
     else:
         filter = PagedQuery(page=1, per_page=20)
