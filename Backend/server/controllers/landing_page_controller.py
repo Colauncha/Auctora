@@ -17,7 +17,7 @@ async def get_trending_auctions(db: Session = Depends(get_db)):
         return PagedResponse.model_validate_json(trending_auctions)
 
     else:
-        filter = PagedQuery(page=1, per_page=10)
+        filter = PagedQuery(page=1, per_page=20)
         auctions = await AuctionServices(db).list(
             filter,
             {'status': 'ACTIVE'}
