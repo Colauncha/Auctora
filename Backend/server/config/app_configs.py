@@ -82,6 +82,7 @@ class AppConfig(BaseSettings):
         "https://www.biddius.com"
     ]
     REDIS_CACHE_EXPIRATION_LANDING: int = 60 * 60 * 24 * 1
+    REDIS_CACHE_EXPIRATION_CAT: int = 60 * 60 * 24 * 2
 
 
 app_configs = AppConfig()

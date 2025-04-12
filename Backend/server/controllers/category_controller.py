@@ -11,6 +11,9 @@ from server.schemas import (
 from server.services.user_service import current_user
 from server.services.category_service import CategoryServices
 from sqlalchemy.orm import Session
+from server.config import app_configs, get_db, redis_store
+from server.utils.helpers import cache_obj_format, load_obj_from_cache
+from server.middlewares.exception_handler import ExcRaiser500
 
 
 route = APIRouter(prefix='/categories', tags=['categories'])
@@ -42,7 +45,24 @@ async def get_category(
 async def list_categories(
     db: Session = Depends(get_db)
 ) -> APIResponse[list[GetCategorySchema]]:
+    redis = await redis_store.get_async_redis()
+    category_cache = await redis.get('category_cache')
+    if category_cache:
+        try:
+            loaded_cache = load_obj_from_cache(category_cache, GetCategorySchema)
+            return APIResponse(data=loaded_cache)
+        except Exception as e:
+            raise ExcRaiser500(
+                detail="Error loading category cache",
+                exception=e
+            )
     categories = await CategoryServices(db).list_categories()
+    formated_categories = cache_obj_format(categories)
+    await redis.set(
+        'category_cache',
+        formated_categories,
+        ex=app_configs.REDIS_CACHE_EXPIRATION_CAT
+    )
     return APIResponse(data=categories)
 
 
@@ -84,7 +104,26 @@ async def get_sub_category(
 async def list_sub_categories(
     db: Session = Depends(get_db)
 ) -> APIResponse[list[GetSubCategorySchema]]:
+
+    redis = await redis_store.get_async_redis()
+    sub_category_cache = await redis.get('sub_category_cache')
+    if sub_category_cache:
+        try:
+            loaded_cache = load_obj_from_cache(sub_category_cache, GetSubCategorySchema)
+            return APIResponse(data=loaded_cache)
+        except Exception as e:
+            raise ExcRaiser500(
+                detail="Error loading subcategory cache",
+                exception=e
+            )
     sub_categories = await CategoryServices(db).list_sub_categories()
+
+    formated_categories = cache_obj_format(sub_categories)
+    await redis.set(
+        'sub_category_cache',
+        formated_categories,
+        ex=app_configs.REDIS_CACHE_EXPIRATION_CAT
+    )
     return APIResponse(data=sub_categories)
 
 

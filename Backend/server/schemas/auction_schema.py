@@ -1,9 +1,12 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime, timezone
+from uuid import UUID
+
 from server.enums.auction_enums import AuctionStatus
 from server.schemas import GetItemSchema, CreateItemSchema
-from uuid import UUID
+from server.schemas.user_schema import GetUsersSchemaPublic
+from server.schemas.bid_schema import GetBidSchema
 
 
 class CreateAuctionParticipantsSchema(BaseModel):
@@ -62,6 +65,15 @@ class GetAuctionSchema(CreateAuctionSchema):
     participants: Optional[list[AuctionParticipantsSchema]] = Field(default=[])
     item: Optional[list[GetItemSchema]] = Field(default=[])
     watchers_count: Optional[int] = Field(default=0)
+    bids: Optional[list[GetBidSchema]] = Field(default=[])
+    user: Optional[GetUsersSchemaPublic] = Field(default=None)
+    bids_count: int = Field(default=0, description="Number of bids")
+    participants_count: int = Field(default=0, description="Number of participants")
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.bids_count = len(self.bids) if self.bids else 0
+        self.participants_count = len(self.participants) if self.participants else 0
 
     model_config = {
         'from_attributes': True
