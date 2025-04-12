@@ -1,9 +1,12 @@
+import json
 import random
 import re
 import string
 import importlib
+from typing import Any
 
 from fastapi import Depends
+from pydantic import BaseModel
 
 
 def is_valid_email(email: str) -> bool:
@@ -73,3 +76,63 @@ def paginator(page: int, item_per_page: int) -> int:
         int: The offset value.
     """
     return (page - 1) * item_per_page if page > 1 else 0
+
+
+def cache_obj_format(entity: BaseModel | list[BaseModel] | Any) -> str:
+    """
+    Returns the cache object format.
+    """
+    if len(entity) == 0:
+        return []
+    if isinstance(entity, list):
+        temp = []
+        for ent in entity:
+            if issubclass(type(ent), BaseModel):
+                temp.append(ent.model_dump_json())
+            else:
+                temp.append(json.dumps(ent))
+        return json.dumps(temp)
+    elif isinstance(entity, BaseModel):
+        return entity.model_dump_json()
+    elif isinstance(entity, dict):
+        return json.dumps(entity)
+    elif isinstance(entity, str):
+        return entity
+    elif isinstance(entity, int):
+        return str(entity)
+    elif isinstance(entity, float):
+        return str(entity)
+    else:
+        return json.dumps(entity)
+
+
+def load_obj_from_cache(
+    obj: str,
+    model: BaseModel | None = None,
+) -> BaseModel | dict:
+    """
+    Loads the object from cache.
+    
+    Parameters:
+        obj (str | dict): The object to load.
+        
+    Returns:
+        BaseModel | dict: The loaded object.
+    """
+    try:
+        obj = json.loads(obj)
+        if isinstance(obj, list):
+            temp = []
+            for ent in obj:
+                if model:
+                    temp.append(model.model_validate_json(ent))
+                else:
+                    temp.append(ent)
+            return temp
+        elif isinstance(obj, dict):
+            if model:
+                return model.model_validate_json(obj)
+        else:
+            return obj
+    except Exception as e:
+        raise TypeError(f"Invalid type: {type(obj)}")

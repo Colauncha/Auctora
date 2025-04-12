@@ -35,8 +35,10 @@ class ExcRaiser404(ExcRaiser):
 
 class ExcRaiser500(ExcRaiser):
     default_detail = 'Internal server error'
-    def __init__(self):
-        super().__init__(500, 'Internal server error', None)
+    def __init__(self, detail: str | Any = None, exception: BaseException = None):
+        super().__init__(500, 'Internal server error', detail)
+        if exception:
+            print(exception.with_traceback())
 
 
 async def exception_handler(request: Request, exc: ExcRaiser | BaseException):
