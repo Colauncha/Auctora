@@ -69,6 +69,7 @@ class GetAuctionSchema(CreateAuctionSchema):
     user: Optional[GetUsersSchemaPublic] = Field(default=None)
     bids_count: int = Field(default=0, description="Number of bids")
     participants_count: int = Field(default=0, description="Number of participants")
+    created_at: Optional[datetime] = Field(default=None)
 
     def __init__(self, **data):
         super().__init__(**data)
