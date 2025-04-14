@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import Optional, Union
 from uuid import UUID, uuid4
@@ -14,6 +15,8 @@ class CreateBidSchema(BaseModel):
 
 class GetBidSchema(CreateBidSchema):
     id: Union[UUID, str]
+    created_at: Optional[datetime] = Field(default=None)
+    updated_at: Optional[datetime] = Field(default=None)
 
 
 class UpdateBidSchema(BaseModel):

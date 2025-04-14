@@ -64,6 +64,31 @@ class GetUsers(GetUsersSchemaPublic):
     auctions: Optional[list[GetAuctionSchema]] = Field(default=[])
 
 
+class GetItemLite(BaseModel):
+    model_config = {"from_attributes": True}
+    name: str = Field(
+        description="Name of the Item",
+        default=None
+    )
+    description: Optional[str] = Field(
+        description="Description of the Item",
+        default=None
+    )
+    image_link: Optional[dict] = Field(
+        description="Image link of the Item",
+        default={}
+    )
+
+
+class GetAuctionItem(BaseModel):
+    model_config = {"from_attributes": True}
+    item: Optional[list[GetItemLite]] = Field(default={})
+
+
+class GetBidSchemaExt(GetBidSchema):
+    auction: Optional[GetAuctionItem] = Field(default={})
+
+
 class GetUserSchema(GetUsersSchemaPublic):
     acct_no: Optional[str]
     acct_name: Optional[str]
@@ -71,7 +96,7 @@ class GetUserSchema(GetUsersSchemaPublic):
     bank_name: Optional[str]
     recipient_code: Optional[str]
     auctions: Optional[list[GetAuctionSchema]] = Field(default=None)
-    bids: Optional[list[GetBidSchema]] = Field(default=[])
+    bids: Optional[list[GetBidSchemaExt]] = Field(default=[])
 
     wallet: float = Field(
         description="User's wallet balance",
