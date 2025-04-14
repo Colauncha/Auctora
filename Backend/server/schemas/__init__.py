@@ -71,6 +71,7 @@ class GetUserSchema(GetUsersSchemaPublic):
     bank_name: Optional[str]
     recipient_code: Optional[str]
     auctions: Optional[list[GetAuctionSchema]] = Field(default=None)
+    bids: Optional[list[GetBidSchema]] = Field(default=[])
 
     wallet: float = Field(
         description="User's wallet balance",
