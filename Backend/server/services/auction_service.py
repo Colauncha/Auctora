@@ -15,7 +15,7 @@ from server.schemas import (
     GetAuctionSchema, AuctionParticipantsSchema,
     CreateNotificationSchema, CreateAuctionParticipantsSchema,
     PagedQuery, PagedResponse, GetUserSchema, CreatePaymentSchema,
-    AuctionQueryScalar
+    AuctionQueryScalar, SearchQuery
 )
 
 
@@ -196,4 +196,19 @@ class AuctionServices:
             )
             await self.notification(notice)
         except Exception as e:
+            raise e
+
+
+    async def search(
+            self,
+            filter: SearchQuery,
+        ) -> PagedResponse:
+        try:
+            filter = filter.model_dump()
+            result = await self.repo.search(filter)
+            result.data = [GetAuctionSchema.model_validate(r) for r in result.data]
+            return result
+        except Exception as e:
+            if issubclass(type(e), ExcRaiser):
+                raise e
             raise e

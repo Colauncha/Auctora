@@ -181,6 +181,11 @@ class BanksQuery(PagedQuery):
     type: Optional[str] = Query(default='nuban')
 
 
-
-
-
+# Search related
+class SearchQuery(PagedQuery):
+    q: str = Query(default=None, description="Search query")
+    # category_id: Optional[str] = Query(default=None, description="Category ID")
+    # sub_category_id: Optional[str] = Query(default=None, description="Sub category ID")
+    # status: Optional[str] = Query(default=None, description="Status")
+    # buy_now: Optional[bool] = Query(default=None, description="Buy now")
+    # users_id: Optional[str] = Query(default=None, description="User ID")

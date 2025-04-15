@@ -1,6 +1,9 @@
 import math
 
+from sqlalchemy import String
+
 from server.models.auction import Auctions, AuctionParticipants
+from server.models.items import Items
 from server.repositories.repository import Repository
 from server.schemas import PagedResponse
 from server.utils import paginator
@@ -104,5 +107,43 @@ class AuctionRepository(Repository):
             page_number=page,
             per_page=limit,
             count=count,
+            total=total,
+        )
+
+    async def search(self, filter_: dict | None = None):
+        filter_ = filter_.copy() if filter_ else {}
+        page = filter_.pop("page", 1)
+        per_page = filter_.pop("per_page", 10)
+
+        limit = per_page
+        offset = paginator(page, per_page)
+        QueryModel = Auctions
+
+        try:
+            search_term = filter_.get("q", "").strip()
+            query = self.db.query(QueryModel)
+
+            if search_term:
+                query = query.filter(
+                    QueryModel.item.any(
+                        (Items.name.ilike(f"%{search_term}%"))
+                        # (Items.id.cast(String).ilike(f"%{search_term}%"))
+                    )
+                )
+
+            total = query.count()
+            results = query.limit(limit).offset(offset).all()
+
+        except Exception as e:
+            print(f"[Search Error] {e}")
+            raise
+
+        pages = max(math.ceil(total / limit), 1)
+        return PagedResponse(
+            data=results,
+            pages=pages,
+            page_number=page,
+            per_page=limit,
+            count=len(results),
             total=total,
         )

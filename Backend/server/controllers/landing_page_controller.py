@@ -3,7 +3,12 @@ from sqlalchemy.orm import Session
 
 from server.config import app_configs, get_db, redis_store
 from server.services.auction_service import AuctionServices
-from server.schemas import PagedQuery, PagedResponse
+from server.schemas import (
+    PagedQuery,
+    PagedResponse,
+    SearchQuery,
+    GetAuctionSchema
+)
 
 
 router = APIRouter(prefix='/landing', tags=['Landing Page'])
@@ -30,5 +35,9 @@ async def get_trending_auctions(db: Session = Depends(get_db)):
         return auctions
 
 @router.get('/search')
-async def search(db: Session = Depends(get_db)):
-    ...
+async def search(
+    query: SearchQuery = Depends(),
+    db: Session = Depends(get_db)
+) -> PagedResponse[list[GetAuctionSchema]]:
+    result = await AuctionServices(db).search(query)
+    return result
