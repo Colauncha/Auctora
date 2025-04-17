@@ -54,6 +54,9 @@ class BidServices:
             if auction.end_date < date:
                 raise ExcRaiser400('Auction has ended')
             
+            if auction.users_id == user.id:
+                raise ExcRaiser400('You cannot bid on your own auction')
+            
             if not auction.buy_now:
                 raise ExcRaiser400('Buy now is not enabled')
 
@@ -120,6 +123,9 @@ class BidServices:
 
             if auction.end_date < date:
                 raise ExcRaiser400('Auction has ended')
+            
+            if auction.users_id == user.id:
+                raise ExcRaiser400('You cannot bid on your own auction')
 
             # TODO: Check if price >= auction.buy_now_price
             if auction.buy_now:
