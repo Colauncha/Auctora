@@ -270,9 +270,9 @@ class UserServices:
 
     async def create_user(self, data: dict) -> dict[str, str]:
         try:
-            NOTIF_TITLE = "Welcome to Auctora"
+            NOTIF_TITLE = "Welcome to Biddius"
             NOTIF_MESSAGE = (
-                "Thank you for signing up with Auctora. "
+                "Thank you for signing up with Biddius. "
                 "We are glad to have you on board"
             )
             # Check if email already exist
