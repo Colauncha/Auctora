@@ -185,6 +185,33 @@ class BidServices:
             return bid
         except Exception as e:
             raise e
+
+    async def list_ws(
+        self,
+        auction_id: str,
+    ):
+        try:
+            redis = await redis_store.get_async_redis()
+            prev_bids = await redis.get(f'auction:{auction_id}')
+            if prev_bids:
+                return json.loads(prev_bids)
+            else:
+                prev_bids = await self.list(
+                    {"auction_id": auction_id}
+                )
+                prev_bids = [
+                    {
+                        'id': str(b.user_id),
+                        'username': b.username,
+                        'amount': b.amount
+                    }
+                    for b in prev_bids.data
+                ]
+                prev_bids_ = json.dumps(prev_bids)
+                _ = await redis.set(f'auction:{auction_id}', prev_bids_)
+                return json.loads(prev_bids_)
+        except Exception as e:
+            raise e
         
     async def create_ws(
         self,

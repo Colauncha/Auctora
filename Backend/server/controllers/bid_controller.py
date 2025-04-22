@@ -89,20 +89,22 @@ async def retrieve(
     return result
 
 
-@route.websocket('/ws/{id}')
+@route.websocket('/ws/{id}/{token}')
 async def ws_create(
     id: str,
     ws: WebSocket,
+    token: str,
     db: Session = Depends(get_db)
 ):
-    _user = await UserServices.get_ws_user(ws, db)
+    _user = await UserServices.get_ws_user(ws, db, token)
     await wsmanager.connect(id, ws)
     redis = await redis_store.get_async_redis()
     prev_bids = await redis.get(f'auction:{id}')
     if prev_bids:
         await wsmanager.send_data(json.loads(prev_bids), ws)
     else:
-        await wsmanager.send_data([], ws)
+        prev_bids = await BidServices(db).list_ws(id)
+        await wsmanager.send_data(prev_bids, ws)
     try:
         watcher = ws.client.host
         await BidServices(db).add_watcher(id, watcher)
@@ -113,7 +115,7 @@ async def ws_create(
                 data["username"] = _user.username
                 bids = await BidServices(db).create_ws(CreateBidSchema(**data), wsmanager, ws)
                 if bids:
-                    await wsmanager.broadcast(id, bids)
+                    await wsmanager.broadcast(id, {'type': 'new_bid', 'payload': bids})
     except WebSocketDisconnect:
         await wsmanager.disconnect(id, ws)
     except WebSocketException as wse:
