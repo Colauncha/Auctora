@@ -27,7 +27,7 @@ class WSManager:
         await websocket.send_text(message)
 
     async def send_data(self, data: dict | list, websocket: WebSocket):
-        await websocket.send_json(data)
+        await websocket.send_json({'type': 'bids', 'payload': data})
 
     async def broadcast(self, auction_id: str, data: any):
         for connection in self.active_connections[auction_id]:
