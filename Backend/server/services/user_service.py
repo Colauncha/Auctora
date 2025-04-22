@@ -440,7 +440,7 @@ class UserServices:
                     )
                 )
                 return {'message': 'email verified'}
-            return {'message': 'Invalid otp or email'}
+            raise ExcRaiser400(message='Invalid OTP, mail not verified')
         except Exception as e:
             raise ExcRaiser(
                 status_code=400,
@@ -543,12 +543,17 @@ class UserServices:
         return token
     
     @staticmethod
-    async def get_ws_user(ws: WebSocket, db: Session = Depends(get_db)):
-        token = ws.headers.get('Authorization')
-        token = token.split(' ')[-1] if token else None
-        if not token:
+    async def get_ws_user(ws: WebSocket, db: Session = Depends(get_db), token = None):
+        try:
+            if token:
+                user = await UserServices._get_current_user(token, db)
+                return user
+            else:
+                token = ws.headers.get('Authorization')
+                token = token.split(' ')[-1] if token else None
+                return await UserServices._get_current_user(token, db)
+        except:
             raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
-        return await UserServices._get_current_user(token, db)
 
     @staticmethod
     async def _get_current_user(
