@@ -81,8 +81,13 @@ class AppConfig(BaseSettings):
         "https://biddius.vercel.app", "https://biddius.com",
         "https://www.biddius.com"
     ]
+
+    # Redis
     REDIS_CACHE_EXPIRATION_LANDING: int = 60 * 60 * 24 * 1
     REDIS_CACHE_EXPIRATION_CAT: int = 60 * 60 * 24 * 2
+
+    # Referrals
+    MAX_REFERRAL_COUNT: int = 2
 
 
 app_configs = AppConfig()
