@@ -43,6 +43,7 @@ class GetUsersSchemaPublic(BaseModel):
     rating: Optional[float] = Field(default=0.00)
     kyc_verified: Optional[bool] = Field(default=False)
     address: Optional[str] = Field(default=None)
+    referral_code: Optional[str] = Field(default=None)
     role: Optional[UserRoles] = Field(
         description='User roles',
         examples=[UserRoles.CLIENT]
@@ -83,6 +84,10 @@ class CreateUserSchema(BaseModel):
     role: Optional[UserRoles] = Field(
         description='User roles',
         examples=[UserRoles.CLIENT], default=UserRoles.CLIENT
+    )
+    referral_code: Optional[str] = Field(
+        default=None,
+        description="Referral code",
     )
 
     model_config = {"from_attributes": True}

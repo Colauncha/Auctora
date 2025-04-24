@@ -4,6 +4,7 @@ import re
 import string
 import importlib
 from typing import Any
+import base64
 
 from fastapi import Depends
 from pydantic import BaseModel
@@ -136,3 +137,25 @@ def load_obj_from_cache(
             return obj
     except Exception as e:
         raise TypeError(f"Invalid type: {type(obj)}")
+
+
+def generate_referral_code(username: str) -> str:
+    """
+    Generates a random 10-character referral code.
+    
+    Returns:
+        str: The generated referral code.
+    """
+    binary_data = username.encode('utf-8')
+    base64_encoded = base64.b64encode(binary_data)
+    ref_code = f'REF_{base64_encoded.decode("utf-8")}'
+    return ref_code
+
+
+def decode_referral_code(ref_code: str) -> None:
+    """
+    Decodes the referral code to get the username."
+    """
+    decode_username = ref_code[4:]
+    decoded = base64.b64decode(decode_username.encode('utf-8'))
+    return decoded.decode('utf-8')

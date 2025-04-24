@@ -2,6 +2,7 @@ from uuid import uuid4
 from typing import Annotated
 from jose import ExpiredSignatureError, jwt
 from datetime import datetime, timezone, timedelta
+import inspect
 
 from sqlalchemy.orm import Session
 from server.models.users import Users
@@ -12,7 +13,12 @@ from server.repositories import DBAdaptor
 from fastapi.security import OAuth2PasswordBearer
 from server.config import app_configs, redis_store
 from jose.exceptions import JWTError, JWTClaimsError
-from server.utils import is_valid_email, otp_generator
+from server.utils import (
+    is_valid_email,
+    otp_generator,
+    generate_referral_code,
+    decode_referral_code
+)
 from server.schemas import (
     VerifyOtpSchema, LoginSchema,
     GetUserSchema, UpdateUserSchema,
@@ -49,6 +55,7 @@ oauth_bearer = OAuth2PasswordBearer(tokenUrl=f"api/users/login")
 class UserNotificationServices:
     def __init__(self, db: Session):
         self.repo = DBAdaptor(db).notif_repo
+        self.debug = app_configs.DEBUG
 
     async def list(self, notice: NotificationQuery):
         try:
@@ -61,8 +68,13 @@ class UserNotificationServices:
             ]
             result.data = valid_notices
             return result
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
         
     async def retrieve(self, id: str):
         try:
@@ -71,8 +83,13 @@ class UserNotificationServices:
                 valid_notice = GetNotificationsSchema.model_validate(notice)
                 return valid_notice
             raise ExcRaiser404(message='Notification not found')
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
         
     async def create(self, data: CreateNotificationSchema):
         try:
@@ -80,8 +97,13 @@ class UserNotificationServices:
             if result:
                 return GetNotificationsSchema.model_validate(result)
             raise ExcRaiser400(message='Unable to create Notification')
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
         
     async def update(self, id: str, read: bool):
         try:
@@ -91,8 +113,13 @@ class UserNotificationServices:
                 if result:
                     return True
             raise ExcRaiser404(message='Notification not found')
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
 
 ###############################################################################
@@ -104,6 +131,7 @@ class UserWalletTransactionServices:
         self.repo = DBAdaptor(db).wallet_repo
         self.user_repo = DBAdaptor(db).user_repo
         self.notification = UserNotificationServices(db)
+        self.debug = app_configs.DEBUG
 
     async def init_transaction(
         self,
@@ -123,8 +151,13 @@ class UserWalletTransactionServices:
             })
             _ = await self.repo.add(wallet_data.model_dump())
             return True
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     async def create(self, transaction, extra):
         try:
@@ -178,8 +211,13 @@ class UserWalletTransactionServices:
                 )
                 # await publish_fund_account(pub_data)
             return
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     async def list(self, filter: WalletHistoryQuery):
         try:
@@ -195,8 +233,13 @@ class UserWalletTransactionServices:
             ]
             history.data = valid_history
             return history
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
         
     async def withdraw(self, user: GetUserSchema, amount: float) -> bool:
         try:
@@ -215,6 +258,7 @@ class UserServices:
         self.repo = DBAdaptor(db).user_repo
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         self.notification = UserNotificationServices(db)
+        self.debug = app_configs.DEBUG
 
     def __check_password(self, password, hashed_password) -> bool:
         return self.pwd_context.verify(password, hashed_password)
@@ -259,14 +303,52 @@ class UserServices:
                     message='Unauthorized',
                     detail='Invalid credentials, try again'
                 )
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            if type(e) == ExcRaiser:
-                raise e
-            raise ExcRaiser(
-                status_code=401,
-                message='Unauthorized',
-                detail=e.__repr__()
-            )
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
+    async def update_referral_users(
+        self,
+        referrer: GetUserSchema,
+        referree: GetUserSchema,
+    ):
+        try:
+            refered_slots = referrer.referred_users.copy()
+            if not refered_slots:
+                raise ExcRaiser400(
+                    message='Referrer not eligible for referrals, Proceed to Login'
+                )
+            if refered_slots['slots_used'] >= app_configs.MAX_REFERRAL_COUNT:
+                raise ExcRaiser400(
+                    message='Referral count maximum reached, Proceed to Login',
+                    detail='Referrer has reached max amount of referrable users'
+                )
+            slot_num = refered_slots['slots_used'] + 1
+            slot = f'slot{slot_num}'
+
+            # new data
+            refered_slots['slots_used'] = slot_num
+            refered_slots[slot] = {
+                'user_id': str(referree.id),
+                'email': referree.email,
+                'username': None,
+                'completed': False,
+                'created_at': datetime.now().isoformat()
+            }
+            updated_ref = await self.repo.update_jsonb(referrer.id, refered_slots)
+
+            return True
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     async def create_user(self, data: dict) -> dict[str, str]:
         try:
@@ -276,10 +358,10 @@ class UserServices:
                 "We are glad to have you on board"
             )
             # Check if email already exist
+            referral_code = data.pop('referral_code') if data.get('referral_code') else None
             ex_uname = await self.repo.get_by_username(data.get('username'))\
             if data.get('username') else None
             ex_email = await self.repo.get_by_email(data.get('email'))
-            print(f'name: {ex_uname},\nemail: {ex_email}')
             if ex_email or ex_uname:
                 raise ExcRaiser400(detail='Username or email already exist')
 
@@ -302,6 +384,17 @@ class UserServices:
                         user_id=new_user.id
                     )
                 )
+
+                # referral
+                if referral_code:
+                    ref_username = decode_referral_code(referral_code)
+                    ref_user = await self.repo.get_by_username(ref_username)
+                    _ = await self.repo.update(
+                        new_user, {'referred_by': str(ref_user.id)}
+                    )
+                    await self.update_referral_users(ref_user, new_user)
+
+                # OTP
                 otp = otp_generator()
                 async_redis = await redis_store.get_async_redis()
                 _ = await async_redis.set(f'otp:{new_user.email}', otp, ex=1800)
@@ -313,15 +406,13 @@ class UserServices:
                 await publish_otp(data)
                 return data
 
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            if issubclass(type(e), ExcRaiser):
-                print(e)
-                raise e
-            raise ExcRaiser(
-                message="Unable to create User",
-                status_code=400,
-                detail=str(e)
-            )
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     async def create_admin(self, data: dict):
         try:
@@ -349,10 +440,13 @@ class UserServices:
             }
             await publish_otp(data)
             return data
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            if type(e) == ExcRaiser:
-                raise e
-            raise ExcRaiser500()
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
         
     async def add_recipient_code(
         self,
@@ -373,14 +467,13 @@ class UserServices:
                 valid_user = GetUserSchema.model_validate(user)
                 return valid_user
             raise ExcRaiser404(message='User not found')
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            if issubclass(type(e), ExcRaiser):
-                raise e
-            raise ExcRaiser(
-                message="Unable to Fetch User",
-                status_code=400,
-                detail=str(e)
-            )
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     # Not optimal (The auction list should be trauncated)
     async def list(self, filter: PagedQuery) ->PagedResponse[list[GetUsers]]:
@@ -400,8 +493,13 @@ class UserServices:
                     per_page=result.per_page
                 )
             raise ExcRaiser404(message='No User found')
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
         
     async def new_otp(self, email: str):
         try:
@@ -417,10 +515,13 @@ class UserServices:
             data = {'email': email, 'otp': otp}
             await publish_otp(data)
             return {'detail': 'OTP resent to Email'}
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            if issubclass(type(e), ExcRaiser):
-                raise e
-            raise ExcRaiser500()
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     async def verify_otp(self, data: VerifyOtpSchema):
         try:
@@ -441,12 +542,13 @@ class UserServices:
                 )
                 return {'message': 'email verified'}
             raise ExcRaiser400(message='Invalid OTP, mail not verified')
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise ExcRaiser(
-                status_code=400,
-                message='Unable to verify email',
-                detail=e.__repr__()
-            )
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     async def update_user(self, user: GetUserSchema, data: UpdateUserSchema):
         try:
@@ -458,12 +560,13 @@ class UserServices:
             result = await self.repo.update(user, _data)
             if result:
                 return True
-        except (HTTPException, Exception) as exc:
-            raise ExcRaiser(
-                status_code=getattr(exc, 'status_code', 400),
-                message="Update not successful",
-                detail=exc.__repr__()
-            )
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     async def update_address(
         self,
@@ -479,8 +582,13 @@ class UserServices:
             result = await self.repo.update(user, _data)
             if result:
                 return True
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
         
     async def get_reset_token(self, email: str):
         try:
@@ -493,10 +601,13 @@ class UserServices:
             data = {'email': email, 'token': token}
             await publish_reset_token(data)
             return {'detail': 'Reset token sent to email'}
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            if issubclass(type(e), ExcRaiser):
-                raise e
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     async def reset_password(self, data: ResetPasswordSchema):
         try:
@@ -512,10 +623,13 @@ class UserServices:
                     return {'detail': 'Password reset successful'}
                 raise ExcRaiser400(detail='Passwords do not match')
             raise ExcRaiser400(detail= 'Invalid token or email')
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            if issubclass(type(e), ExcRaiser):
-                raise e
-            raise ExcRaiser500()
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
         
     async def change_password(self, user: GetUserSchema, data: ChangePasswordSchema):
         try:
@@ -528,12 +642,43 @@ class UserServices:
                 )
                 return {'detail': 'Password change successful'}
             raise ExcRaiser400(detail='Passwords do not match')
-        except Exception as exc:
-            print(exc)
-            if issubclass(type(exc), ExcRaiser):
-                raise exc
-            raise ExcRaiser500()
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
+    async def get_referral_code(self, user: GetUserSchema):
+        try:
+            username = user.username
+            if not username:
+                raise ExcRaiser400(
+                    message='Username not found',
+                    detail="Update profile to include username then proceed"
+                )
+            if user.referral_code:
+                return {
+                    'referral_code': user.referral_code,
+                    'referral_url': f"{app_configs.FRONTEND_URL}/sign-up?referral_code={user.referral_code}",
+                    'referred_users': user.referred_users
+                }
+            ref_code = generate_referral_code(username)
+            _ = await self.repo.update(
+                user, {'referral_code': ref_code}
+            )
+            return {
+                'referral_code': ref_code,
+                'referral_url': f"{app_configs.FRONTEND_URL}/sign-up?referral_code={ref_code}"
+            }
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
         
     ############################## Static Methods #################################
 

@@ -68,6 +68,7 @@ class AppConfig(BaseSettings):
     APP_NAME: str
     URI_PREFIX: str = '/api'
     SWAGGER_DOCS_URL: str = f'{URI_PREFIX}/docs'
+    FRONTEND_URL: str = 'https://biddius.com'
     DB: DataBaseSettings = DataBaseSettings()
     test_user: TestUser = TestUser()
     security: JWTSettings= JWTSettings()

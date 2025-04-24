@@ -91,6 +91,27 @@ class Repository:
         except Exception as e:
             self.db.rollback()
             raise e
+        
+    async def update_jsonb(
+        self,
+        id: str,
+        data: dict = None,
+    ):
+        try:
+            if not data:
+                raise ValueError("Data cannot be None or empty")
+            entity = self.db.query(self._Model).filter_by(id=id).first()
+            if entity is None:
+                raise ExcRaiser404(message='Entity not found')
+
+            entity.referred_users = data
+
+            self.db.add(entity)
+            self.db.commit()
+            return entity
+        except Exception as e:
+            self.db.rollback()
+            raise e
 
     async def delete(self, entity: BaseModel) -> bool:
         try:
