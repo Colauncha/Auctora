@@ -82,6 +82,8 @@ class AppConfig(BaseSettings):
         "https://biddius.vercel.app", "https://biddius.com",
         "https://www.biddius.com"
     ]
+    # Payment
+    COMPANY_TAX: float = 0.05
 
     # Redis
     REDIS_CACHE_EXPIRATION_LANDING: int = 60 * 60 * 24 * 1
@@ -89,6 +91,7 @@ class AppConfig(BaseSettings):
 
     # Referrals
     MAX_REFERRAL_COUNT: int = 2
+    REFERRAL_TAX: float = 0.01
 
 
 app_configs = AppConfig()

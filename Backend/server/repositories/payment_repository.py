@@ -1,3 +1,4 @@
+from server.config import app_configs
 from server.middlewares.exception_handler import ExcRaiser404
 from server.models.payment import Payments
 from server.models.users import Users
@@ -53,7 +54,8 @@ class PaymentRepository(Repository):
         self,
         data: CreatePaymentSchema
     ):
-        COMPANY_TAX = 0.05
+        COMPANY_TAX = app_configs.COMPANY_TAX
+        REFERRAL_TAX = app_configs.REFERRAL_TAX
         try:
             with self.db.begin(nested=True):
                 buyer = self.db.query(Users).filter(
@@ -70,9 +72,29 @@ class PaymentRepository(Repository):
                     raise ExcRaiser404(message="Payer not found")
                 if not seller:
                     raise ExcRaiser404(message="Recipient not found")
-                
-                seller.available_balance += (data.amount - (data.amount * COMPANY_TAX))
-                seller.wallet += (data.amount - (data.amount * COMPANY_TAX))
+
+                if seller.referral_debt_settled:
+                    seller.available_balance += (data.amount - (data.amount * COMPANY_TAX))
+                    seller.wallet += (data.amount - (data.amount * COMPANY_TAX))
+                else:
+                    refered_by = self.db.query(Users).filter(
+                        Users.id == seller.referred_by
+                    ).first()
+                    company_fee = data.amount * COMPANY_TAX
+                    referral_fee = data.amount * REFERRAL_TAX
+
+                    seller.available_balance += (data.amount - (company_fee + referral_fee))
+                    seller.wallet += (data.amount - (company_fee + referral_fee))
+                    seller.referral_debt_settled = True
+
+                    refered_by.available_balance += referral_fee
+                    refered_by.wallet += referral_fee
+                    for k, v in refered_by.referred_users:
+                        if isinstance(v, dict):
+                            if v.get('user_id') == str(seller.id):
+                                v['completed'] = True
+                        else:
+                            pass
 
                 entity.status = PaymentStatus.COMPLETED
             return entity

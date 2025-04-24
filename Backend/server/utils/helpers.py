@@ -5,9 +5,13 @@ import string
 import importlib
 from typing import Any
 import base64
+import inspect
 
 from fastapi import Depends
 from pydantic import BaseModel
+
+from server.config import app_configs
+from server.middlewares.exception_handler import ExcRaiser, ExcRaiser500
 
 
 def is_valid_email(email: str) -> bool:
@@ -146,16 +150,32 @@ def generate_referral_code(username: str) -> str:
     Returns:
         str: The generated referral code.
     """
-    binary_data = username.encode('utf-8')
-    base64_encoded = base64.b64encode(binary_data)
-    ref_code = f'REF_{base64_encoded.decode("utf-8")}'
-    return ref_code
+    try:
+        binary_data = username.encode('utf-8')
+        base64_encoded = base64.b64encode(binary_data)
+        ref_code = f'REF_{base64_encoded.decode("utf-8")}'
+        return ref_code
+    except ExcRaiser as e:
+        raise
+    except Exception as e:
+        if app_configs.DEBUG:
+            method_name = inspect.stack()[0].frame.f_code.co_name
+            print(f'Unexpected error in {method_name}: {e}')
+        raise ExcRaiser500(detail=str(e))
 
 
 def decode_referral_code(ref_code: str) -> None:
     """
     Decodes the referral code to get the username."
     """
-    decode_username = ref_code[4:]
-    decoded = base64.b64decode(decode_username.encode('utf-8'))
-    return decoded.decode('utf-8')
+    try:
+        decode_username = ref_code[4:]
+        decoded = base64.b64decode(decode_username.encode('utf-8'))
+        return decoded.decode('utf-8')
+    except ExcRaiser as e:
+        raise
+    except Exception as e:
+        if app_configs.DEBUG:
+            method_name = inspect.stack()[0].frame.f_code.co_name
+            print(f'Unexpected error in {method_name}: {e}')
+        raise ExcRaiser500(detail=f'{str(e)}, Proceed to login')

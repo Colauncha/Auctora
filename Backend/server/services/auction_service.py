@@ -1,6 +1,7 @@
+import inspect
 from sqlalchemy.orm import Session
 from fastapi import WebSocket
-from server.config import redis_store
+from server.config import redis_store, app_configs
 from server.repositories import DBAdaptor
 from server.models.items import Items
 from server.enums.auction_enums import AuctionStatus
@@ -26,6 +27,7 @@ class AuctionServices:
         self.user_repo = UserServices(db).repo
         self.notification = UserNotificationServices(db).create
         self.payment_repo = DBAdaptor(db).payment_repo
+        self.debug = app_configs.DEBUG
 
     # Auction services
     async def create(self, data: dict):
@@ -53,10 +55,13 @@ class AuctionServices:
                 NOTIF_BODY_PRIV if result.private else NOTIF_BODY
             )
             return GetAuctionSchema.model_validate(result)
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            if issubclass(type(e), ExcRaiser):
-                raise e
-            raise e # Edit line
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     async def retrieve(self, id: str):
         try:
@@ -64,10 +69,13 @@ class AuctionServices:
             if not result:
                 raise ExcRaiser404("Auction not found")
             return GetAuctionSchema.model_validate(result)
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            if issubclass(type(e), ExcRaiser):
-                raise e
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     async def list(
             self,
@@ -83,21 +91,27 @@ class AuctionServices:
             result = await self.repo.get_all(filter)
             result.data = [GetAuctionSchema.model_validate(r) for r in result.data]
             return result
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            if issubclass(type(e), ExcRaiser):
-                raise e
-            raise e
-        
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
     async def update(self, id: str, data: dict):
         try:
             print(data)
             entity = await self.repo.get_by_id(id)
             updated = await self.repo.update(entity, data)
             return GetAuctionSchema.model_validate(updated)
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            if issubclass(type(e), ExcRaiser):
-                raise e
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     # Auction participants
     async def create_participants(
@@ -114,16 +128,26 @@ class AuctionServices:
             if user:
                 await self.notify(str(user.id), NOTIF_TITLE, NOTIF_BODY)
             _ = await self.participant_repo.add(data)
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
-        
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
     async def ws_bids(self, auction_id: str, ws: WebSocket):
         try:
             async_redis = await redis_store.get_async_redis()
             bid_list = async_redis.get(f'auction:{auction_id}')
             await ws.send(bid_list)
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     async def close(
         self,
@@ -164,7 +188,6 @@ class AuctionServices:
                 )
                 # TODO: Develop system to move amount to company's account
                 bids = sorted(bids, key=lambda x: x.amount)
-                print(bid.amount for bid in bids)
                 bids = bids[:-1]
                 for bid in bids:
                     _ = await self.user_repo.abtw(bid.user_id, bid.amount)
@@ -172,17 +195,27 @@ class AuctionServices:
                         bid.user_id, 'Auction Lost',
                         'You have lost the auction, Amount has been returned'
                     )
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
-        
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
     async def finalize_payment(self, entity):
         try:
             entity = CreatePaymentSchema.model_validate(entity)
             res = await self.payment_repo.disburse(entity)
             if res:
                 return True
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     async def delete(self, id: str):
         ...
@@ -195,9 +228,13 @@ class AuctionServices:
                 user_id=user_id
             )
             await self.notification(notice)
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
-
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     async def search(
             self,
@@ -208,7 +245,10 @@ class AuctionServices:
             result = await self.repo.search(filter)
             result.data = [GetAuctionSchema.model_validate(r) for r in result.data]
             return result
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            if issubclass(type(e), ExcRaiser):
-                raise e
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
