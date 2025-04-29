@@ -6,9 +6,10 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     String,
-    Enum
+    Enum,
+    Integer
 )
-from sqlalchemy.dialects.postgresql import ENUM
+from sqlalchemy.dialects.postgresql import ENUM, JSONB
 from sqlalchemy.orm import relationship
 from passlib.context import CryptContext
 
@@ -50,6 +51,14 @@ class Users(BaseModel):
     kyc_verified = Column(Boolean, default=False)
     kyc_id_type = Column(String, nullable=True)
     kyc_id_number = Column(String, nullable=True)
+
+    # Referral
+    referred_by = Column(String, nullable=True)
+    referral_debt_settled = Column(Boolean, default=False)
+    referral_commisions_paid = Column(Integer, default=0)
+    referral_code = Column(String, nullable=True)
+    referral_slots_used = Column(Integer, default=0)
+    referred_users = Column(JSONB, nullable=True, default={})
 
     # Additional INFO
     rating = Column(Float, nullable=True, default=0.00)
@@ -109,7 +118,7 @@ class Users(BaseModel):
         return context.hash(password)
     
     def __str__(self):
-        return f'Name: {self.username}, Email: {self.email}'
+        return f'Name: {self.username}, Email: {self.email}, referrals: {self.referred_users}'
     
 
 class Notifications(BaseModel):

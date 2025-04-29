@@ -17,7 +17,7 @@ class CreatePaymentSchema(BaseModel):
     auction_id: Union[UUID, str]
     amount: float
     due_date: datetime = Field(
-        default=datetime.now().astimezone() + timedelta(minutes=5)
+        default=datetime.now().astimezone() + timedelta(minutes=1)
     )
 
 

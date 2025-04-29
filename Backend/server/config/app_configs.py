@@ -20,7 +20,7 @@ class DataBaseSettings(BaseSettings):
     TEST_DATABASE: Optional[str]
 
     def all(self):
-        return [self.DATABASE_URL, self.NEON_DB_URL]
+        return [self.DATABASE_URL, self.TEST_DATABASE, self.NEON_DB_URL]
 
 
 class JWTSettings(BaseSettings):
@@ -68,6 +68,7 @@ class AppConfig(BaseSettings):
     APP_NAME: str
     URI_PREFIX: str = '/api'
     SWAGGER_DOCS_URL: str = f'{URI_PREFIX}/docs'
+    FRONTEND_URL: str = 'https://biddius.com'
     DB: DataBaseSettings = DataBaseSettings()
     test_user: TestUser = TestUser()
     security: JWTSettings= JWTSettings()
@@ -81,8 +82,16 @@ class AppConfig(BaseSettings):
         "https://biddius.vercel.app", "https://biddius.com",
         "https://www.biddius.com"
     ]
+    # Payment
+    COMPANY_TAX: float = 0.05
+
+    # Redis
     REDIS_CACHE_EXPIRATION_LANDING: int = 60 * 60 * 24 * 1
     REDIS_CACHE_EXPIRATION_CAT: int = 60 * 60 * 24 * 2
+
+    # Referrals
+    MAX_COMMISIONS_COUNT: int = 2
+    REFERRAL_TAX: float = 0.01
 
 
 app_configs = AppConfig()

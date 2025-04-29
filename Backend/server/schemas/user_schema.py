@@ -43,6 +43,8 @@ class GetUsersSchemaPublic(BaseModel):
     rating: Optional[float] = Field(default=0.00)
     kyc_verified: Optional[bool] = Field(default=False)
     address: Optional[str] = Field(default=None)
+    referral_code: Optional[str] = Field(default=None)
+    referral_slots_used: Optional[int] = Field(default=0)
     role: Optional[UserRoles] = Field(
         description='User roles',
         examples=[UserRoles.CLIENT]
@@ -83,6 +85,10 @@ class CreateUserSchema(BaseModel):
     role: Optional[UserRoles] = Field(
         description='User roles',
         examples=[UserRoles.CLIENT], default=UserRoles.CLIENT
+    )
+    referral_code: Optional[str] = Field(
+        default=None,
+        description="Referral code",
     )
 
     model_config = {"from_attributes": True}
@@ -212,3 +218,15 @@ class TransferRecipientData(BaseModel):
     account_number: str
     bank_code: str
     currency: Optional[str] = Field(default="NGN")
+
+
+class ReferralSlots(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: str = Field(default='')
+    email: str = Field(default='')
+    commissions_paid: int = Field(default=0)
+    commissions_amount: float = Field(default=0.0)
+    created_at: str = Field(
+        default_factory=lambda: datetime.datetime.now().isoformat()
+    )

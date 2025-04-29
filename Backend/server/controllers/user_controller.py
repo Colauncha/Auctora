@@ -228,6 +228,16 @@ async def change_password(
     return APIResponse(data=response)
 
 
+@route.get('/referral_code')
+@permissions(permission_level=Permissions.CLIENT)
+async def get_referral_code(
+    user: current_user,
+    db: Session = Depends(get_db)
+) -> APIResponse:
+    response = await UserServices(db).get_referral_code(user)
+    return APIResponse(data=response)
+
+
 ###############################################################################
 ############################ Notification Endpoints ###########################
 ###############################################################################

@@ -97,6 +97,8 @@ class GetUserSchema(GetUsersSchemaPublic):
     recipient_code: Optional[str]
     auctions: Optional[list[GetAuctionSchema]] = Field(default=None)
     bids: Optional[list[GetBidSchemaExt]] = Field(default=[])
+    referred_by: Optional[str] = Field(default='')
+    referred_users: Optional[dict] = Field(default={})
 
     wallet: float = Field(
         description="User's wallet balance",
