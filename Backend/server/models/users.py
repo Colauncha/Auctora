@@ -6,7 +6,8 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     String,
-    Enum
+    Enum,
+    Integer
 )
 from sqlalchemy.dialects.postgresql import ENUM, JSONB
 from sqlalchemy.orm import relationship
@@ -54,24 +55,10 @@ class Users(BaseModel):
     # Referral
     referred_by = Column(String, nullable=True)
     referral_debt_settled = Column(Boolean, default=False)
+    referral_commisions_paid = Column(Integer, default=0)
     referral_code = Column(String, nullable=True)
-    referred_users = Column(JSONB, nullable=True, default={
-        'slot1': {
-            'user_id': None,
-            'email': None,
-            'username': None,
-            'completed': False,
-            'created_at': None
-        },
-        'slot2': {
-            'user_id': None,
-            'email': None,
-            'username': None,
-            'completed': False,
-            'created_at': None
-        },
-        'slots_used': 0
-    })
+    referral_slots_used = Column(Integer, default=0)
+    referred_users = Column(JSONB, nullable=True, default={})
 
     # Additional INFO
     rating = Column(Float, nullable=True, default=0.00)

@@ -28,7 +28,7 @@ from server.schemas import (
     NotificationQuery, CreateNotificationSchema,
     WalletTransactionSchema, WalletHistoryQuery,
     InitializePaymentRes, AccountDetailsSchema,
-    UpdateUserAddressSchema
+    UpdateUserAddressSchema, ReferralSlots
 )
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
@@ -318,28 +318,17 @@ class UserServices:
     ):
         try:
             refered_slots = referrer.referred_users.copy()
-            if not refered_slots:
+            if not referrer.referral_code:
                 raise ExcRaiser400(
                     message='Referrer not eligible for referrals, Proceed to Login'
                 )
-            if refered_slots['slots_used'] >= app_configs.MAX_REFERRAL_COUNT:
-                raise ExcRaiser400(
-                    message='Referral count maximum reached, Proceed to Login',
-                    detail='Referrer has reached max amount of referrable users'
-                )
-            slot_num = refered_slots['slots_used'] + 1
-            slot = f'slot{slot_num}'
 
             # new data
-            refered_slots['slots_used'] = slot_num
-            refered_slots[slot] = {
-                'user_id': str(referree.id),
-                'email': referree.email,
-                'username': None,
-                'completed': False,
-                'created_at': datetime.now().isoformat()
-            }
-            updated_ref = await self.repo.update_jsonb(referrer.id, refered_slots)
+            refered_user = ReferralSlots(
+                user_id=str(referree.id), email=referree.email
+            )
+            refered_slots[f'slot_{referree.email}'] = refered_user.model_dump()
+            _ = await self.repo.update_jsonb(referrer.id, refered_slots)
 
             return True
         except ExcRaiser as e:

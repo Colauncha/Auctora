@@ -20,7 +20,7 @@ class DataBaseSettings(BaseSettings):
     TEST_DATABASE: Optional[str]
 
     def all(self):
-        return [self.DATABASE_URL, self.NEON_DB_URL]
+        return [self.DATABASE_URL, self.TEST_DATABASE, self.NEON_DB_URL]
 
 
 class JWTSettings(BaseSettings):
@@ -90,7 +90,7 @@ class AppConfig(BaseSettings):
     REDIS_CACHE_EXPIRATION_CAT: int = 60 * 60 * 24 * 2
 
     # Referrals
-    MAX_REFERRAL_COUNT: int = 2
+    MAX_COMMISIONS_COUNT: int = 2
     REFERRAL_TAX: float = 0.01
 
 

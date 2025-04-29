@@ -96,15 +96,19 @@ class Repository:
         self,
         id: str,
         data: dict = None,
+        new_slot: bool = True,
+        model: BaseModel = Users,
     ):
         try:
             if not data:
                 raise ValueError("Data cannot be None or empty")
-            entity = self.db.query(self._Model).filter_by(id=id).first()
+            entity = self.db.query(model).filter_by(id=id).first()
             if entity is None:
                 raise ExcRaiser404(message='Entity not found')
 
             entity.referred_users = data
+            if new_slot:
+                entity.referral_slots_used += 1
 
             self.db.add(entity)
             self.db.commit()
