@@ -41,14 +41,14 @@ jobs:
         key: ${{ secrets.BIDDIUS_AWS_SERVER_KEY }}
         script: |
           sudo systemctl stop biddiusApi
-          sudo systemctl stop biddiusEvent
-          sudo systemctl stop biddiusUpdater
+          sudo systemctl stop biddiusEvents
+          sudo systemctl stop biddiusUpdate
           
           cd /var/www/biddius/Backend/Backend && ls -la;
 
           git pull origin main
 
           sudo systemctl restart biddiusApi
-          sudo systemctl restart biddiusEvent
-          sudo systemctl restart biddiusUpdater
+          sudo systemctl restart biddiusEvents
+          sudo systemctl restart biddiusUpdate
         shell: bash -l {0}
