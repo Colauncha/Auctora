@@ -88,8 +88,8 @@ class PaymentRepository(Repository):
                         company_fee = data.amount * COMPANY_TAX
                         referral_fee = data.amount * REFERRAL_TAX
 
-                        seller.available_balance += (data.amount - (company_fee + referral_fee))
-                        seller.wallet += (data.amount - (company_fee + referral_fee))
+                        seller.available_balance += (data.amount - company_fee)
+                        seller.wallet += (data.amount - company_fee)
 
                         refered_by = None
                         if seller.referred_by:  # Add this check
