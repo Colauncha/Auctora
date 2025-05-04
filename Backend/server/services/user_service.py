@@ -546,6 +546,9 @@ class UserServices:
                     status_code=400, detail="Not authenticated"
                 )
             _data = data.model_dump(exclude_unset=True, exclude_none=True)
+            ex_uname = await self.repo.get_by_username(_data.get('username'))
+            if ex_uname and ex_uname.id != user.id:
+                raise ExcRaiser400(detail='Username already exist')
             result = await self.repo.update(user, _data)
             if result:
                 return True
