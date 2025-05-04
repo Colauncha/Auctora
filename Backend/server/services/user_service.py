@@ -671,7 +671,21 @@ class UserServices:
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
-        
+
+    async def delete_user(self, user: GetUserSchema):
+        try:
+            user_ = await self.repo.get_by_id(user.id)
+            result = await self.repo.delete(user_)
+            if result:
+                return True
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
     ############################## Static Methods #################################
 
     @staticmethod

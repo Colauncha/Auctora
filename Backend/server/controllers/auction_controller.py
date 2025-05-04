@@ -60,15 +60,16 @@ async def update(
     return APIResponse(data=result)
 
 
-# @route.delete('/{auction_id}')
-# @permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.AUCTION)
-# async def delete(
-#     user: current_user,
-#     auction_id: str,
-#     db: Session = Depends(get_db)
-# ) -> APIResponse[GetAuctionSchema]:
-#     result = await AuctionServices(db).delete(auction_id)
-#     return APIResponse(data=result)
+@route.delete('/{auction_id}')
+@permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.AUCTION)
+async def delete(
+    user: current_user,
+    auction_id: str,
+    db: Session = Depends(get_db)
+) -> APIResponse:
+    result = await AuctionServices(db).delete(auction_id)
+    return APIResponse(data={}) if result else\
+    APIResponse(message='Fail', success=False)
 
 
 # @route.put('/{auction_id}/participants')

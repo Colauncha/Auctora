@@ -238,6 +238,16 @@ async def get_referral_code(
     return APIResponse(data=response)
 
 
+@route.delete('/delete')
+@permissions(permission_level=Permissions.CLIENT)
+async def delete(
+    user: current_user,
+    db: Session = Depends(get_db)
+) -> APIResponse:
+    response = await UserServices(db).delete_user(user)
+    return APIResponse(data={}) if response else\
+        APIResponse(message='Failed', success=False, data={})
+
 ###############################################################################
 ############################ Notification Endpoints ###########################
 ###############################################################################
