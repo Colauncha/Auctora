@@ -25,6 +25,14 @@ class Auctions(BaseModel):
     end_date = Column(DateTime(timezone=True), index=True)
     watchers = Column(JSON, nullable=True, default=[])
     watchers_count = Column(Integer, nullable=True, default=0)
+
+    # Logistic INFO
+    pickup_address = Column(String, nullable=True)
+    pickup_latitude = Column(Float, nullable=True)
+    pickup_longitude = Column(Float, nullable=True)
+    logistic_type = Column(JSON, nullable=True, default=[])
+    logistic_fee = Column(Float, nullable=True, default=0.0)
+
     status = Column(
         ENUM(
             AuctionStatus, name='auction_status', create_type=True,

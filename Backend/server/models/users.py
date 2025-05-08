@@ -7,7 +7,8 @@ from sqlalchemy import (
     ForeignKey,
     String,
     Enum,
-    Integer
+    Integer,
+    JSON
 )
 from sqlalchemy.dialects.postgresql import ENUM, JSONB
 from sqlalchemy.orm import relationship
@@ -32,6 +33,7 @@ class Users(BaseModel):
     hash_password = Column(String, nullable=False)
     email = Column(String, index=True, unique=True, nullable=False)
     email_verified = Column(Boolean, default=False)
+    image_link = Column(JSON, nullable=True)
 
     # Wallet & account INFO
     wallet = Column(Float, nullable=True, default=0.00)

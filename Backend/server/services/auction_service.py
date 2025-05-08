@@ -104,7 +104,7 @@ class AuctionServices:
             print(data)
             entity = await self.repo.get_by_id(id)
             updated = await self.repo.update(entity, data)
-            return GetAuctionSchema.model_validate(updated)
+            return GetAuctionSchema.model_validate(updated[0])
         except ExcRaiser as e:
             raise
         except Exception as e:
@@ -218,7 +218,18 @@ class AuctionServices:
             raise ExcRaiser500(detail=str(e))
 
     async def delete(self, id: str):
-        ...
+        try:
+            auction = await self.repo.get_by_id(id)
+            result = await self.repo.delete(auction)
+            if result:
+                return True
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
     # Notifications
     async def notify(self, user_id: str, title: str, message: str):

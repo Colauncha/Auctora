@@ -241,12 +241,65 @@ class UserWalletTransactionServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
         
-    async def withdraw(self, user: GetUserSchema, amount: float) -> bool:
+    async def withdraw(self, transaction, extra) -> bool:
         try:
+            transaction = WalletTransactionSchema(**transaction, **extra)
+            user = await self.user_repo.get_by_id(transaction.user_id)
+            notify = False
 
-            ...
+            print(transaction, user)
+            NOTIF_TITLE = f"Funding Account {transaction.status.value}"
+            NOTIF_MESSAGE = (
+            f"Your attempt to withdraw N{transaction.amount} from your wallet"
+            f"was {transaction.status.value}"
+            )
+
+            exist = await self.repo.get_by_attr(
+                {'reference_id': transaction.reference_id}
+            )
+
+            print(exist)
+            if transaction.status == TransactionStatus.COMPLETED:
+                if exist and exist.status == transaction.status:
+                    return
+                elif exist and exist.status != transaction.status:
+                    _ = await self.user_repo.withdraw(
+                        transaction, update=True, exist=exist
+                    )
+                    notify = True
+                elif not exist:
+                    _ = await self.user_repo.withdraw(transaction)
+                    notify = True
+
+            else:
+                if exist and exist.status == transaction.status:
+                    return
+                elif exist and exist.status != transaction.status:
+                    _ = await self.repo.save(exist, transaction.model_dump())
+                else:
+                    _ = await self.repo.add(transaction.model_dump())
+                    notify = True
+            
+
+            if notify:
+                pub_data = transaction.model_dump()
+                pub_data['email'] = user.email
+                _ = await self.notification.create(
+                    CreateNotificationSchema(
+                        title=NOTIF_TITLE,
+                        message=NOTIF_MESSAGE,
+                        user_id=user.id
+                    )
+                )
+                # await publish_fund_account(pub_data)
+            return
+        except ExcRaiser as e:
+            raise
         except Exception as e:
-            raise e
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
 
 ##############################################################################
@@ -671,7 +724,21 @@ class UserServices:
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
-        
+
+    async def delete_user(self, user: GetUserSchema):
+        try:
+            user_ = await self.repo.get_by_id(user.id)
+            result = await self.repo.delete(user_)
+            if result:
+                return True
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
     ############################## Static Methods #################################
 
     @staticmethod
