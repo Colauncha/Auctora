@@ -437,10 +437,28 @@ async def paystack_webhook(
 
         print("Funding transaction completed")
     elif event == 'transfer':
-        if subevent == 'success':
-            ...
-        else:
-            ...
+        tranx = {
+            "user_id": meta.get('user_id'),
+            "email": meta.get('email'),
+            "amount": meta.get('amount'),
+            "reference_id": data.data.get('reference')
+        }
+
+        status_map = {
+            'success': TransactionStatus.COMPLETED,
+            'failed': TransactionStatus.FAILED,
+            'abandoned': TransactionStatus.FAILED,
+            'reversed': TransactionStatus.FAILED  # if supported
+        }
+
+        extra["status"] = status_map.get(subevent, TransactionStatus.FAILED)
+        extra["transaction_type"] = TransactionTypes.WITHDRAWAL
+        extra["description"] = f"{data.data.get('message')}: transfer {subevent}"
+
+        print(tranx, extra)
+        _ = await UserWalletTransactionServices(db).create(tranx, extra)
+
+        print("Transfer transaction processed")
     return APIResponse()
 
 
@@ -516,8 +534,11 @@ async def withdraw(
 ) -> APIResponse:
     if user.recipient_code is None:
         raise ExcRaiser400(detail="Recipient code not set")
+    
+    if user.available_balance < amount:
+        raise ExcRaiser400(detail="Insufficient balance")
 
-    url = f"{app_configs.paystack.URL}/transfer"
+    url = f"{app_configs.paystack.PAYSTACK_URL}/transfer"
     headers = {
         "Authorization": f"Bearer {app_configs.paystack.PAYSTACK_SECRET_KEY}",
         "Content-Type": "application/json"

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Union
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -54,6 +54,11 @@ class UpdateAuctionSchema(BaseModel):
     buy_now: Optional[bool] = Field(default=None)
     buy_now_price: Optional[float] = Field(default=None)
     participants: Optional[list[str]] = Field(default=None)
+    pickup_address: Optional[str] = Field(default=None)
+    pickup_latitude: Optional[float] = Field(default=None)
+    pickup_longitude: Optional[float] = Field(default=None)
+    logistic_type: Optional[list] = Field(default=[])
+    logistic_fee: Optional[float] = Field(default=None)
 
     model_config = {
         'from_attributes': True
@@ -70,6 +75,11 @@ class GetAuctionSchema(CreateAuctionSchema):
     bids_count: int = Field(default=0, description="Number of bids")
     participants_count: int = Field(default=0, description="Number of participants")
     created_at: Optional[datetime] = Field(default=None)
+    pickup_address: Optional[str] = Field(default=None)
+    pickup_latitude: Optional[float] = Field(default=None)
+    pickup_longitude: Optional[float] = Field(default=None)
+    logistic_type: Optional[Union[list, str]] = Field(default=None)
+    logistic_fee: Optional[float] = Field(default=None)
 
     def __init__(self, **data):
         super().__init__(**data)

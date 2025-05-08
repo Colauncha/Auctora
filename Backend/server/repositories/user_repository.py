@@ -173,11 +173,31 @@ class UserRepository(Repository):
                 detail=str(e)
             )
 
-    async def withdraw(self):
+    async def withdraw(
+        self,
+        transaction: WalletTransactionSchema,
+        update: bool = False,
+        exist: WalletTransactions = None
+    ):
         try:
-            ...
-        except Exception as e:
-            raise e
+            with self.db.begin(nested=True):
+                user = await self.get_by_id(transaction.user_id)
+                if not user:
+                    raise ExcRaiser404(message="User not found")
+                user.wallet -= transaction.amount
+                user.available_balance -= transaction.amount
+
+            if update:
+                await self.wallet_transaction.save(exist, transaction.model_dump())
+            else:
+                await self.wallet_transaction.add(transaction.model_dump())
+        except (Exception, SQLAlchemyError) as e:
+            self.db.rollback()
+            raise ExcRaiser(
+                status_code=500,
+                message='Transaction failed',
+                detail=str(e)
+            )
 
 
 class UserNotificationRepository(Repository):

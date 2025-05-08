@@ -104,7 +104,7 @@ class AuctionServices:
             print(data)
             entity = await self.repo.get_by_id(id)
             updated = await self.repo.update(entity, data)
-            return GetAuctionSchema.model_validate(updated)
+            return GetAuctionSchema.model_validate(updated[0])
         except ExcRaiser as e:
             raise
         except Exception as e:
