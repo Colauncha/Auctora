@@ -202,11 +202,19 @@ class AuthorizationURL(BaseModel):
     reference: str
 
 
+class TransferResponseData(BaseModel):
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
+    reference: str
+    amount: int
+    status: str
+    transfer_code: str
+
+
 class InitializePaymentRes(BaseModel):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
     status: bool
     message: str
-    data: Optional[AuthorizationURL] = Field(default=None)
+    data: Optional[Union[AuthorizationURL, TransferResponseData]] = Field(default=None)
     code: Optional[str] = Field(default=None)
     type: Optional[str] = Field(default=None)
 

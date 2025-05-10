@@ -13,7 +13,7 @@ route = APIRouter(prefix='/misc', tags=['Miscellaneous'])
 @route.get('/banks')
 async def banks(query: BanksQuery = Depends()):
     paystack_url = f'{app_configs.paystack.PAYSTACK_URL}/bank'
-    secret_key = 'sk_live_cff92154fddb8bfc33622a2e968882b2f078c987'# app_configs.paystack.SECRET_KEY
+    secret_key = app_configs.paystack.PAYSTACK_SECRET_KEY
     headers = {
         "Authorization": f"Bearer {secret_key}",
         "Content-Type": "application/json"
