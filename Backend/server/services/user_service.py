@@ -301,6 +301,22 @@ class UserWalletTransactionServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
+    async def retrieve(self, reference: str):
+        try:
+            transaction = await self.repo.get_by_attr(
+                {'reference_id': reference}
+            )
+            if transaction:
+                valid_transaction = WalletTransactionSchema.model_validate(transaction)
+                return valid_transaction
+            raise ExcRaiser404(message='Transaction not found')
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
 ##############################################################################
 ################################ User Services ###############################

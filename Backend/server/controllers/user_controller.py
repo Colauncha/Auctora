@@ -437,10 +437,12 @@ async def paystack_webhook(
 
         print("Funding transaction completed")
     elif event == 'transfer':
+        transaction = await UserWalletTransactionServices(db).retrieve(data.data.get('reference'))
+        user = await UserServices(db).retrieve(transaction.user_id)
         tranx = {
-            "user_id": meta.get('user_id'),
-            "email": meta.get('email'),
-            "amount": meta.get('amount'),
+            "user_id": user.id,
+            "email": user.email,
+            "amount": transaction.amount,
             "reference_id": data.data.get('reference')
         }
 
@@ -448,7 +450,7 @@ async def paystack_webhook(
             'success': TransactionStatus.COMPLETED,
             'failed': TransactionStatus.FAILED,
             'abandoned': TransactionStatus.FAILED,
-            'reversed': TransactionStatus.FAILED  # if supported
+            'reversed': TransactionStatus.REVERSED
         }
 
         extra["status"] = status_map.get(subevent, TransactionStatus.FAILED)
@@ -456,7 +458,7 @@ async def paystack_webhook(
         extra["description"] = f"{data.data.get('message')}: transfer {subevent}"
 
         print(tranx, extra)
-        _ = await UserWalletTransactionServices(db).create(tranx, extra)
+        _ = await UserWalletTransactionServices(db).withdraw(tranx, extra)
 
         print("Transfer transaction processed")
     return APIResponse()
