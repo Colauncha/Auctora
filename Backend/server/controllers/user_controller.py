@@ -183,7 +183,6 @@ def login_with_google() -> APIResponse:
 @route.get("/auth/callback")
 async def callback(
     code: str,
-    response_: Response,
     db: Session = Depends(get_db)
 ) -> APIResponse:
     # Exchange the code for a token
@@ -209,8 +208,8 @@ async def callback(
     token, url = await UserServices(db).google_auth(id_info)
     if token is None:
         raise ExcRaiser400(detail="Failed to authenticate user")
-    # Set the token as a cookie
-    response_.set_cookie(
+    redirect_response = RedirectResponse(url=url)
+    redirect_response.set_cookie(
         key='access_token',
         value=token.token,
         httponly=True,
@@ -218,7 +217,7 @@ async def callback(
         secure=True if app_configs.ENV == 'production' else False,
         samesite="None" if app_configs.ENV == 'production' else "lax",
     )
-    return RedirectResponse(url=url)
+    return redirect_response
 
 
 @route.post('/logout')
