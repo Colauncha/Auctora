@@ -214,7 +214,7 @@ async def callback(
         key='access_token',
         value=token.token,
         httponly=True,
-        max_age=1800,
+        max_age=5400,
         secure=True if app_configs.ENV == 'production' else False,
         samesite="None" if app_configs.ENV == 'production' else "lax",
     )
