@@ -3,6 +3,10 @@ import hashlib
 import hmac
 from typing import Union
 from fastapi import APIRouter, Depends, Request, Response
+from fastapi.responses import RedirectResponse
+import httpx
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 from server.config import get_db, redis_store, app_configs
 from server.enums import ServiceKeys
 from server.enums.user_enums import (
@@ -136,8 +140,7 @@ async def reset_otp(
     db: Session = Depends(get_db)
 ) -> APIResponse[dict[str, str]]:
     response = await UserServices(db).new_otp(email)
-    return APIResponse(data=response)
-    
+    return APIResponse(data=response)    
 
 
 @route.post(
@@ -161,6 +164,60 @@ async def login(
         samesite="None" if app_configs.ENV == 'production' else "lax",
     )
     return APIResponse(data=token)
+
+
+@route.get("/google/auth")
+def login_with_google() -> APIResponse:
+    # Redirect to Google's OAuth 2.0 server
+    auth_url = (
+        f"https://accounts.google.com/o/oauth2/auth"
+        f"?client_id={app_configs.GOOGLE_CLIENT_ID}"
+        f"&redirect_uri={app_configs.GOOGLE_REDIRECT_URI}"
+        f"&response_type=code"
+        f"&scope=email profile"
+    )
+    return APIResponse(data={"url": auth_url})
+
+
+@route.get("/auth/callback")
+async def callback(
+    code: str,
+    response_: Response,
+    db: Session = Depends(get_db)
+) -> APIResponse:
+    # Exchange the code for a token
+    async with httpx.AsyncClient() as client:
+        token_data = {
+            "client_id": app_configs.GOOGLE_CLIENT_ID,
+            "client_secret": app_configs.GOOGLE_CLIENT_SECRET,
+            "code": code,
+            "grant_type": "authorization_code",
+            "redirect_uri": app_configs.GOOGLE_REDIRECT_URI,
+        }
+        response = await client.post(app_configs.GOOGLE_TOKEN_URI, data=token_data)
+        response_data = response.json()
+
+    if "error" in response_data:
+        raise ExcRaiser400(detail="Failed to get token")
+
+    # Validate the ID token
+    id_info = id_token.verify_oauth2_token(
+        response_data["id_token"], google_requests.Request(), app_configs.GOOGLE_CLIENT_ID
+    )
+
+    token, url = await UserServices(db).google_auth(id_info)
+    if token is None:
+        raise ExcRaiser400(detail="Failed to authenticate user")
+    # Set the token as a cookie
+    response_.set_cookie(
+        key='access_token',
+        value=token.token,
+        httponly=True,
+        max_age=1800,
+        secure=True if app_configs.ENV == 'production' else False,
+        samesite="None" if app_configs.ENV == 'production' else "lax",
+    )
+    return RedirectResponse(url=url)
 
 
 @route.post('/logout')

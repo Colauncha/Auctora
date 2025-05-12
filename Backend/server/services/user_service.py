@@ -755,6 +755,54 @@ class UserServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
+    async def google_auth(self, data: dict):
+        try:
+            user = await self.repo.get_by_email(data.get('email'))
+            if not user:
+                NOTIF_TITLE = "Welcome to Biddius"
+                NOTIF_MESSAGE = (
+                    "Thank you for signing up with Biddius. "
+                    "We are glad to have you on board"
+                )
+                new_user_dict = {
+                    'email': data.get('email'),
+                    'first_name': data.get('given_name'),
+                    'last_name': data.get('family_name'),
+                    'username': data.get('email'),
+                    'email_verified': True,
+                    'image_link': data.get('picture'),
+                    'password': data.get('sub'),
+                    'role': UserRoles.CLIENT,
+                    'google_id': data.get('sub'),
+                }
+                new_user = await self.repo.add(new_user_dict)
+                if not new_user:
+                    raise ExcRaiser400(detail='Unable to create user')
+
+                token = await self.__generate_token(new_user)
+                url = f"{app_configs.FRONTEND_URL}/update-profile"
+                new_user = GetUserSchema.model_validate(new_user)
+                # Create a notification for the new user
+                _ = await self.notification.create(
+                    CreateNotificationSchema(
+                        title=NOTIF_TITLE,
+                        message=NOTIF_MESSAGE,
+                        user_id=new_user.id
+                    )
+                )
+                return token, url
+
+            token = await self.__generate_token(user)
+            url = f"{app_configs.FRONTEND_URL}/dashboard"
+            return token, url
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
     ############################## Static Methods #################################
 
     @staticmethod

@@ -34,6 +34,7 @@ class Users(BaseModel):
     email = Column(String, index=True, unique=True, nullable=False)
     email_verified = Column(Boolean, default=False)
     image_link = Column(JSON, nullable=True)
+    google_id = Column(String, nullable=True)
 
     # Wallet & account INFO
     wallet = Column(Float, nullable=True, default=0.00)
@@ -102,6 +103,9 @@ class Users(BaseModel):
             phone_number: str = None,
             first_name: str = None,
             last_name: str = None,
+            email_verified: bool = False,
+            image_link: str = None,
+            google_id: str = None,
             role: UserRoles = UserRoles.CLIENT
         ):
         self.username = username
@@ -111,9 +115,12 @@ class Users(BaseModel):
         self.first_name = first_name
         self.last_name = last_name
         self.role = role
+        self.email_verified = email_verified
+        self.image_link = {'link': image_link} if image_link else None
+        self.google_id = google_id
         # To be removed
-        self.wallet = 50000.00
-        self.available_balance = 50000.00
+        self.wallet = 0.00
+        self.available_balance = 0.00
 
     def _hash_password(self, password: str) -> str:
         context = CryptContext(schemes=["bcrypt"], deprecated="auto")
