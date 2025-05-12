@@ -82,6 +82,13 @@ class AppConfig(BaseSettings):
         "https://biddius.vercel.app", "https://biddius.com",
         "https://www.biddius.com"
     ]
+
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str
+    GOOGLE_CLIENT_SECRET: str
+    GOOGLE_REDIRECT_URI: str
+    GOOGLE_TOKEN_URI: str
+
     # Payment
     COMPANY_TAX: float = 0.05
 
