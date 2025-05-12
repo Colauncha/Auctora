@@ -170,12 +170,13 @@ async def login(
 def login_with_google() -> APIResponse:
     # Redirect to Google's OAuth 2.0 server
     auth_url = (
-        f"https://accounts.google.com/o/oauth2/auth"
-        f"?client_id={app_configs.GOOGLE_CLIENT_ID}"
-        f"&redirect_uri={app_configs.GOOGLE_REDIRECT_URI}"
-        f"&response_type=code"
-        f"&scope=email profile"
-    )
+    "https://accounts.google.com/o/oauth2/auth"
+    f"?response_type=code"
+    f"&client_id={app_configs.GOOGLE_CLIENT_ID}"
+    f"&redirect_uri={app_configs.GOOGLE_REDIRECT_URI}"
+    f"&scope=openid%20email%20profile"
+    f"&access_type=online"
+)
     return APIResponse(data={"url": auth_url})
 
 
