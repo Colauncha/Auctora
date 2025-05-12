@@ -170,19 +170,19 @@ async def login(
 def login_with_google() -> APIResponse:
     # Redirect to Google's OAuth 2.0 server
     auth_url = (
-        f"https://accounts.google.com/o/oauth2/auth"
-        f"?client_id={app_configs.GOOGLE_CLIENT_ID}"
-        f"&redirect_uri={app_configs.GOOGLE_REDIRECT_URI}"
-        f"&response_type=code"
-        f"&scope=email profile"
-    )
+    "https://accounts.google.com/o/oauth2/auth"
+    f"?response_type=code"
+    f"&client_id={app_configs.GOOGLE_CLIENT_ID}"
+    f"&redirect_uri={app_configs.GOOGLE_REDIRECT_URI}"
+    f"&scope=openid%20email%20profile"
+    f"&access_type=online"
+)
     return APIResponse(data={"url": auth_url})
 
 
 @route.get("/auth/callback")
 async def callback(
     code: str,
-    response_: Response,
     db: Session = Depends(get_db)
 ) -> APIResponse:
     # Exchange the code for a token
@@ -208,8 +208,8 @@ async def callback(
     token, url = await UserServices(db).google_auth(id_info)
     if token is None:
         raise ExcRaiser400(detail="Failed to authenticate user")
-    # Set the token as a cookie
-    response_.set_cookie(
+    redirect_response = RedirectResponse(url=url)
+    redirect_response.set_cookie(
         key='access_token',
         value=token.token,
         httponly=True,
@@ -217,7 +217,7 @@ async def callback(
         secure=True if app_configs.ENV == 'production' else False,
         samesite="None" if app_configs.ENV == 'production' else "lax",
     )
-    return RedirectResponse(url=url)
+    return redirect_response
 
 
 @route.post('/logout')
