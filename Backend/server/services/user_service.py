@@ -780,7 +780,7 @@ class UserServices:
                     raise ExcRaiser400(detail='Unable to create user')
 
                 token = await self.__generate_token(new_user)
-                url = f"{app_configs.FRONTEND_URL}/update-profile"
+                url = f"{app_configs.FRONTEND_URL}/oauth-success"
                 new_user = GetUserSchema.model_validate(new_user)
                 # Create a notification for the new user
                 _ = await self.notification.create(
@@ -793,7 +793,7 @@ class UserServices:
                 return token, url
 
             token = await self.__generate_token(user)
-            url = f"{app_configs.FRONTEND_URL}/dashboard"
+            url = f"{app_configs.FRONTEND_URL}/oauth-success"
             return token, url
         except ExcRaiser as e:
             raise
