@@ -3,7 +3,7 @@ import hashlib
 import hmac
 from typing import Union
 from fastapi import APIRouter, Depends, Request, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import RedirectResponse
 import httpx
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
@@ -209,8 +209,8 @@ async def callback(
     if token is None:
         raise ExcRaiser400(detail="Failed to authenticate user")
 
-    json_response = JSONResponse(content={"message": "Authentication successful"})
-    json_response.set_cookie(
+    redirect_response = RedirectResponse(url=url)
+    redirect_response.set_cookie(
         key='access_token',
         value=token.token,
         httponly=True,
@@ -218,7 +218,7 @@ async def callback(
         secure=True if app_configs.ENV == 'production' else False,
         samesite="None" if app_configs.ENV == 'production' else "lax",
     )
-    return json_response
+    return redirect_response
 
 
 @route.post('/logout')
