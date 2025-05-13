@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, WebSocket
 from sqlalchemy.orm import Session
+from server.middlewares.exception_handler import ExcRaiser400
 from server.config import get_db
 from server.schemas import (
     APIResponse, UpdateAuctionSchema,
@@ -71,6 +72,22 @@ async def delete(
     result = await AuctionServices(db).delete(auction_id)
     return APIResponse(data={}) if result else\
     APIResponse(message='Fail', success=False)
+
+
+@route.get('/finalize/{auction_id}')
+@permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.AUCTION)
+async def finalize(
+    user: current_user,
+    auction_id: str,
+    db: Session = Depends(get_db)
+) -> APIResponse[GetAuctionSchema]:
+    auction = await AuctionServices(db).retrieve(auction_id)
+    if auction.status != 'COMPLETED':
+        return ExcRaiser400(
+            detail='You can only finalize a completed auction'
+        )
+    result = await AuctionServices(db).finalize_payment(auction)
+    return APIResponse(data=result)
 
 
 # @route.put('/{auction_id}/participants')

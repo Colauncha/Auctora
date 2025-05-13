@@ -17,7 +17,7 @@ class Items(BaseModel):
 
     users_id = Column(
         UUID(as_uuid=True),
-        ForeignKey('users.id', ondelete='SET DEFAULT'),
+        ForeignKey('users.id', ondelete='CASCADE'),
         nullable=False,
         default="335ffd00-da75-473b-8c58-c99eebf84bbf"
     ) # change to users_id

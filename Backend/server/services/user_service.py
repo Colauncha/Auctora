@@ -803,6 +803,30 @@ class UserServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
+    async def rate_user(self, user_id: str, rating: int):
+        try:
+            user = await self.repo.get_by_id(user_id)
+            if not user:
+                raise ExcRaiser404(message='User not found')
+            rating_count = user.rating_count + 1
+            rating_sum = user.rating + rating
+            rating = round(rating_sum / rating_count, 2)
+            _ = await self.repo.save(
+                user,
+                {
+                    'rating': rating,
+                    'rating_count': rating_count
+                }
+            )
+            return True
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
     ############################## Static Methods #################################
 
     @staticmethod
