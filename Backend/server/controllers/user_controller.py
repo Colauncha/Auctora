@@ -306,6 +306,23 @@ async def delete(
     return APIResponse(data={}) if response else\
         APIResponse(message='Failed', success=False, data={})
 
+
+@route.put('/rating/{user_id}')
+@permissions(permission_level=Permissions.AUTHENTICATED)
+async def rate_user(
+    user: current_user,
+    user_id: str,
+    rating: float,
+    db: Session = Depends(get_db)
+) -> APIResponse:
+    if user.id == user_id:
+        raise ExcRaiser400(detail="You cannot rate yourself")
+    if rating < 1 or rating > 5:
+        raise ExcRaiser400(detail="Rating must be between 1 and 5")
+    response = await UserServices(db).rate_user(user_id, rating)
+    return APIResponse(data=response)
+
+
 ###############################################################################
 ############################ Notification Endpoints ###########################
 ###############################################################################

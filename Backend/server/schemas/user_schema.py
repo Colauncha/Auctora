@@ -39,6 +39,7 @@ class GetUsersSchemaPublic(BaseModel):
         description="User's unique email address",
         examples=[app_configs.test_user.EMAIL]
     )
+    image_link: Optional[dict] = Field(default=None)
     email_verified: Optional[bool] = Field(default=False)
     rating: Optional[float] = Field(default=0.00)
     kyc_verified: Optional[bool] = Field(default=False)

@@ -65,6 +65,7 @@ class Users(BaseModel):
 
     # Additional INFO
     rating = Column(Float, nullable=True, default=0.00)
+    rating_count = Column(Integer, nullable=True, default=0)
     role = Column(
         ENUM(
             UserRoles, name='userroles',
