@@ -15,6 +15,7 @@ class ExcRaiser(Exception):
         self.status_code = status_code
         self.message = message
         self.detail = detail
+        self.success = False
 
 
 class ExcRaiser400(ExcRaiser):
