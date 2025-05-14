@@ -33,6 +33,9 @@ class CreateAuctionSchema(BaseModel):
     current_price: Optional[float] = Field(examples=[100.00, 50.00], default=None)
     buy_now: bool = Field(default=False)
     buy_now_price: Optional[float] = Field(default=None)
+    refundable: Optional[bool] = Field(default=False)
+    pickup_latitude: Optional[float] = Field(default=None)
+    pickup_longitude: Optional[float] = Field(default=None)
     participants: Optional[list[str]] = Field(
         default=None,
         examples=[['example@gmail.com', 'email@example.com']],

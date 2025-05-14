@@ -25,6 +25,7 @@ class Auctions(BaseModel):
     end_date = Column(DateTime(timezone=True), index=True)
     watchers = Column(JSON, nullable=True, default=[])
     watchers_count = Column(Integer, nullable=True, default=0)
+    refundable = Column(Boolean, nullable=True, default=False)
 
     # Logistic INFO
     pickup_address = Column(String, nullable=True)
