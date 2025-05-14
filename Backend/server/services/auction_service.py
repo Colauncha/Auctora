@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import inspect
 from sqlalchemy.orm import Session
 from fastapi import WebSocket
@@ -5,6 +6,7 @@ from server.config import redis_store, app_configs
 from server.repositories import DBAdaptor
 from server.models.items import Items
 from server.enums.auction_enums import AuctionStatus
+from server.enums.payment_enums import PaymentStatus
 from server.events.publisher import publish_win_auction
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
@@ -170,7 +172,7 @@ class AuctionServices:
                 await self.payment_repo.add(
                     CreatePaymentSchema(
                         from_id=winner.user_id, to_id=auction.users_id,
-                        auction_id=auction.id, amount=winner.amount
+                        auction_id=auction.id, amount=winner.amount,
                     ),
                     caller=caller,
                     existing_amount=existing_amount
@@ -203,10 +205,63 @@ class AuctionServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def finalize_payment(self, entity):
+    async def set_inspecting(self, id: str, buyer_id: str):
         try:
-            entity = CreatePaymentSchema.model_validate(entity)
-            res = await self.payment_repo.disburse(entity)
+            payment = await self.payment_repo.get_by_attr({'auction_id': id})
+            payment = CreatePaymentSchema.model_validate(payment)
+            if payment:
+                if payment.status != 'PENDING':
+                    raise ExcRaiser400(
+                        detail='Payment has already been processed'
+                    )
+                if payment.from_id != buyer_id:
+                    raise ExcRaiser400(
+                        detail='You are not the buyer of this auction'
+                    )
+
+                await self.payment_repo.update(
+                    payment, {
+                        'status': PaymentStatus.INSPECTING,
+                        'due_data': datetime.now().astimezone() + timedelta(days=3)
+                    }
+                )
+                return True
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
+    async def finalize_payment(self, entity, buyer_id: str):
+        try:
+            payment = await self.payment_repo.get_by_attr({'auction_id': entity.id})
+            payment = CreatePaymentSchema.model_validate(payment)
+            if payment.from_id != buyer_id:
+                raise ExcRaiser400(
+                    detail='You are not the buyer of this auction'
+                )
+            res = await self.payment_repo.disburse(payment)
+            if res:
+                return True
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
+    async def refund(self, id: str, buyer_id: str):
+        try:
+            payment = await self.payment_repo.get_by_attr({'auction_id': id})
+            payment = CreatePaymentSchema.model_validate(payment)
+            if payment.from_id != buyer_id:
+                raise ExcRaiser400(
+                    detail='You are not the buyer of this auction'
+                )
+            res = await self.payment_repo.refund(payment)
             if res:
                 return True
         except ExcRaiser as e:

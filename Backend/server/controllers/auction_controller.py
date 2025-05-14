@@ -75,18 +75,29 @@ async def delete(
 
 
 @route.get('/finalize/{auction_id}')
-@permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.AUCTION)
+@permissions(permission_level=Permissions.AUTHENTICATED)
 async def finalize(
     user: current_user,
     auction_id: str,
     db: Session = Depends(get_db)
-) -> APIResponse[GetAuctionSchema]:
+) -> APIResponse[bool]:
     auction = await AuctionServices(db).retrieve(auction_id)
     if auction.status != 'COMPLETED':
         return ExcRaiser400(
             detail='You can only finalize a completed auction'
         )
-    result = await AuctionServices(db).finalize_payment(auction)
+    result = await AuctionServices(db).finalize_payment(auction, user.id)
+    return APIResponse(data=result)
+
+
+@route.put('/set_inspecting/{auction_id}')
+@permissions(permission_level=Permissions.AUTHENTICATED)
+async def set_inspecting(
+    user: current_user,
+    auction_id: str,
+    db: Session = Depends(get_db)
+) -> APIResponse[bool]:
+    result = await AuctionServices(db).set_inspecting(auction_id, user.id)
     return APIResponse(data=result)
 
 

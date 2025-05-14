@@ -64,6 +64,7 @@ def run_migrations_online(database_url: str, schema: str) -> None:
             include_schemas=True,
             compare_type=True,
             version_table_schema=schema,
+            compare_server_default=True
         )
         connection.execute(
             text(f"CREATE SCHEMA IF NOT EXISTS {schema}")
