@@ -607,8 +607,17 @@ async def transfer_recipient(
 async def withdraw(
     user: current_user,
     amount: int,
+    credentials: LoginSchema,
     db: Session = Depends(get_db)
 ) -> APIResponse:
+    user = await UserServices(db).repo.get_by_email(user.email)
+    validate = await UserServices(db).__check_password(
+        credentials.password, user.hash_password
+    )
+
+    if not validate:
+        raise ExcRaiser400(detail="Invalid credentials")
+
     if user.recipient_code is None:
         raise ExcRaiser400(detail="Recipient code not set")
     
