@@ -79,6 +79,18 @@ async def upload_images(
     return APIResponse(data=result)
 
 
+@route.put('/{item_id}')
+@permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.ITEM)
+async def update(
+    user: current_user,
+    item_id: str,
+    data: UpdateItemSchema,
+    db: Session = Depends(get_db)
+) -> APIResponse[GetItemSchema]:
+    data = data.model_dump(exclude_unset=True, exclude_none=True)
+    result = await ItemServices(db).update(item_id, data)
+    return APIResponse(data=result)
+
 # @route.get('/get_items')
 # @permissions(permission_level=Permissions.ALL)
 # async def get_items(

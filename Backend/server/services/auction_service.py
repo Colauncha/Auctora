@@ -275,6 +275,13 @@ class AuctionServices:
     async def delete(self, id: str):
         try:
             auction = await self.repo.get_by_id(id)
+            bids = auction.bids
+            for bid in bids:
+                _ = await self.user_repo.abtw(bid.user_id, bid.amount)
+                await self.notify(
+                    bid.user_id, 'Auction Closed',
+                    'The auction has been canceled, The amount placed on the bid has been returned'
+                )
             result = await self.repo.delete(auction)
             if result:
                 return True
