@@ -33,30 +33,37 @@ class CreateItemSchema(BaseModel):
         examples=["SUBCAT001"]
     )
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, 'extra': 'ignore'}
 
 
-class UpdateItemSchema(CreateItemSchema):
-    image_link: Optional[ImageLinkObj] # Watch for errors
-    image_link_2: Optional[ImageLinkObj]
-    image_link_3: Optional[ImageLinkObj]
-    image_link_4: Optional[ImageLinkObj]
-    image_link_5: Optional[ImageLinkObj]
+class UpdateItemSchema(BaseModel):
+    model_config = {"from_attributes": True, 'extra': 'ignore'}
+    name: Optional[str] = Field(default=None)
+    description: Optional[str] = Field(default=None)    
+    image_link: Optional[ImageLinkObj] = Field(default=None) # Watch for errors
+    image_link_2: Optional[ImageLinkObj] = Field(default=None)
+    image_link_3: Optional[ImageLinkObj] = Field(default=None)
+    image_link_4: Optional[ImageLinkObj] = Field(default=None)
+    image_link_5: Optional[ImageLinkObj] = Field(default=None)
     weight: Optional[float] = Field(
         description="Weight of the Item",
-        examples=[1.0]
+        examples=[1.0],
+        default=None
     )
     height: Optional[float] = Field(
         description="Height of the Item",
-        examples=[1.0]
+        examples=[1.0],
+        default=None
     )
     width: Optional[float] = Field(
         description="Width of the Item",
-        examples=[1.0]
+        examples=[1.0],
+        default=None
     )
     length: Optional[float] = Field(
         description="Length of the Item",
-        examples=[1.0]
+        examples=[1.0],
+        default=None
     )
 
 class GetItemSchema(UpdateItemSchema):

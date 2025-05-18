@@ -1,5 +1,6 @@
 import cloudinary
 import cloudinary.uploader
+import inspect
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 from server.config import cloudinary_init
@@ -9,7 +10,11 @@ from server.schemas import (
     GetItemSchema, CreateItemSchema,
     UpdateItemSchema, ImageLinkObj
 )
-from server.middlewares.exception_handler import ExcRaiser, ExcRaiser404
+from server.middlewares.exception_handler import (
+    ExcRaiser,
+    ExcRaiser404,
+    ExcRaiser500
+)
 from starlette.concurrency import run_in_threadpool
 
 
@@ -78,6 +83,20 @@ class ItemServices:
             if issubclass(type(e), ExcRaiser):
                 raise e
             raise e
+
+    async def update(self, id: str, data: dict):
+        try:
+            print(data)
+            entity = await self.repo.get_by_id(id)
+            updated = await self.repo.update(entity, data)
+            return GetItemSchema.model_validate(updated[0])
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
 # try:
 #     ...

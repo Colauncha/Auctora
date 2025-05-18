@@ -43,7 +43,8 @@ class CreateAuctionSchema(BaseModel):
     )
 
     model_config = {
-        'from_attributes': True
+        'from_attributes': True,
+        'extra': 'ignore'
     }
 
 
@@ -62,9 +63,11 @@ class UpdateAuctionSchema(BaseModel):
     pickup_longitude: Optional[float] = Field(default=None)
     logistic_type: Optional[list] = Field(default=[])
     logistic_fee: Optional[float] = Field(default=None)
+    refundable: Optional[bool] = Field(default=False)
 
     model_config = {
-        'from_attributes': True
+        'from_attributes': True,
+        'extra': 'ignore'
     }
 
 
