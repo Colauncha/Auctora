@@ -1,6 +1,6 @@
 import os
 import smtplib
-from smtplib import SMTP
+from smtplib import SMTP_SSL
 from email.message import EmailMessage
 from server.config.app_configs import app_configs
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -8,20 +8,20 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 class Emailer:
     """
-    Emailer class to send email
+    Emailer class to send email using SSL
     """
     password: str = app_configs.email_settings.MAIL_PASSWORD
     email: str = app_configs.email_settings.MAIL_USERNAME
-    PORT: int = app_configs.email_settings.MAIL_PORT
+    PORT: int = app_configs.email_settings.MAIL_PORT  # should be 465 for SSL
     SERVER: str = app_configs.email_settings.MAIL_SERVER
     FROM: str = app_configs.email_settings.MAIL_USERNAME
 
     def __init__(
-            self, subject: str,
-            to: str,
-            template_name: str,
-            **kwargs
-        ):
+        self, subject: str,
+        to: str,
+        template_name: str,
+        **kwargs
+    ):
         self.kwargs = kwargs
         self.env = Environment(
             loader=FileSystemLoader(
@@ -36,8 +36,7 @@ class Emailer:
         self.message: EmailMessage = EmailMessage()
 
     async def enter(self):
-        self.server: SMTP = smtplib.SMTP(self.SERVER, self.PORT)
-        self.server.starttls()
+        self.server: SMTP_SSL = smtplib.SMTP_SSL(self.SERVER, self.PORT)
         self.server.login(self.email, self.password)
         self.message["Subject"] = self.SUBJECT
         self.message["From"] = self.FROM
