@@ -1,5 +1,6 @@
 import os
 import smtplib
+from datetime import datetime
 from smtplib import SMTP_SSL
 from email.message import EmailMessage
 from server.config.app_configs import app_configs
@@ -17,9 +18,12 @@ class Emailer:
     FROM: str = app_configs.email_settings.MAIL_USERNAME
 
     def __init__(
-        self, subject: str,
+        self,
+        subject: str,
         to: str,
         template_name: str,
+        reply_to: str = None,
+        cc: str | list[str] = None,
         **kwargs
     ):
         self.kwargs = kwargs
@@ -32,6 +36,8 @@ class Emailer:
         self.template = self.env.get_template(template_name)
         self.SUBJECT = subject
         self.TO = to
+        self.CC = cc
+        self.REPLY_TO = reply_to
         self.server = None
         self.message: EmailMessage = EmailMessage()
 
@@ -41,6 +47,17 @@ class Emailer:
         self.message["Subject"] = self.SUBJECT
         self.message["From"] = self.FROM
         self.message["To"] = self.TO
+
+        if self.REPLY_TO:
+            self.message["Reply-To"] = self.REPLY_TO
+
+        if self.CC:
+            if isinstance(self.CC, list):
+                self.message["Cc"] = ", ".join(self.CC)
+            else:
+                self.message["Cc"] = self.CC
+
+        self.kwargs["current_year"] = datetime.now().year
         self.message.add_alternative(
             self.template.render(**self.kwargs), subtype='html'
         )

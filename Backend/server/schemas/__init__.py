@@ -183,6 +183,14 @@ class BanksQuery(PagedQuery):
     type: Optional[str] = Query(default='nuban')
 
 
+class ContactUsSchema(BaseModel):
+    name: str = Field(..., description="Name of the user")
+    email: str = Field(..., description="Email address of the user")
+    subject: str = Field(..., description="Subject of the message")
+    message: str = Field(..., description="Message content")
+    model_config = {"from_attributes": True, "extra": "ignore"}
+
+
 # Search related
 class SearchQuery(PagedQuery):
     q: str = Query(default=None, description="Search query")

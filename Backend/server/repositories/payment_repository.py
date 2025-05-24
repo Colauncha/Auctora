@@ -116,3 +116,6 @@ class PaymentRepository(Repository):
                 return entity
             except Exception as e:
                 raise e
+
+    async def refund():
+        ...

@@ -3,11 +3,28 @@ import httpx
 from fastapi import Depends
 from fastapi.routing import APIRouter
 from server.config.app_configs import app_configs
-from server.schemas import BanksQuery, APIResponse
+from server.schemas import BanksQuery, APIResponse, ContactUsSchema
 from server.middlewares.exception_handler import ExcRaiser400
+from server.services.misc_service import ContactUsService
 
 
 route = APIRouter(prefix='/misc', tags=['Miscellaneous'])
+
+
+@route.post('/contact-us')
+async def contact_us(
+    data: ContactUsSchema
+) -> APIResponse[str]:
+    """
+    Endpoint to handle contact us form submissions.
+    """
+    print(
+        f"Received contact us submission:\
+        \nName: {data.name}, \nFrom: {data.email},\
+        \nSubject: {data.subject}, \n\n{data.message}"
+    )
+    await ContactUsService.publish(data)
+    return APIResponse(data="Your message has been Qeued!")
 
 
 @route.get('/banks')
