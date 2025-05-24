@@ -1,0 +1,20 @@
+{% extends "base_template.html" %}
+{% block title %}{{subject}}{% endblock %}
+{% block header %}
+Biddius Client Support mail
+{% endblock %}
+
+{% block content %}
+    <p class="important">
+        Client support request,
+    </p>
+    <p>
+        Name: {{name}}
+    </p>
+    <p>
+        Subject: {{subject}}
+    </p>
+    <p>
+        {{message}}
+    </p>
+{% endblock %}

@@ -3,6 +3,7 @@ from asyncio import run, sleep
 import json
 from server.config import redis_store
 from server.utils.email_context import Emailer
+from server.services.misc_service import ContactUsService
 
 # Configure logging
 logging.basicConfig(
@@ -88,6 +89,14 @@ async def send_fund_account_mail(data):
     logging.info('➡ sent ✅')
 
 
+async def send_contact_us_mail(data):
+    logging.info('📨 Sending Contact Us mail 📫')
+    await ContactUsService.contact_us(data)
+    await sleep(0.5)
+    logging.info('➡ sent ✅')
+
+
+
 channels = {
     'OTP-sender': send_otp_mail,
     'Bid-placed': send_bid_placed_mail,
@@ -97,6 +106,7 @@ channels = {
     'Win-Auction': send_win_auction_mail,
     'Fund-Account': send_fund_account_mail,
     # 'Withdrawal': send_withdrawal_mail,
+    'Contact-us': send_contact_us_mail,
 }
 
 

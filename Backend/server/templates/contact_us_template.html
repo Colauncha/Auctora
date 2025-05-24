@@ -1,0 +1,20 @@
+{% extends "base_template.html" %}
+{% block title %}Contact Us{% endblock %}
+<!-- {% block head %}
+    {{ super() }}
+{% endblock %} -->
+{% block header %}
+Biddius Help center
+{% endblock %}
+
+{% block content %}
+    <p class="important">
+        Dear {{ name }},
+    </p>
+    <p>
+        Your mail has been recieved and you will get a response from our support team as soon as possible.
+    </p>
+    <p>
+        {{message}}
+    </p>
+{% endblock %}

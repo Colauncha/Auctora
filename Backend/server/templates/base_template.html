@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block head %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Email{% endblock %}</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .image-bg {
+            background-color: #ffffff;
+            padding: 10px 20px;
+            text-align: center;
+        }
+        .image-bg img {
+            max-width: 100%;
+            height: auto;
+        }
+        .header-title {
+            margin: 10px 0 0;
+            font-size: 20px;
+            color: #7B2334;
+            text-align: center;
+        }
+        .content-row {
+            padding: 35px 25px;
+        }
+        .footer {
+            background-color: #7B2334;
+            color: #fff;
+            text-align: center;
+            padding: 12px;
+            font-size: 12px;
+        }
+        .footer a {
+            color: #fff;
+            text-decoration: none;
+        }
+        th {
+            background-color: #f1f1f1;
+            text-align: left;
+            padding: 8px;
+        }
+        td {
+            padding: 8px;
+            font-size: 14px;
+        }
+
+        /* Mobile responsiveness */
+        @media only screen and (max-width: 600px) {
+            .container {
+                width: 90% !important;
+                padding: 0 !important;
+            }
+            .content-row {
+                padding: 20px !important;
+            }
+            td, th {
+                font-size: 13px;
+            }
+            .header-title {
+                font-size: 18px;
+            }
+        }
+    </style>
+    {% endblock %}
+</head>
+<body>
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+        <tr>
+            <td align="center">
+                <table class="container" cellpadding="0" cellspacing="0" role="presentation">
+                    <tr>
+                        <td class="image-bg">
+                            <img src="https://res.cloudinary.com/dtkv6il4e/image/upload/v1748091825/Biddius_logo_lkme0j.jpg"
+                                 alt="Biddius logo"
+                                 style="display: block; margin: 0 auto;">
+                            <h1 class="header-title">{% block header %}{% endblock %}</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="content-row">
+                            {% block content %}
+                            <!-- Main content goes here -->
+                            {% endblock %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="footer">
+                            {% block footer %}
+                            &copy; {{ current_year }} <a href="https://biddius.com/">Biddius</a> <br>
+                            <a href="https://biddius.com/terms-conditions">Terms & Conditions</a> |
+                            <a href="https://biddius.com/privacy-policy">Privacy Policy</a> <br>
+                            <a href="https://biddius.com/contact-us">Contact Us</a> |
+                            <a href="https://biddius.com/constructing">Unsubscribe</a>
+                            {% endblock %}
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

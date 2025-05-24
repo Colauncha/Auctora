@@ -30,10 +30,11 @@ class JWTSettings(BaseSettings):
 
 
 class EmailSettiings(BaseSettings):
-    MAIL_SERVER: str ="smtp.googlemail.com"
+    MAIL_SERVER: str
     MAIL_PORT: int
     MAIL_USERNAME: str
     MAIL_PASSWORD: str
+    SUPPORT_EMAIL: str = "support@biddius.com"
 
 
 class TestUser(BaseSettings):
