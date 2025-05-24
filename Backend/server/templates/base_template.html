@@ -33,7 +33,8 @@
             text-align: center;
         }
         .image-bg img {
-            max-width: 100%;
+            max-width: 50%;
+            width: 25%;
             height: auto;
         }
         .header-title {
@@ -66,6 +67,35 @@
             font-size: 14px;
         }
 
+        .disclaimer {
+            margin-top: 30px;
+            padding: 15px;
+            border-left: 4px solid #b00020;
+            background-color: #fff5f5;
+            color: #800000;
+            font-size: 13px;
+            line-height: 1.6;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+    
+        .disclaimer-icon {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+    
+        .disclaimer-content {
+            flex: 1;
+        }
+    
+        .disclaimer strong {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
         /* Mobile responsiveness */
         @media only screen and (max-width: 600px) {
             .container {
@@ -80,6 +110,44 @@
             }
             .header-title {
                 font-size: 18px;
+            }
+        }
+
+        /* 🌙 Dark Mode Support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #121212;
+                color: #e0e0e0;
+            }
+
+            .container {
+                background-color: #1e1e1e;
+                border-color: #333;
+            }
+
+            .textarea {
+                background-color: #2a2a2a;
+                border-color: #444;
+                color: #e0e0e0;
+            }
+
+            .textarea:focus {
+                border-color: #666;
+            }
+
+            .footer {
+                background-color: #5a1a25;
+                color: #eee;
+            }
+
+            .footer a {
+                color: #ffcdd2;
+            }
+
+            .disclaimer {
+                background-color: #2a1a1a;
+                border-left-color: #ff6f6f;
+                color: #ffb3b3;
             }
         }
     </style>
@@ -103,6 +171,14 @@
                             {% block content %}
                             <!-- Main content goes here -->
                             {% endblock %}
+                            <div class="disclaimer">
+                                <div class="disclaimer-content">
+                                    <strong>Important Notice:</strong>
+                                    If you did not initiate this contact or believe this message was sent to you in error, please disregard this
+                                    email. No further action is required. If you have concerns about your account’s security, please contact us
+                                    immediately.
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     <tr>

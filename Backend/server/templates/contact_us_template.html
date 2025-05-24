@@ -1,20 +1,47 @@
 {% extends "base_template.html" %}
+
 {% block title %}Contact Us{% endblock %}
-<!-- {% block head %}
+{% block head %}
     {{ super() }}
-{% endblock %} -->
+    <style>
+        .textarea {
+            background-color: #eeeff1;
+            font-size: 13px;
+            font-style: italic;
+            border: 1px solid #dcdfe3;
+            border-radius: 6px;
+            width: 100%;
+            min-height: 120px;
+            padding: 10px;
+            resize: none;
+            color: #333;
+        }
+    
+        .textarea:focus {
+            outline: none;
+            border-color: #c7ccd2;
+        }
+    
+        .message-label {
+            font-weight: bold;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            display: block;
+            font-size: 14px;
+        }
+    </style>
+    {% endblock %}
+
 {% block header %}
-Biddius Help center
+    Biddius Help Center
 {% endblock %}
 
 {% block content %}
-    <p class="important">
-        Dear {{ name }},
-    </p>
+    <p>Dear {{ name }},</p>
+
     <p>
-        Your mail has been recieved and you will get a response from our support team as soon as possible.
+        Thank you for reaching out. Your message has been received and our support team will respond as soon as possible.
     </p>
-    <p>
-        {{message}}
-    </p>
+<label class="message-label">Your Message:</label>
+<textarea class="textarea" readonly>{{ message }}</textarea>
 {% endblock %}
