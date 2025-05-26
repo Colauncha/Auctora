@@ -67,7 +67,10 @@ async def upload_images(
     item = await ItemServices(db).repo.get_by_attr({'id': item_id})
 
     images = [image1, image2, image3, image4, image5]
-    content_type = ["image/jpeg", "image/png"]
+    content_type = [
+        "image/jpeg", "image/png", "image/webp",
+        "image/bmp", "image/avif"
+    ]
 
     uploads = [
         image.file
