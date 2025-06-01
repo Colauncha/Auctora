@@ -2,10 +2,10 @@ from datetime import datetime, timezone, timedelta
 
 from sqlalchemy import Column, UUID, DateTime, Float, ForeignKey
 from sqlalchemy.dialects.postgresql import ENUM
+from sqlalchemy.orm import relationship
 
 from server.models.base import BaseModel
 from server.enums.payment_enums import PaymentStatus
-
 
 
 class Payments(BaseModel):
@@ -38,4 +38,9 @@ class Payments(BaseModel):
         DateTime(timezone=True),
         index=True,
         nullable=True
+    )
+
+    # relationships
+    auction = relationship(
+        'Auctions', back_populates='payment'
     )

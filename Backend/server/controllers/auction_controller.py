@@ -82,11 +82,11 @@ async def finalize(
     db: Session = Depends(get_db)
 ) -> APIResponse[bool]:
     auction = await AuctionServices(db).retrieve(auction_id)
-    if auction.status != 'COMPLETED':
+    if auction.status != 'completed':
         return ExcRaiser400(
             detail='You can only finalize a completed auction'
         )
-    result = await AuctionServices(db).finalize_payment(auction, user.id)
+    result = await AuctionServices(db).finalize_payment(auction.id, user.id)
     return APIResponse(data=result)
 
 

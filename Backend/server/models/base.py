@@ -18,4 +18,4 @@ class BaseModel(Base):
                 pass
             else:
                 dict[attr] = vals
-            return dict
+        return dict

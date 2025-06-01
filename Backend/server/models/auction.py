@@ -62,6 +62,9 @@ class Auctions(BaseModel):
         cascade='all, delete-orphan',
         order_by=Bids.amount
     )
+    payment = relationship(
+        'Payments', back_populates='auction',
+    )
 
     def __str__(self):
         return f'id: {self.id} - {self.status}'

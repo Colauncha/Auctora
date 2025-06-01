@@ -44,7 +44,8 @@ class PaymentRepository(Repository):
 
                 entity = self._Model(
                     from_id=buyer.id, to_id=seller.id,
-                    auction_id=data.auction_id, amount=data.amount
+                    auction_id=data.auction_id, amount=data.amount,
+                    due_data=data.due_data
                 )
                 self.db.add(entity)
             return entity
@@ -113,6 +114,9 @@ class PaymentRepository(Repository):
 
                     await self.update_jsonb(refered_by.id, ref_users, new_slot=False)
 
+
+                entity_data = entity.to_dict()
+                await self.update(entity, entity_data)
                 return entity
             except Exception as e:
                 raise e

@@ -12,8 +12,8 @@ from ..enums.payment_enums import PaymentStatus
 from ..services.auction_service import AuctionServices
 
 # Configure logging
-# LOG_FILE_PATH = '/var/log/biddius-logs/auction_updater.log'
-LOG_FILE_PATH = 'auction_updater.log'
+LOG_FILE_PATH = '/var/log/biddius-logs/auction_updater.log'
+# LOG_FILE_PATH = 'auction_updater.log'
 logging.basicConfig(
     filename=LOG_FILE_PATH,
     level=logging.INFO,
@@ -80,7 +80,7 @@ async def process_intra_payment():
                 logger.info(
                     f"♻ Updating status for payment {event.id} from {event.from_id} to {event.to_id}"
                 )
-                await AuctionServices(session).finalize_payment(event)
+                await AuctionServices(session).finalize_payment(event.auction_id, event.from_id)
                 # event.status = 'COMPLETED'
                 print('Done')
                 logger.info('✅ Payment status updated')

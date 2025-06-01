@@ -18,7 +18,7 @@ from server.schemas import (
     GetAuctionSchema, AuctionParticipantsSchema,
     CreateNotificationSchema, CreateAuctionParticipantsSchema,
     PagedQuery, PagedResponse, GetUserSchema, CreatePaymentSchema,
-    AuctionQueryScalar, SearchQuery
+    AuctionQueryScalar, SearchQuery, GetPaymentSchema
 )
 
 
@@ -173,6 +173,7 @@ class AuctionServices:
                     CreatePaymentSchema(
                         from_id=winner.user_id, to_id=auction.users_id,
                         auction_id=auction.id, amount=winner.amount,
+                        due_data=datetime.now().astimezone() + timedelta(minutes=10.0)
                     ),
                     caller=caller,
                     existing_amount=existing_amount
@@ -208,9 +209,9 @@ class AuctionServices:
     async def set_inspecting(self, id: str, buyer_id: str):
         try:
             payment = await self.payment_repo.get_by_attr({'auction_id': id})
-            payment = CreatePaymentSchema.model_validate(payment)
+            payment = GetPaymentSchema.model_validate(payment)
             if payment:
-                if payment.status != 'PENDING':
+                if payment.status != 'pending':
                     raise ExcRaiser400(
                         detail='Payment has already been processed'
                     )
@@ -222,7 +223,7 @@ class AuctionServices:
                 await self.payment_repo.update(
                     payment, {
                         'status': PaymentStatus.INSPECTING,
-                        'due_data': datetime.now().astimezone() + timedelta(days=3)
+                        'due_data': datetime.now().astimezone() + timedelta(minutes=5)
                     }
                 )
                 return True
@@ -234,10 +235,14 @@ class AuctionServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def finalize_payment(self, entity, buyer_id: str):
+    async def finalize_payment(self, auction_id, buyer_id: str):
         try:
-            payment = await self.payment_repo.get_by_attr({'auction_id': entity.id})
-            payment = CreatePaymentSchema.model_validate(payment)
+            payment = await self.payment_repo.get_by_attr({'auction_id': auction_id})
+            if not payment:
+                raise ExcRaiser400(
+                    detail='Entity not found'
+                )
+            payment = GetPaymentSchema.model_validate(payment)
             if payment.from_id != buyer_id:
                 raise ExcRaiser400(
                     detail='You are not the buyer of this auction'
