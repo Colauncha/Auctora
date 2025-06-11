@@ -1,6 +1,7 @@
 import cloudinary
 from server.config.app_configs import app_configs
 from server.config.database import Base, engine, RedisStorage, get_db
+from server.config.notification_messages import notification_messages
 
 
 __all__ = [

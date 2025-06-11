@@ -53,73 +53,101 @@ class PaymentRepository(Repository):
             raise e
         
     async def disburse(
-            self,
-            data: CreatePaymentSchema
-        ):
-            COMPANY_TAX = app_configs.COMPANY_TAX
-            REFERRAL_TAX = app_configs.REFERRAL_TAX
-            MAX_COMMISIONS = app_configs.MAX_COMMISIONS_COUNT
-            refered_by = None
-            try:
-                with self.db.begin(nested=True):
-                    buyer = self.db.query(Users).filter(
-                        Users.id == data.from_id
-                    ).first()
-                    seller = self.db.query(Users).filter(
-                        Users.id == data.to_id
-                    ).first()
-                    entity = self.db.query(Payments).filter(
-                        Payments.auction_id == data.auction_id
-                    ).first()
+        self,
+        data: CreatePaymentSchema
+    ):
+        COMPANY_TAX = app_configs.COMPANY_TAX
+        REFERRAL_TAX = app_configs.REFERRAL_TAX
+        MAX_COMMISIONS = app_configs.MAX_COMMISIONS_COUNT
+        refered_by = None
+        try:
+            with self.db.begin(nested=True):
+                buyer = self.db.query(Users).filter(
+                    Users.id == data.from_id
+                ).first()
+                seller = self.db.query(Users).filter(
+                    Users.id == data.to_id
+                ).first()
+                entity = self.db.query(Payments).filter(
+                    Payments.auction_id == data.auction_id
+                ).first()
 
-                    if not buyer:
-                        raise ExcRaiser404(message="Payer not found")
-                    if not seller:
-                        raise ExcRaiser404(message="Recipient not found")
+                if not buyer:
+                    raise ExcRaiser404(message="Payer not found")
+                if not seller:
+                    raise ExcRaiser404(message="Recipient not found")
 
-                    if seller.referral_debt_settled:
-                        seller.available_balance += (data.amount - (data.amount * COMPANY_TAX))
-                        seller.wallet += (data.amount - (data.amount * COMPANY_TAX))
-                    else:
-                        if seller.referral_commisions_paid < MAX_COMMISIONS:
-                            seller.referral_commisions_paid += 1
-                            if seller.referral_commisions_paid == MAX_COMMISIONS:
-                                seller.referral_debt_settled = True
+                if seller.referral_debt_settled:
+                    seller.available_balance += (data.amount - (data.amount * COMPANY_TAX))
+                    seller.wallet += (data.amount - (data.amount * COMPANY_TAX))
+                else:
+                    if seller.referral_commisions_paid < MAX_COMMISIONS:
+                        seller.referral_commisions_paid += 1
+                        if seller.referral_commisions_paid == MAX_COMMISIONS:
+                            seller.referral_debt_settled = True
 
-                        company_fee = data.amount * COMPANY_TAX
-                        referral_fee = data.amount * REFERRAL_TAX
+                    company_fee = data.amount * COMPANY_TAX
+                    referral_fee = data.amount * REFERRAL_TAX
 
-                        seller.available_balance += (data.amount - company_fee)
-                        seller.wallet += (data.amount - company_fee)
+                    seller.available_balance += (data.amount - company_fee)
+                    seller.wallet += (data.amount - company_fee)
 
-                        refered_by = None
-                        if seller.referred_by:  # Add this check
-                            refered_by = self.db.query(Users).filter(
-                                Users.id == seller.referred_by
-                            ).first()
+                    refered_by = None
+                    if seller.referred_by:  # Add this check
+                        refered_by = self.db.query(Users).filter(
+                            Users.id == seller.referred_by
+                        ).first()
 
-                            if refered_by:  # Add this check to ensure refered_by is not None
-                                refered_by.available_balance += referral_fee
-                                refered_by.wallet += referral_fee
+                        if refered_by:  # Add this check to ensure refered_by is not None
+                            refered_by.available_balance += referral_fee
+                            refered_by.wallet += referral_fee
 
-                    entity.status = PaymentStatus.COMPLETED
-                if refered_by:
-                    ref_users = {
-                        k: ReferralSlots.model_validate(v).model_dump()
-                        for k, v in refered_by.referred_users.items()
-                    }
+                entity.status = PaymentStatus.COMPLETED
+            if refered_by:
+                ref_users = {
+                    k: ReferralSlots.model_validate(v).model_dump()
+                    for k, v in refered_by.referred_users.items()
+                }
 
-                    ref_users[f'slot_{seller.email}']['commissions_paid'] += 1
-                    ref_users[f'slot_{seller.email}']['commissions_amount'] += referral_fee
+                ref_users[f'slot_{seller.email}']['commissions_paid'] += 1
+                ref_users[f'slot_{seller.email}']['commissions_amount'] += referral_fee
 
-                    await self.update_jsonb(refered_by.id, ref_users, new_slot=False)
+                await self.update_jsonb(refered_by.id, ref_users, new_slot=False)
 
 
-                entity_data = entity.to_dict()
-                await self.update(entity, entity_data)
-                return entity
-            except Exception as e:
-                raise e
+            entity_data = entity.to_dict()
+            await self.update(entity, entity_data)
+            return entity
+        except Exception as e:
+            raise e
 
-    async def refund():
-        ...
+    async def refund(
+        self,
+        data: GetPaymentSchema
+    ):
+        try:
+            with self.db.begin(nested=True):
+                buyer = self.db.query(Users).filter(
+                    Users.id == data.from_id
+                ).first()
+                entity = self.db.query(Payments).filter(
+                    Payments.auction_id == data.auction_id
+                ).first()
+
+                if not buyer:
+                    raise ExcRaiser404(message="Payer not found")
+
+                buyer.available_balance += data.amount
+                buyer.wallet += data.amount
+
+                data.status = PaymentStatus.REFUNDED
+                data.seller_refund_confirmed = True
+                data = data.model_dump(
+                    exclude_none=True,
+                    exclude_unset=True,
+                    exclude={'buyer', 'seller'}
+                )
+            res = await self.update(entity, data)
+            return res 
+        except Exception as e:
+            raise e

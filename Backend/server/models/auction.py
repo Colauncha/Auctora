@@ -64,6 +64,7 @@ class Auctions(BaseModel):
     )
     payment = relationship(
         'Payments', back_populates='auction',
+        uselist=False
     )
 
     def __str__(self):

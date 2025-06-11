@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from uuid import UUID
 
 from server.enums.payment_enums import PaymentStatus
+from server.schemas.user_schema import GetUsersSchemaPublic
 
 
 class CreatePaymentSchema(BaseModel):
@@ -18,10 +19,14 @@ class CreatePaymentSchema(BaseModel):
     auction_id: Union[UUID, str]
     amount: float
     due_data: datetime = Field(
-        default=(datetime.now().astimezone() + timedelta(minutes=10.0))
+        default=(datetime.now().astimezone() + timedelta(days=5))
     )
+    refund_requested: bool = Field(default=False)
+    seller_refund_confirmed: bool = Field(default=False)
 
 
 class GetPaymentSchema(CreatePaymentSchema):
     id: Union[UUID, str]
+    buyer: Optional[GetUsersSchemaPublic] = Field(default=None)
+    seller: Optional[GetUsersSchemaPublic] = Field(default=None)
     

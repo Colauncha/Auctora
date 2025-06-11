@@ -135,3 +135,9 @@ async def publish_withdrawal(data: dict[str, any]):
 
 async def publish_contact_us(data: dict[str, any]):
     await publish_event('Contact-us', data)
+
+async def publish_refund_req_buyer(data: dict[str, any]):
+    await publish_event('Refund-Req-Buyer', data)
+
+async def publish_refund_req_seller(data: dict[str, any]):
+    await publish_event('Refund-Req-Seller', data)

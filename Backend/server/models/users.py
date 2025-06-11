@@ -143,6 +143,8 @@ class Notifications(BaseModel):
     title = Column(String, nullable=False)
     message = Column(String, nullable=False)
     read = Column(Boolean, default=False)
+    links = Column(JSON, nullable=True, default=[])
+    class_name = Column(String, nullable=True)
 
     # Add relationships
     user = relationship('Users', back_populates='notifications')

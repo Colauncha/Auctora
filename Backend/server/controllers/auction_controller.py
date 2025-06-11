@@ -97,7 +97,39 @@ async def set_inspecting(
     auction_id: str,
     db: Session = Depends(get_db)
 ) -> APIResponse[bool]:
+    auction = await AuctionServices(db).retrieve(auction_id)
+    if auction.status != 'completed':
+        return ExcRaiser400(
+            detail='You can only inspect a completed auction'
+        )
     result = await AuctionServices(db).set_inspecting(auction_id, user.id)
+    return APIResponse(data=result)
+
+
+@route.get('/refund/{auction_id}')
+@permissions(permission_level=Permissions.AUTHENTICATED)
+async def refund(
+    user: current_user,
+    auction_id: str,
+    db: Session = Depends(get_db)
+) -> APIResponse[bool]:
+    auction = await AuctionServices(db).retrieve(auction_id)
+    if auction.status != 'completed':
+        return ExcRaiser400(
+            detail='You can only refund a completed auction'
+        )
+    result = await AuctionServices(db).refund(auction_id, user.id)
+    return APIResponse(data=result)
+
+
+@route.get('/complete_refund/{auction_id}')
+@permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.AUCTION)
+async def refund_completed(
+    user: current_user,
+    auction_id: str,
+    db: Session = Depends(get_db)
+):
+    result = await AuctionServices(db).complete_refund(auction_id, user.id)
     return APIResponse(data=result)
 
 

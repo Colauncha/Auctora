@@ -2,9 +2,11 @@ from datetime import datetime, timedelta
 import inspect
 from sqlalchemy.orm import Session
 from fastapi import WebSocket
-from server.config import redis_store, app_configs
+
+from server.config import redis_store, app_configs, notification_messages
 from server.repositories import DBAdaptor
 from server.models.items import Items
+from server.enums.notification_enums import NotificationClasses
 from server.enums.auction_enums import AuctionStatus
 from server.enums.payment_enums import PaymentStatus
 from server.events.publisher import publish_win_auction
@@ -223,7 +225,7 @@ class AuctionServices:
                 await self.payment_repo.update(
                     payment, {
                         'status': PaymentStatus.INSPECTING,
-                        'due_data': datetime.now().astimezone() + timedelta(minutes=5)
+                        'due_data': datetime.now().astimezone() + timedelta(days=5)
                     }
                 )
                 return True
@@ -261,12 +263,102 @@ class AuctionServices:
     async def refund(self, id: str, buyer_id: str):
         try:
             payment = await self.payment_repo.get_by_attr({'auction_id': id})
-            payment = CreatePaymentSchema.model_validate(payment)
-            if payment.from_id != buyer_id:
+            payment_ = GetPaymentSchema.model_validate(payment)
+            if payment_.from_id != buyer_id:
                 raise ExcRaiser400(
                     detail='You are not the buyer of this auction'
                 )
-            res = await self.payment_repo.refund(payment)
+            blocked_status = [
+                PaymentStatus.REFUNDING.value,
+                PaymentStatus.REFUNDED.value,
+                PaymentStatus.COMPLETED.value
+            ]
+            if payment_.status in blocked_status:
+                raise ExcRaiser400(
+                    detail='Payment is already in process or completed'
+                )
+            payment_.status = PaymentStatus.REFUNDING
+            payment_.due_data = datetime.now().astimezone() + timedelta(minutes=0.0)
+            payment_.refund_requested = True
+            payment_.seller_refund_confirmed = False
+            payment_ = payment_.model_dump(
+                exclude_none=True,
+                exclude_unset=True,
+                exclude={'buyer', 'seller'}
+            )
+
+            # Update the payment status to REFUNDING
+            res = await self.payment_repo.update(payment, payment_)
+
+            # Notify the seller and buyer
+            await self.notify(
+                payment.to_id, 'Refund Requested',
+                notification_messages.REFUND_REQUEST_SELLER,
+                links=[
+                    f'/auctions/payments/complete_refund/{id}',
+                ],
+                class_name=NotificationClasses.PAYMENT.value
+            )
+
+            # Notify the buyer that the refund is being processed
+            await self.notify(
+                payment.from_id, 'Refund Processing',
+                notification_messages.REFUND_REQUEST_BUYER,
+                class_name=NotificationClasses.PAYMENT.value,
+            )
+
+            if res:
+                return True
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
+    async def complete_refund(self, id: str, seller_id: str):
+        try:
+            payment = await self.payment_repo.get_by_attr({'auction_id': id})
+            payment_ = GetPaymentSchema.model_validate(payment)
+            if payment_.to_id != seller_id:
+                raise ExcRaiser400(
+                    detail='You are not the creator of this auction'
+                )
+            blocked_status = [
+                PaymentStatus.INSPECTING.value,
+                PaymentStatus.PENDING.value,
+                PaymentStatus.REFUNDED.value,
+                PaymentStatus.COMPLETED.value
+            ]
+            if payment_.status in blocked_status:
+                raise ExcRaiser400(
+                    detail='Payment is not up for a refund'
+                )
+
+            # Update the payment status to REFUNDING
+            res = await self.payment_repo.refund(payment_)
+
+            # Notify the seller and buyer
+            await self.notify(
+                payment.to_id, 'Refund Requested',
+                notification_messages.REFUND_COMPLETED,
+                links=[
+                    f'/products/{id}',
+                ],
+                class_name=NotificationClasses.PAYMENT.value
+            )
+
+            # Notify the buyer that the refund is being processed
+            await self.notify(
+                payment.from_id, 'Refund Processing',
+                notification_messages.REFUND_COMPLETED,
+                links=[
+                    f'/product-details/{id}',
+                ],
+                class_name=NotificationClasses.PAYMENT.value,
+            )
+
             if res:
                 return True
         except ExcRaiser as e:
@@ -299,11 +391,19 @@ class AuctionServices:
             raise ExcRaiser500(detail=str(e))
 
     # Notifications
-    async def notify(self, user_id: str, title: str, message: str):
+    async def notify(
+        self,
+        user_id: str,
+        title: str,
+        message: str,
+        links: list = None,
+        class_name: str = None
+    ):
         try:
             notice = CreateNotificationSchema(
                 title=title, message=message,
-                user_id=user_id
+                user_id=user_id, links=links or [],
+                class_name=class_name
             )
             await self.notification(notice)
         except ExcRaiser as e:

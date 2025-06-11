@@ -5,3 +5,4 @@ class PaymentStatus(Enum):
     PENDING = 'pending'
     COMPLETED = 'completed'
     REFUNDED = 'refunded'
+    REFUNDING = 'refunding'

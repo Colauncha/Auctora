@@ -6,14 +6,15 @@ from sqlalchemy.orm import Session
 
 from ..models.auction import Auctions
 from ..models.payment import Payments
-from ..config.database import get_db
+from ..config.database import get_db, app_configs
 from ..enums.auction_enums import AuctionStatus
 from ..enums.payment_enums import PaymentStatus
 from ..services.auction_service import AuctionServices
 
 # Configure logging
-LOG_FILE_PATH = '/var/log/biddius-logs/auction_updater.log'
-# LOG_FILE_PATH = 'auction_updater.log'
+LOG_FILE_PATH = '/var/log/biddius-logs/auction_updater.log'\
+if app_configs.ENV == 'production' else 'auction_updater.log'
+
 logging.basicConfig(
     filename=LOG_FILE_PATH,
     level=logging.INFO,
