@@ -7,6 +7,7 @@ from server.enums.auction_enums import AuctionStatus
 from server.schemas import GetItemSchema, CreateItemSchema
 from server.schemas.user_schema import GetUsersSchemaPublic
 from server.schemas.bid_schema import GetBidSchema
+from server.schemas.payment_schema import GetPaymentSchema
 
 
 class CreateAuctionParticipantsSchema(BaseModel):
@@ -86,6 +87,7 @@ class GetAuctionSchema(CreateAuctionSchema):
     pickup_longitude: Optional[float] = Field(default=None)
     logistic_type: Optional[Union[list, str]] = Field(default=None)
     logistic_fee: Optional[float] = Field(default=None)
+    payment: Optional[GetPaymentSchema] = Field(default=None)
 
     def __init__(self, **data):
         super().__init__(**data)

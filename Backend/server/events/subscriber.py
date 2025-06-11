@@ -1,13 +1,14 @@
 import logging
 from asyncio import run, sleep
 import json
-from server.config import redis_store
+from server.config import redis_store, app_configs
 from server.utils.email_context import Emailer
 from server.services.misc_service import ContactUsService
 
 # Configure logging
 logging.basicConfig(
-    filename='/var/log/biddius-logs/biddius_events.log',
+    filename='/var/log/biddius-logs/biddius_events.log'\
+        if app_configs.ENV == 'production' else 'biddius_events.log',
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
@@ -96,7 +97,6 @@ async def send_contact_us_mail(data):
     logging.info('➡ sent ✅')
 
 
-
 channels = {
     'OTP-sender': send_otp_mail,
     'Bid-placed': send_bid_placed_mail,
@@ -107,6 +107,8 @@ channels = {
     'Fund-Account': send_fund_account_mail,
     # 'Withdrawal': send_withdrawal_mail,
     'Contact-us': send_contact_us_mail,
+    'Refund-Req-Buyer': send_contact_us_mail,
+    'Refund-Req-Seller': send_contact_us_mail,
 }
 
 

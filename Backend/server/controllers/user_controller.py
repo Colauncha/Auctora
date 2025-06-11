@@ -159,7 +159,8 @@ async def login(
         key='access_token',
         value=token.token,
         httponly=True,
-        max_age=1800,
+        max_age=app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
+        expires= app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
         secure=True if app_configs.ENV == 'production' else False,
         samesite="None" if app_configs.ENV == 'production' else "lax",
     )

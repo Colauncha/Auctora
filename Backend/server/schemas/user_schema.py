@@ -163,6 +163,8 @@ class CreateNotificationSchema(BaseModel):
     title: str
     message: str
     user_id: Union[str, UUID]
+    links: Optional[list] = Field(default=None)
+    class_name: Optional[str] = Field(default=None)
 
     model_config = {"from_attributes": True}
 

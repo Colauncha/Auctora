@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta
 
-from sqlalchemy import Column, UUID, DateTime, Float, ForeignKey
+from sqlalchemy import Column, UUID, DateTime, Float, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import relationship
 
@@ -39,8 +39,16 @@ class Payments(BaseModel):
         index=True,
         nullable=True
     )
+    refund_requested = Column(Boolean, default=False)
+    seller_refund_confirmed = Column(Boolean, default=False)
 
     # relationships
     auction = relationship(
         'Auctions', back_populates='payment'
+    )
+    buyer = relationship(
+        'Users', foreign_keys=[from_id]
+    )
+    seller = relationship(
+        'Users', foreign_keys=[to_id]
     )
