@@ -5,7 +5,7 @@ from server.config import get_db
 from server.schemas import (
     APIResponse, UpdateAuctionSchema,
     GetAuctionSchema, CreateAuctionSchema,
-    PagedQuery, PagedResponse, AuctionQueryScalar,
+    RestartAuctionSchema, PagedResponse, AuctionQueryScalar,
 )
 from server.services.auction_service import AuctionServices
 from server.middlewares.auth import (
@@ -132,6 +132,17 @@ async def refund_completed(
     result = await AuctionServices(db).complete_refund(auction_id, user.id)
     return APIResponse(data=result)
 
+
+@route.patch('/restart/{auction_id}')
+@permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.AUCTION)
+async def restart(
+    user: current_user,
+    auction_id: str,
+    data: RestartAuctionSchema,
+    db: Session = Depends(get_db)
+) -> APIResponse[bool]:
+    result = await AuctionServices(db).restart(auction_id, data)
+    return APIResponse(data=result)
 
 # @route.put('/{auction_id}/participants')
 # @permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.AUCTION)
