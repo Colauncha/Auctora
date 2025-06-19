@@ -17,10 +17,10 @@ from server.services.user_service import (
     UserNotificationServices, UserServices
 )
 from server.schemas import (
-    GetAuctionSchema, AuctionParticipantsSchema,
+    GetAuctionSchema,
     CreateNotificationSchema, CreateAuctionParticipantsSchema,
-    PagedQuery, PagedResponse, GetUserSchema, CreatePaymentSchema,
-    AuctionQueryScalar, SearchQuery, GetPaymentSchema
+    PagedQuery, PagedResponse, CreatePaymentSchema,
+    SearchQuery, GetPaymentSchema, RestartAuctionSchema
 )
 
 
@@ -208,6 +208,50 @@ class AuctionServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
+    async def restart(self, id: str, data: RestartAuctionSchema):
+        try:
+            auction = await self.repo.get_by_id(id)
+            payment = await self.payment_repo.get_by_attr({'auction_id': id})
+            if not auction:
+                raise ExcRaiser404("Auction not found")
+            if auction.status != AuctionStatus.COMPLETED:
+                raise ExcRaiser400("Auction is not completed")
+            if not payment or (payment.status == PaymentStatus.REFUNDED):
+                # Reset the auction status to PENDING
+                auction.start_date = data.start_date or auction.start_date
+                auction.end_date = data.end_date
+                auction.start_price = data.start_price or auction.start_price
+                auction.buy_now = data.buy_now if data.buy_now is not None else auction.buy_now
+                auction.buy_now_price = data.buy_now_price or auction.buy_now_price
+                auction.status = AuctionStatus.PENDING
+                auction_data = auction.to_dict()
+                print(auction_data)
+                # await self.repo.update(auction, {'status': AuctionStatus.PENDING})
+                if payment:
+                    # If payment exists, delete it
+                    await self.payment_repo.delete(payment)
+                # Notify the seller and participants
+                await self.notify(
+                    auction.users_id, 'Auction Restarted',
+                    notification_messages.AUCTION_RESTARTED.message,
+                    links=[
+                        f'{notification_messages.AUCTION_RESTARTED.link[0]}{id}',
+                    ],
+                    class_name=NotificationClasses.AUCTION.value
+                )
+            else:
+                raise ExcRaiser400(
+                    detail='Payment completed or not refunded, cannot restart auction'
+                )
+            return True
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
     async def set_inspecting(self, id: str, buyer_id: str):
         try:
             payment = await self.payment_repo.get_by_attr({'auction_id': id})
@@ -293,9 +337,9 @@ class AuctionServices:
             # Notify the seller and buyer
             await self.notify(
                 payment.to_id, 'Refund Requested',
-                notification_messages.REFUND_REQUEST_SELLER,
+                notification_messages.REFUND_REQUEST_SELLER.message,
                 links=[
-                    f'/auctions/payments/complete_refund/{id}',
+                    f'{notification_messages.REFUND_REQUEST_SELLER.link}{id}',
                 ],
                 class_name=NotificationClasses.PAYMENT.value
             )
@@ -303,7 +347,7 @@ class AuctionServices:
             # Notify the buyer that the refund is being processed
             await self.notify(
                 payment.from_id, 'Refund Processing',
-                notification_messages.REFUND_REQUEST_BUYER,
+                notification_messages.REFUND_REQUEST_BUYER.message,
                 class_name=NotificationClasses.PAYMENT.value,
             )
 
@@ -344,7 +388,7 @@ class AuctionServices:
                 payment.to_id, 'Refund Requested',
                 notification_messages.REFUND_COMPLETED,
                 links=[
-                    f'/products/{id}',
+                    f'{notification_messages.REFUND_COMPLETED.link[0]}{id}',
                 ],
                 class_name=NotificationClasses.PAYMENT.value
             )
@@ -354,7 +398,7 @@ class AuctionServices:
                 payment.from_id, 'Refund Processing',
                 notification_messages.REFUND_COMPLETED,
                 links=[
-                    f'/product-details/{id}',
+                    f'{notification_messages.REFUND_COMPLETED.link[1]}{id}',
                 ],
                 class_name=NotificationClasses.PAYMENT.value,
             )

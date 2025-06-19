@@ -97,3 +97,15 @@ class GetAuctionSchema(CreateAuctionSchema):
     model_config = {
         'from_attributes': True
     }
+
+
+class RestartAuctionSchema(BaseModel):
+    model_config = {
+        'from_attributes'
+        'extra': 'ignore'
+    }
+    start_date: Optional[datetime] = Field(default=None)
+    end_date: Optional[datetime] = Field(default=None)
+    start_price: Optional[float] = Field(default=None)
+    buy_now: Optional[bool] = Field(default=None)
+    buy_now_price: Optional[float] = Field(default=None)
