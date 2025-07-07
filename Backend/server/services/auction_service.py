@@ -105,7 +105,6 @@ class AuctionServices:
 
     async def update(self, id: str, data: dict):
         try:
-            print(data)
             entity = await self.repo.get_by_id(id)
             updated = await self.repo.update(entity, data)
             return GetAuctionSchema.model_validate(updated[0])
@@ -161,7 +160,30 @@ class AuctionServices:
     ):
         try:
             auction = await self.repo.get_by_id(id)
+            bids: list = auction.bids
+            winner = None
+            if len(bids) > 0:
+                winner = max(bids, key=lambda x: x.amount)
             if auction:
+                # check if price >= reserve price
+                if auction.use_reserve_price and\
+                    auction.reserve_price >= winner.amount:
+                    await self.repo.update(
+                        auction, {'status': AuctionStatus.CANCLED}
+                    )
+                    await self.notify(
+                        auction.users_id, 'Auction Closed',
+                        'Your auction has been closed'
+                    )
+                    for bid in bids:
+                        _ = await self.user_repo.abtw(bid.user_id, bid.amount)
+                        await self.notify(
+                            bid.user_id, 'Auction Lost',
+                            'You have lost the auction, Amount has been returned'
+                        )
+                        return
+
+
                 await self.repo.update(
                     auction, {'status': AuctionStatus.COMPLETED}
                 )
@@ -169,13 +191,12 @@ class AuctionServices:
                     auction.users_id, 'Auction Closed',
                     'Your auction has been closed'
                 )
-                bids: list = auction.bids
-                winner = max(bids, key=lambda x: x.amount)
                 await self.payment_repo.add(
                     CreatePaymentSchema(
                         from_id=winner.user_id, to_id=auction.users_id,
                         auction_id=auction.id, amount=winner.amount,
-                        due_data=datetime.now().astimezone() + timedelta(minutes=10.0)
+                        due_data=datetime.now().astimezone()\
+                            + timedelta(minutes=10.0)
                     ),
                     caller=caller,
                     existing_amount=existing_amount
@@ -212,10 +233,14 @@ class AuctionServices:
         try:
             auction = await self.repo.get_by_id(id)
             payment = await self.payment_repo.get_by_attr({'auction_id': id})
+            restart_status = [
+                AuctionStatus.COMPLETED,
+                AuctionStatus.CANCLED
+            ]
             if not auction:
                 raise ExcRaiser404("Auction not found")
-            if auction.status != AuctionStatus.COMPLETED:
-                raise ExcRaiser400("Auction is not completed")
+            if auction.status not in restart_status:
+                raise ExcRaiser400("Auction is not completed or canceled")
             if not payment or (payment.status == PaymentStatus.REFUNDED):
                 # Reset the auction status to PENDING
                 auction.start_date = data.start_date or auction.start_date
@@ -224,9 +249,8 @@ class AuctionServices:
                 auction.buy_now = data.buy_now if data.buy_now is not None else auction.buy_now
                 auction.buy_now_price = data.buy_now_price or auction.buy_now_price
                 auction.status = AuctionStatus.PENDING
-                auction_data = auction.to_dict()
-                print(auction_data)
-                # await self.repo.update(auction, {'status': AuctionStatus.PENDING})
+                auction.bids = []
+
                 if payment:
                     # If payment exists, delete it
                     await self.payment_repo.delete(payment)

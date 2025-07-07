@@ -11,11 +11,13 @@ class BaseModel(Base):
     created_at = Column(DateTime(timezone=True), default=datetime.now().astimezone())
     updated_at = Column(DateTime(timezone=True), onupdate=datetime.now().astimezone())
 
-    def to_dict(self):
+    def to_dict(self, exclude: list = None) -> dict:
         dict = {}
         for attr, vals in self.__dict__.items():
             if attr.startswith('_') or attr == 'hash_password':
-                pass
+                continue
+            elif exclude and attr in exclude:
+                continue
             else:
                 dict[attr] = vals
         return dict

@@ -22,7 +22,6 @@ class ContactUsService:
     @staticmethod
     async def contact_us_client(data: ContactUsSchema):
         data = ContactUsSchema.model_validate(data)
-        print(data)
         async with Emailer(
             subject=f"Contact Us - {data.subject}",
             template_name="contact_us_template.html",

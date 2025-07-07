@@ -18,11 +18,6 @@ async def contact_us(
     """
     Endpoint to handle contact us form submissions.
     """
-    print(
-        f"Received contact us submission:\
-        \nName: {data.name}, \nFrom: {data.email},\
-        \nSubject: {data.subject}, \n\n{data.message}"
-    )
     await ContactUsService.publish(data)
     return APIResponse(data="Your message has been Qeued!")
 
