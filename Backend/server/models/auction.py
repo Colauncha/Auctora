@@ -16,16 +16,24 @@ class Auctions(BaseModel):
     __mapper_args__ = {'polymorphic_identity': 'auctions'}
 
     users_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), index=True)
-    private = Column(Boolean, nullable=False, default=False)
+
+    # Prices
     start_price = Column(Float, nullable=False, default=0.0)
     current_price = Column(Float, nullable=False, default=0.0)
-    buy_now = Column(Boolean, nullable=False, default=False)
+    reserve_price = Column(Float, nullable=True, default=0.0)
     buy_now_price = Column(Float, nullable=True)
+
+    # Dates
     start_date = Column(DateTime(timezone=True), default=datetime.now(tz=timezone.utc), index=True)
     end_date = Column(DateTime(timezone=True), index=True)
+
+    # Auction details
     watchers = Column(JSON, nullable=True, default=[])
     watchers_count = Column(Integer, nullable=True, default=0)
     refundable = Column(Boolean, nullable=True, default=False)
+    buy_now = Column(Boolean, nullable=False, default=False)
+    private = Column(Boolean, nullable=False, default=False)
+    use_reserve_price = Column(Boolean, nullable=True, default=False)
 
     # Logistic INFO
     pickup_address = Column(String, nullable=True)

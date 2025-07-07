@@ -37,11 +37,13 @@ class Items(BaseModel):
     height = Column(Float, nullable=True)
     width = Column(Float, nullable=True)
     length = Column(Float, nullable=True)
+    # IDEA: make this a JSON column with list of categories
     category_id = Column(
         String,
         ForeignKey('categories.id'),
         nullable=False
     )
+    # IDEA: make this a JSON column with list of sub_categories
     sub_category_id = Column(
         String,
         ForeignKey('subcategories.id'),
