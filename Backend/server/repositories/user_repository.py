@@ -1,5 +1,4 @@
-from sqlalchemy.orm import Session
-from server.repositories.repository import Repository
+from server.repositories.repository import Repository, no_db_error
 from server.models.users import Users, Notifications, WalletTransactions
 from server.schemas import GetUserSchema, WalletTransactionSchema
 from server.middlewares.exception_handler import ExcRaiser, ExcRaiser404
@@ -8,15 +7,16 @@ from server.enums.user_enums import TransactionStatus, TransactionTypes
 
 
 class WalletTranscationRepository(Repository):
-    def __init__(self, db):
-        super().__init__(db, WalletTransactions)
+    def __init__(self):
+        super().__init__(WalletTransactions)
 
 
 class UserRepository(Repository):
-    def __init__(self, db):
-        super().__init__(db, Users)
-        self.wallet_transaction = WalletTranscationRepository(self.db)
+    def __init__(self, wallet_transaction: WalletTranscationRepository):
+        super().__init__(Users)
+        self.wallet_transaction = wallet_transaction
 
+    @no_db_error
     async def get_by_email(
             self, email: str, schema_mode: bool = False
         ) -> GetUserSchema | Users:
@@ -27,7 +27,8 @@ class UserRepository(Repository):
         elif user and not schema_mode:
             return user
         return None
-    
+
+    @no_db_error
     async def get_by_username(
             self, username: str, schema_mode: bool = False
         ) -> GetUserSchema | Users:
@@ -38,7 +39,8 @@ class UserRepository(Repository):
         elif user and not schema_mode:
             return user
         return None
-    
+
+    @no_db_error
     async def wtab(self, id: str, amount: float):
         """
         WALLET/AVAILABLE_BALANCE TO AUCTION_BALANCE\n
@@ -72,7 +74,8 @@ class UserRepository(Repository):
                 message='Transaction failed',
                 detail=str(e)
             )
-        
+
+    @no_db_error
     async def abtw(self, id: str, amount: float):
         """
         AUCTION_BALANCE TO WALLET/AVAILABLE_BALANCE\n
@@ -106,7 +109,8 @@ class UserRepository(Repository):
                 message='Transaction failed',
                 detail=str(e)
             )
-        
+
+    @no_db_error        
     async def intra_payment(self, payer_id: str, recipient_id: str, amount: float):
         """Intra payment"""
         try:
@@ -146,7 +150,8 @@ class UserRepository(Repository):
                 message='Transaction failed',
                 detail=str(e)
             )
-        
+
+    @no_db_error        
     async def fund_wallet(
             self,
             transaction: WalletTransactionSchema,
@@ -173,6 +178,7 @@ class UserRepository(Repository):
                 detail=str(e)
             )
 
+    @no_db_error
     async def withdraw(
         self,
         transaction: WalletTransactionSchema,
@@ -201,6 +207,6 @@ class UserRepository(Repository):
 
 
 class UserNotificationRepository(Repository):
-    def __init__(self, db):
-        super().__init__(db, Notifications)
+    def __init__(self):
+        super().__init__(Notifications)
             

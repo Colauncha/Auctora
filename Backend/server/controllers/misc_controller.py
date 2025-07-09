@@ -5,7 +5,7 @@ from fastapi.routing import APIRouter
 from server.config.app_configs import app_configs
 from server.schemas import BanksQuery, APIResponse, ContactUsSchema
 from server.middlewares.exception_handler import ExcRaiser400
-from server.services.misc_service import ContactUsService
+from server.services import Services
 
 
 route = APIRouter(prefix='/misc', tags=['Miscellaneous'])
@@ -18,7 +18,7 @@ async def contact_us(
     """
     Endpoint to handle contact us form submissions.
     """
-    await ContactUsService.publish(data)
+    await Services.contactUsServices.publish(data)
     return APIResponse(data="Your message has been Qeued!")
 
 

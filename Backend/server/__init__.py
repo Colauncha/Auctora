@@ -2,12 +2,9 @@
 Copyright (c) 12/2024 - iyanuajimobi12@gmail.com
 """
 
-import logging
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from fastapi.logger import logger as fastapi_logger
 from server.config import app_configs, init_db, get_db
 from server.controllers import routes
 from server.middlewares.exception_handler import (
@@ -17,10 +14,6 @@ from server.middlewares.exception_handler import (
     HTTP_error_handler, integrity_error_handler,
     exception_handler, db_exception_handler,
 )
-
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-import time
 
 
 def create_app(app_name: str = 'temporary') -> FastAPI:

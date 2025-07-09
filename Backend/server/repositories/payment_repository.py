@@ -3,7 +3,7 @@ from server.middlewares.exception_handler import ExcRaiser404
 from server.models.payment import Payments
 from server.models.users import Users
 from server.enums.payment_enums import PaymentStatus
-from server.repositories.repository import Repository
+from server.repositories.repository import Repository, no_db_error
 from server.schemas import ReferralSlots
 from server.schemas.payment_schema import (
     CreatePaymentSchema,
@@ -12,10 +12,11 @@ from server.schemas.payment_schema import (
 
 
 class PaymentRepository(Repository):
-    def __init__(self, db):
-        super().__init__(db, Payments)
+    def __init__(self):
+        super().__init__(Payments)
         self._Model = Payments
 
+    @no_db_error
     async def add(
         self,
         data: CreatePaymentSchema,
@@ -51,7 +52,8 @@ class PaymentRepository(Repository):
             return entity
         except Exception as e:
             raise e
-        
+
+    @no_db_error
     async def disburse(
         self,
         data: CreatePaymentSchema
@@ -121,6 +123,7 @@ class PaymentRepository(Repository):
         except Exception as e:
             raise e
 
+    @no_db_error
     async def refund(
         self,
         data: GetPaymentSchema

@@ -12,17 +12,18 @@ from server.middlewares.exception_handler import (
 
 
 class CategoryServices:
-    def __init__(self, db: Session):
-        self.cat_repo = DBAdaptor(db).category_repo
-        self.sub_cat_repo = DBAdaptor(db).sub_category_repo
+    def __init__(self, category_repo, sub_category_repo):
+        self.cat_repo = category_repo
+        self.sub_cat_repo = sub_category_repo
 
     async def create_category(
-            self, 
+            self,
+            db: Session,
             category: CreateCategorySchema
         ) -> GetCategorySchema:
         try:
             category_dict = category.model_dump()
-            _category = await self.cat_repo.add(category_dict)
+            _category = await self.cat_repo.attachDB(db).add(category_dict)
             return _category
         except Exception as e:
             raise ExcRaiser(
@@ -31,9 +32,9 @@ class CategoryServices:
                 detail=repr(e)
             )
 
-    async def get_cat_by_id(self, id: str) -> GetCategorySchema:
+    async def get_cat_by_id(self, db: Session, id: str) -> GetCategorySchema:
         try:
-            category = await self.cat_repo.get_by_attr({'id': id})
+            category = await self.cat_repo.attachDB(db).get_by_attr({'id': id})
             if not category:
                 raise ExcRaiser404("Category not found")
             valid_category = GetCategorySchema.model_validate(category)
@@ -53,9 +54,9 @@ class CategoryServices:
                 detail=repr(e)
             )
 
-    async def list_categories(self):
+    async def list_categories(self, db: Session):
         try:
-            categories = self.cat_repo.all()
+            categories = self.cat_repo.attachDB(db).all()
             if not categories:
                 raise ExcRaiser404("No categories found")
             valid_categories = [
@@ -75,12 +76,12 @@ class CategoryServices:
                 detail=repr(e)
             )
         
-    async def update_category(self, id: str, data: UpdateCategorySchema):
+    async def update_category(self, db: Session, id: str, data: UpdateCategorySchema):
         try:
-            cat = await self.cat_repo.get_by_attr({'id': id})
+            cat = await self.cat_repo.attachDB(db).get_by_attr({'id': id})
             _data = data.model_dump(exclude_unset=True)
             if cat:
-                response = await self.cat_repo.update(cat, _data)
+                response = await self.cat_repo.attachDB(db).update(cat, _data)
             else:
                 raise ExcRaiser404(message='Category not found')
             if response:
@@ -95,11 +96,12 @@ class CategoryServices:
     # Sub Category services
     async def create_sub_category(
             self,
+            db: Session,
             sub_cat: CreateSubCategorySchema
         ) -> GetSubCategorySchema:
         try:
             sub_category_dict = sub_cat.model_dump()
-            sub_category = await self.sub_cat_repo.add(sub_category_dict)
+            sub_category = await self.sub_cat_repo.attachDB(db).add(sub_category_dict)
             return sub_category
         except Exception as e:
             raise ExcRaiser(
@@ -108,9 +110,9 @@ class CategoryServices:
                 detail=repr(e)
             )
 
-    async def get_subcat_by_id(self, id: str) -> GetSubCategorySchema:
+    async def get_subcat_by_id(self, db: Session, id: str) -> GetSubCategorySchema:
         try:
-            sub_category = await self.sub_cat_repo.get_by_attr({'id': id})
+            sub_category = await self.sub_cat_repo.attachDB(db).get_by_attr({'id': id})
             if not sub_category:
                 raise ExcRaiser404("Sub category not found")
             valid_sub_category = GetSubCategorySchema.model_validate(sub_category)
@@ -129,9 +131,9 @@ class CategoryServices:
                 detail=repr(e)
             )
         
-    async def list_sub_categories(self):
+    async def list_sub_categories(self, db: Session):
         try:
-            sub_categories = self.sub_cat_repo.all()
+            sub_categories = self.sub_cat_repo.attachDB(db).all()
             if not sub_categories:
                 raise ExcRaiser404("No sub categories found")
             valid_sub_categories = [
@@ -149,12 +151,12 @@ class CategoryServices:
                 detail=repr(e)
             )
 
-    async def update_sub_category(self, id: str, data: UpdateSubCategorySchema):
+    async def update_sub_category(self, db: Session, id: str, data: UpdateSubCategorySchema):
         try:
-            sub_cat = await self.sub_cat_repo.get_by_attr({'id': id})
+            sub_cat = await self.sub_cat_repo.attachDB(db).get_by_attr({'id': id})
             _data = data.model_dump(exclude_unset=True)
             if sub_cat:
-                response = await self.sub_cat_repo.update(sub_cat, _data)
+                response = await self.sub_cat_repo.attachDB(db).update(sub_cat, _data)
             else:
                 raise ExcRaiser404(message='Subcategory not found')
             if response:
@@ -166,11 +168,11 @@ class CategoryServices:
                 detail=repr(e)
             )
         
-    async def retrieve(self, id: str):
+    async def retrieve(self, db: Session, id: str):
         try:
             if id.startswith('SUB'):
-                return await self.get_subcat_by_id(id)
-            return await self.get_cat_by_id(id)
+                return await self.get_subcat_by_id(db, id)
+            return await self.get_cat_by_id(db, id)
         except Exception as e:
             raise ExcRaiser(
                 status_code=400,

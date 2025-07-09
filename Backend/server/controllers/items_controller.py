@@ -1,17 +1,15 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
-from server.middlewares.exception_handler import ExcRaiser, ExcRaiser404
+from fastapi import APIRouter, Depends, File, UploadFile
 from server.config import get_db
-from server.services.user_service import current_user
+# from server.services.user_service import current_user
 from server.middlewares.auth import permissions, Permissions
-from server.services.item_service import ItemServices
+from server.services import Services, current_user
 from server.schemas import (
     APIResponse,
     CreateItemSchema, GetItemSchema,
     UpdateItemSchema
 )
 from server.enums import ServiceKeys
-from server.enums.user_enums import UserRoles
 from sqlalchemy.orm import Session
 
 
@@ -27,7 +25,7 @@ async def create(
 ) -> APIResponse[GetItemSchema]:
     _data = CreateItemSchema.model_dump(data, exclude_unset=True)
     _data["users_id"] = user.id
-    result = await ItemServices(db).create(_data)
+    result = await Services.itemServices.create(db, _data)
     return APIResponse(data=result)
 
 
@@ -47,7 +45,7 @@ async def get_items(
     id: str,
     db: Session = Depends(get_db)
 ) -> APIResponse[GetItemSchema]:
-    result = await ItemServices(db).retrieve(id)
+    result = await Services.itemServices.retrieve(db, id)
     return APIResponse(data=result)
 
 
@@ -64,7 +62,7 @@ async def upload_images(
     db: Session = Depends(get_db)
 ) -> APIResponse[GetItemSchema]:
     
-    item = await ItemServices(db).repo.get_by_attr({'id': item_id})
+    item = await Services.itemServices.repo.attachDB(db).get_by_attr({'id': item_id})
 
     images = [image1, image2, image3, image4, image5]
     content_type = [
@@ -78,7 +76,7 @@ async def upload_images(
         for image in images
     ]
 
-    result = await ItemServices(db).upload_images(item, uploads)
+    result = await Services.itemServices.upload_images(db, item, uploads)
     return APIResponse(data=result)
 
 
@@ -91,7 +89,7 @@ async def update(
     db: Session = Depends(get_db)
 ) -> APIResponse[GetItemSchema]:
     data = data.model_dump(exclude_unset=True, exclude_none=True)
-    result = await ItemServices(db).update(item_id, data)
+    result = await Services.itemServices.update(db, item_id, data)
     return APIResponse(data=result)
 
 # @route.get('/get_items')

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from server.config import app_configs, get_db, redis_store
-from server.services.auction_service import AuctionServices
+from server.services import Services
 from server.schemas import (
     PagedQuery,
     PagedResponse,
@@ -23,7 +23,8 @@ async def get_trending_auctions(db: Session = Depends(get_db)):
 
     else:
         filter = PagedQuery(page=1, per_page=20)
-        auctions = await AuctionServices(db).list(
+        auctions = await Services.auctionServices.list(
+            db,
             filter,
             {'status': 'ACTIVE'}
         )
@@ -39,5 +40,5 @@ async def search(
     query: SearchQuery = Depends(),
     db: Session = Depends(get_db)
 ) -> PagedResponse[list[GetAuctionSchema]]:
-    result = await AuctionServices(db).search(query)
+    result = await Services.auctionServices.search(db, query)
     return result
