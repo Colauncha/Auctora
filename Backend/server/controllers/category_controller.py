@@ -21,7 +21,7 @@ sub_route = APIRouter(prefix='/subcategories', tags=['subcategories'])
 
 
 @route.post('/')
-@permissions(permission_level=Permissions.ADMIN)
+@permissions(permission_level=Permissions.CLIENT)
 async def create_category(
     user: current_user,
     category: CreateCategorySchema,
@@ -80,7 +80,7 @@ async def update(
 
 # Subcategory Routes
 @sub_route.post('/')
-@permissions(permission_level=Permissions.ADMIN)
+@permissions(permission_level=Permissions.CLIENT)
 async def create_sub_category(
     user: current_user,
     sub_cat: CreateSubCategorySchema,
