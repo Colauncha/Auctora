@@ -329,7 +329,7 @@ class UserServices:
         self.notification = UserNotificationServices(db)
         self.debug = app_configs.DEBUG
 
-    def __check_password(self, password, hashed_password) -> bool:
+    def check_password(self, password, hashed_password) -> bool:
         return self.pwd_context.verify(password, hashed_password)
 
     async def __generate_token(self, user: Users) -> LoginToken:
@@ -361,7 +361,7 @@ class UserServices:
                 user = await self.repo.get_by_email(identity.identifier)
             else:
                 user = await self.repo.get_by_username(identity.identifier)
-            if user and self.__check_password(
+            if user and self.check_password(
                     identity.password, user.hash_password
                 ):
                 token = await self.__generate_token(user)
@@ -695,7 +695,7 @@ class UserServices:
     async def change_password(self, user: GetUserSchema, data: ChangePasswordSchema):
         try:
             user = await self.repo.get_by_email(user.email)
-            if not self.__check_password(data.old_password, user.hash_password):
+            if not self.check_password(data.old_password, user.hash_password):
                 raise ExcRaiser400(detail='Invalid old password')
             if data.new_password == data.confirm_password:
                 _ = await self.repo.save(
