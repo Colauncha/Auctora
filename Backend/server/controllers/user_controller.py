@@ -612,7 +612,7 @@ async def withdraw(
     db: Session = Depends(get_db)
 ) -> APIResponse:
     user = await UserServices(db).repo.get_by_email(user.email)
-    validate = await UserServices(db).check_password(
+    validate = UserServices(db).check_password(
         credentials.password, user.hash_password
     )
 
