@@ -1,17 +1,19 @@
-from server.repositories import Repository
+from server.repositories.repository import Repository, no_db_error
 from server.models.bids import Bids
 from server.schemas.bid_schema import GetBidSchema
 from server.middlewares.exception_handler import ExcRaiser404
 
 
 class BidRepository(Repository):
-    def __init__(self, db):
-        super().__init__(db, Bids)
+    def __init__(self):
+        super().__init__(Bids)
 
+    @no_db_error
     async def exists(self, filter: dict) -> bool:
         entity = self.db.query(self._Model).filter_by(**filter).first()
         return entity if entity else None
-    
+
+    @no_db_error
     async def update(
             self,
             entity: GetBidSchema,

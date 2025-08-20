@@ -1,6 +1,5 @@
 from uuid import uuid4
-from typing import Annotated
-from jose import ExpiredSignatureError, jwt
+from jose import jwt
 from datetime import datetime, timezone, timedelta
 import inspect
 
@@ -8,11 +7,9 @@ from sqlalchemy.orm import Session
 from server.models.users import Users
 from server.enums.user_enums import TransactionStatus, TransactionTypes, UserRoles
 from passlib.context import CryptContext
-from server.config.database import get_db
-from server.repositories import DBAdaptor
 from fastapi.security import OAuth2PasswordBearer
 from server.config import app_configs, redis_store
-from jose.exceptions import JWTError, JWTClaimsError
+from jose.exceptions import JWTError
 from server.utils import (
     is_valid_email,
     otp_generator,
@@ -38,11 +35,7 @@ from server.events import (
     publish_otp,
     publish_fund_account
 )
-from fastapi import (
-    Depends, HTTPException, Request,
-    WebSocket, WebSocketException, status
-)
-
+from fastapi import HTTPException
 
 
 oauth_bearer = OAuth2PasswordBearer(tokenUrl=f"api/users/login")
@@ -53,13 +46,13 @@ oauth_bearer = OAuth2PasswordBearer(tokenUrl=f"api/users/login")
 ###############################################################################
 
 class UserNotificationServices:
-    def __init__(self, db: Session):
-        self.repo = DBAdaptor(db).notif_repo
+    def __init__(self, notif_repo):
+        self.repo = notif_repo
         self.debug = app_configs.DEBUG
 
-    async def list(self, notice: NotificationQuery):
+    async def list(self, db: Session, notice: NotificationQuery):
         try:
-            result = await self.repo.get_all(notice.model_dump(exclude_unset=True))
+            result = await self.repo.attachDB(db).get_all(notice.model_dump(exclude_unset=True))
             if not result:
                 raise ExcRaiser404(message='No Notification found')
             valid_notices = [
@@ -76,9 +69,9 @@ class UserNotificationServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
         
-    async def retrieve(self, id: str):
+    async def retrieve(self, db: Session, id: str):
         try:
-            notice = await self.repo.get_by_id(id)
+            notice = await self.repo.attachDB(db).get_by_id(id)
             if notice:
                 valid_notice = GetNotificationsSchema.model_validate(notice)
                 return valid_notice
@@ -91,9 +84,9 @@ class UserNotificationServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
         
-    async def create(self, data: CreateNotificationSchema):
+    async def create(self, db: Session, data: CreateNotificationSchema):
         try:
-            result = await self.repo.add(data.model_dump())
+            result = await self.repo.attachDB(db).add(data.model_dump())
             if result:
                 return GetNotificationsSchema.model_validate(result)
             raise ExcRaiser400(message='Unable to create Notification')
@@ -105,11 +98,11 @@ class UserNotificationServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
         
-    async def update(self, id: str, read: bool):
+    async def update(self, db: Session, id: str, read: bool):
         try:
-            notice = await self.repo.get_by_id(id)
+            notice = await self.repo.attachDB(db).get_by_id(id)
             if notice:
-                result = await self.repo.save(notice, {'read': read})
+                result = await self.repo.attachDB(db).save(notice, {'read': read})
                 if result:
                     return True
             raise ExcRaiser404(message='Notification not found')
@@ -127,14 +120,15 @@ class UserNotificationServices:
 ###############################################################################
 
 class UserWalletTransactionServices:
-    def __init__(self, db: Session):
-        self.repo = DBAdaptor(db).wallet_repo
-        self.user_repo = DBAdaptor(db).user_repo
-        self.notification = UserNotificationServices(db)
+    def __init__(self, notif_repo, user_repo, notif_service):
+        self.repo = notif_repo
+        self.user_repo = user_repo
+        self.notification = notif_service
         self.debug = app_configs.DEBUG
 
     async def init_transaction(
         self,
+        db: Session,
         data: InitializePaymentRes ,
         user: GetUserSchema,
         amount: float,
@@ -149,7 +143,7 @@ class UserWalletTransactionServices:
                 "amount": amount,
                 "reference_id": data.data.reference
             })
-            _ = await self.repo.add(wallet_data.model_dump())
+            _ = await self.repo.attachDB(db).add(wallet_data.model_dump())
             return True
         except ExcRaiser as e:
             raise
@@ -159,10 +153,10 @@ class UserWalletTransactionServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def create(self, transaction, extra):
+    async def create(self, db: Session, transaction, extra):
         try:
             transaction = WalletTransactionSchema(**transaction, **extra)
-            user = await self.user_repo.get_by_id(transaction.user_id)
+            user = await self.user_repo.attachDB(db).get_by_id(transaction.user_id)
             notify = False
 
             print(transaction, user)
@@ -172,30 +166,29 @@ class UserWalletTransactionServices:
             f"has {transaction.status.value}"
             )
 
-            exist = await self.repo.get_by_attr(
+            exist = await self.repo.attachDB(db).get_by_attr(
                 {'reference_id': transaction.reference_id}
             )
 
-            print(exist)
             if transaction.status == TransactionStatus.COMPLETED:
                 if exist and exist.status == transaction.status:
                     return
                 elif exist and exist.status != transaction.status:
-                    _ = await self.user_repo.fund_wallet(
+                    _ = await self.user_repo.attachDB(db).fund_wallet(
                         transaction, update=True, exist=exist
                     )
                     notify = True
                 elif not exist:
-                    _ = await self.user_repo.fund_wallet(transaction)
+                    _ = await self.user_repo.attachDB(db).fund_wallet(transaction)
                     notify = True
 
             else:
                 if exist and exist.status == transaction.status:
                     return
                 elif exist and exist.status != transaction.status:
-                    _ = await self.repo.save(exist, transaction.model_dump())
+                    _ = await self.repo.attachDB(db).save(exist, transaction.model_dump())
                 else:
-                    _ = await self.repo.add(transaction.model_dump())
+                    _ = await self.repo.attachDB(db).add(transaction.model_dump())
                     notify = True
             
 
@@ -203,6 +196,7 @@ class UserWalletTransactionServices:
                 pub_data = transaction.model_dump()
                 pub_data['email'] = user.email
                 _ = await self.notification.create(
+                    db,
                     CreateNotificationSchema(
                         title=NOTIF_TITLE,
                         message=NOTIF_MESSAGE,
@@ -219,10 +213,10 @@ class UserWalletTransactionServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def list(self, filter: WalletHistoryQuery):
+    async def list(self, db: Session, filter: WalletHistoryQuery):
         try:
             filter = filter.model_dump(exclude_none=True)
-            history = await self.repo.get_all(filter=filter)
+            history = await self.repo.attachDB(db).get_all(filter=filter)
             if not history:
                 raise ExcRaiser404(message='No Transaction found')
             valid_history = [
@@ -241,10 +235,10 @@ class UserWalletTransactionServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
         
-    async def withdraw(self, transaction, extra) -> bool:
+    async def withdraw(self, db: Session, transaction, extra) -> bool:
         try:
             transaction = WalletTransactionSchema(**transaction, **extra)
-            user = await self.user_repo.get_by_id(transaction.user_id)
+            user = await self.user_repo.attachDB(db).get_by_id(transaction.user_id)
             notify = False
 
             print(transaction, user)
@@ -254,30 +248,29 @@ class UserWalletTransactionServices:
             f"was {transaction.status.value}"
             )
 
-            exist = await self.repo.get_by_attr(
+            exist = await self.repo.attachDB(db).get_by_attr(
                 {'reference_id': transaction.reference_id}
             )
 
-            print(exist)
             if transaction.status == TransactionStatus.COMPLETED:
                 if exist and exist.status == transaction.status:
                     return
                 elif exist and exist.status != transaction.status:
-                    _ = await self.user_repo.withdraw(
+                    _ = await self.user_repo.attachDB(db).withdraw(
                         transaction, update=True, exist=exist
                     )
                     notify = True
                 elif not exist:
-                    _ = await self.user_repo.withdraw(transaction)
+                    _ = await self.user_repo.attachDB(db).withdraw(transaction)
                     notify = True
 
             else:
                 if exist and exist.status == transaction.status:
                     return
                 elif exist and exist.status != transaction.status:
-                    _ = await self.repo.save(exist, transaction.model_dump())
+                    _ = await self.repo.attachDB(db).save(exist, transaction.model_dump())
                 else:
-                    _ = await self.repo.add(transaction.model_dump())
+                    _ = await self.repo.attachDB(db).add(transaction.model_dump())
                     notify = True
             
 
@@ -285,6 +278,7 @@ class UserWalletTransactionServices:
                 pub_data = transaction.model_dump()
                 pub_data['email'] = user.email
                 _ = await self.notification.create(
+                    db,
                     CreateNotificationSchema(
                         title=NOTIF_TITLE,
                         message=NOTIF_MESSAGE,
@@ -301,9 +295,9 @@ class UserWalletTransactionServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def retrieve(self, reference: str):
+    async def retrieve(self, db: Session, reference: str):
         try:
-            transaction = await self.repo.get_by_attr(
+            transaction = await self.repo.attachDB(db).get_by_attr(
                 {'reference_id': reference}
             )
             if transaction:
@@ -323,10 +317,10 @@ class UserWalletTransactionServices:
 ##############################################################################
 
 class UserServices:
-    def __init__(self, db: Session):
-        self.repo = DBAdaptor(db).user_repo
+    def __init__(self, user_repo, notif_service):
+        self.repo = user_repo
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-        self.notification = UserNotificationServices(db)
+        self.notification = notif_service
         self.debug = app_configs.DEBUG
 
     def check_password(self, password, hashed_password) -> bool:
@@ -354,18 +348,19 @@ class UserServices:
             raise ValueError(err, "Unable to generate token")
         return LoginToken(**{"token": token, "token_type": token_type})
 
-    async def authenticate(self, identity: LoginSchema) -> LoginToken:
+    async def authenticate(self, db: Session, identity: LoginSchema) -> LoginToken:
         try:
             user = None
             if is_valid_email(identity.identifier):
-                user = await self.repo.get_by_email(identity.identifier)
+                user = await self.repo.attachDB(db).get_by_email(identity.identifier)
             else:
-                user = await self.repo.get_by_username(identity.identifier)
-            if user and self.check_password(
+                user = await self.repo.attachDB(db).get_by_username(identity.identifier)
+            if user and self.__check_password(
+
                     identity.password, user.hash_password
                 ):
                 token = await self.__generate_token(user)
-                return token
+                return token, user
             else:
                 raise ExcRaiser(
                     status_code=401,
@@ -382,6 +377,7 @@ class UserServices:
 
     async def update_referral_users(
         self,
+        db: Session,
         referrer: GetUserSchema,
         referree: GetUserSchema,
     ):
@@ -397,7 +393,7 @@ class UserServices:
                 user_id=str(referree.id), email=referree.email
             )
             refered_slots[f'slot_{referree.email}'] = refered_user.model_dump()
-            _ = await self.repo.update_jsonb(referrer.id, refered_slots)
+            _ = await self.repo.attachDB(db).update_jsonb(referrer.id, refered_slots)
 
             return True
         except ExcRaiser as e:
@@ -408,7 +404,7 @@ class UserServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def create_user(self, data: dict) -> dict[str, str]:
+    async def create_user(self, db: Session, data: dict) -> dict[str, str]:
         try:
             NOTIF_TITLE = "Welcome to Biddius"
             NOTIF_MESSAGE = (
@@ -417,15 +413,15 @@ class UserServices:
             )
             # Check if email already exist
             referral_code = data.pop('referral_code') if data.get('referral_code') else None
-            ex_uname = await self.repo.get_by_username(data.get('username'))\
+            ex_uname = await self.repo.attachDB(db).get_by_username(data.get('username'))\
             if data.get('username') else None
-            ex_email = await self.repo.get_by_email(data.get('email'))
+            ex_email = await self.repo.attachDB(db).get_by_email(data.get('email'))
             if ex_email or ex_uname:
                 raise ExcRaiser400(detail='Username or email already exist')
 
             # Create new user
             else:
-                new_user = await self.repo.add(data)
+                new_user = await self.repo.attachDB(db).add(data)
                 if not new_user:
                     raise ExcRaiser(
                         message="Unable to create User",
@@ -436,6 +432,7 @@ class UserServices:
                 new_user = GetUserSchema.model_validate(new_user)
                 # Create a notification for the new user
                 _ = await self.notification.create(
+                    db,
                     CreateNotificationSchema(
                         title=NOTIF_TITLE,
                         message=NOTIF_MESSAGE,
@@ -446,11 +443,11 @@ class UserServices:
                 # referral
                 if referral_code:
                     ref_username = decode_referral_code(referral_code)
-                    ref_user = await self.repo.get_by_username(ref_username)
-                    _ = await self.repo.update(
+                    ref_user = await self.repo.attachDB(db).get_by_username(ref_username)
+                    _ = await self.repo.attachDB(db).update(
                         new_user, {'referred_by': str(ref_user.id)}
                     )
-                    await self.update_referral_users(ref_user, new_user)
+                    await self.update_referral_users(db, ref_user, new_user)
 
                 # OTP
                 otp = otp_generator()
@@ -472,17 +469,18 @@ class UserServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def create_admin(self, data: dict):
+    async def create_admin(self, db: Session, data: dict):
         try:
-            ex_uname = await self.repo.get_by_username(data.get('username'))
-            ex_email = await self.repo.get_by_email(data.get('email'))
+            ex_uname = await self.repo.attachDB(db).get_by_username(data.get('username'))
+            ex_email = await self.repo.attachDB(db).get_by_email(data.get('email'))
             if ex_email or ex_uname:
                 raise ExcRaiser400(message='User already exist')
             data['role'] = UserRoles.ADMIN
-            new_user = await self.repo.add(data)
+            new_user = await self.repo.attachDB(db).add(data)
             new_user = GetUserSchema.model_validate(new_user)
             # Create a notification for the new user
             _ = await self.notification.create(
+                db,
                 CreateNotificationSchema(
                     title="ADMIN Registration",
                     message="You have been registered as an Admin",
@@ -508,19 +506,20 @@ class UserServices:
         
     async def add_recipient_code(
         self,
+        db: Session,
         data: AccountDetailsSchema,
         user: GetUserSchema
     ) -> AccountDetailsSchema:
         try:
             data = data.model_dump(exclude={'id'})
-            res = await self.repo.update(user, data)
+            res = await self.repo.attachDB(db).update(user, data)
             return AccountDetailsSchema.model_validate(*res)
         except Exception as e:
             raise e
 
-    async def retrieve(self, id) -> GetUserSchema:
+    async def retrieve(self, db: Session, id) -> GetUserSchema:
         try:
-            user = await self.repo.get_by_attr({'id': id})
+            user = await self.repo.attachDB(db).get_by_attr({'id': id})
             if user:
                 valid_user = GetUserSchema.model_validate(user)
                 return valid_user
@@ -534,9 +533,9 @@ class UserServices:
             raise ExcRaiser500(detail=str(e))
 
     # Not optimal (The auction list should be trauncated)
-    async def list(self, filter: PagedQuery) ->PagedResponse[list[GetUsers]]:
+    async def list(self, db: Session, filter: PagedQuery) ->PagedResponse[list[GetUsers]]:
         try:
-            result = await self.repo.get_all(filter.model_dump(exclude_unset=True))
+            result = await self.repo.attachDB(db).get_all(filter.model_dump(exclude_unset=True))
             if result:
                 valid_users = [
                     GetUsers.model_validate(user).model_dump(include={'__all__'})
@@ -559,13 +558,13 @@ class UserServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
         
-    async def new_otp(self, email: str):
+    async def new_otp(self, db: Session, email: str):
         try:
             async_redis = await redis_store.get_async_redis()
             stored_otp = await async_redis.get(f'otp:{email}')
             if stored_otp:
                 _ = await async_redis.delete(f'otp:{email}')
-            user = await self.repo.get_by_email(email)
+            user = await self.repo.attachDB(db).get_by_email(email)
             if user.email_verified:
                 return {'detail': 'User email already verified'}
             otp = otp_generator()
@@ -581,17 +580,18 @@ class UserServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def verify_otp(self, data: VerifyOtpSchema):
+    async def verify_otp(self, db: Session, data: VerifyOtpSchema):
         try:
             NOTIF_TITLE = "Email Verification"
             NOTIF_MESSAGE = "Your email has been verified successfully"
             async_redis = await redis_store.get_async_redis()
             stored_otp = await async_redis.get(f'otp:{data.email}')
-            user = await self.repo.get_by_email(data.email)
+            user = await self.repo.attachDB(db).get_by_email(data.email)
             if stored_otp == data.otp:
-                _ = await self.repo.save(user, {'email_verified': True})
+                _ = await self.repo.attachDB(db).save(user, {'email_verified': True})
                 _ = await async_redis.delete(f'otp:{data.email}')
                 _ = await self.notification.create(
+                    db,
                     CreateNotificationSchema(
                         title=NOTIF_TITLE,
                         message=NOTIF_MESSAGE,
@@ -608,17 +608,17 @@ class UserServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def update_user(self, user: GetUserSchema, data: UpdateUserSchema):
+    async def update_user(self, db: Session, user: GetUserSchema, data: UpdateUserSchema):
         try:
             if not user:
                 raise HTTPException(
                     status_code=400, detail="Not authenticated"
                 )
             _data = data.model_dump(exclude_unset=True, exclude_none=True)
-            ex_uname = await self.repo.get_by_username(_data.get('username'))
+            ex_uname = await self.repo.attachDB(db).get_by_username(_data.get('username'))
             if ex_uname and ex_uname.id != user.id:
                 raise ExcRaiser400(detail='Username already exist')
-            result = await self.repo.update(user, _data)
+            result = await self.repo.attachDB(db).update(user, _data)
             if result:
                 return True
         except ExcRaiser as e:
@@ -631,6 +631,7 @@ class UserServices:
 
     async def update_address(
         self,
+        db: Session,
         user: GetUserSchema,
         data: UpdateUserAddressSchema
     ):
@@ -640,7 +641,7 @@ class UserServices:
                     status_code=400, detail="Not authenticated"
                 )
             _data = data.model_dump(exclude_unset=True, exclude_none=True)
-            result = await self.repo.update(user, _data)
+            result = await self.repo.attachDB(db).update(user, _data)
             if result:
                 return True
         except ExcRaiser as e:
@@ -651,9 +652,9 @@ class UserServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
         
-    async def get_reset_token(self, email: str):
+    async def get_reset_token(self, db: Session, email: str):
         try:
-            user = await self.repo.get_by_email(email)
+            user = await self.repo.attachDB(db).get_by_email(email)
             if not user:
                 raise ExcRaiser404("User not found")
             token = uuid4().hex
@@ -670,14 +671,14 @@ class UserServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def reset_password(self, data: ResetPasswordSchema):
+    async def reset_password(self, db: Session, data: ResetPasswordSchema):
         try:
             async_redis = await redis_store.get_async_redis()
             stored_token = await async_redis.get(f'reset_password:{data.email}')
             if stored_token == data.token: 
                 if data.password == data.confirm_password:
-                    user = await self.repo.get_by_email(data.email)
-                    _ = await self.repo.save(
+                    user = await self.repo.attachDB(db).get_by_email(data.email)
+                    _ = await self.repo.attachDB(db).save(
                         user, {'hash_password': self.pwd_context.hash(data.password)}
                     )
                     _ = await async_redis.delete(f'reset_password:{data.email}')
@@ -692,13 +693,14 @@ class UserServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
         
-    async def change_password(self, user: GetUserSchema, data: ChangePasswordSchema):
+    async def change_password(self, db: Session, user: GetUserSchema, data: ChangePasswordSchema):
         try:
-            user = await self.repo.get_by_email(user.email)
-            if not self.check_password(data.old_password, user.hash_password):
+            user = await self.repo.attachDB(db).get_by_email(user.email)
+            if not self.__check_password(data.old_password, user.hash_password):
+
                 raise ExcRaiser400(detail='Invalid old password')
             if data.new_password == data.confirm_password:
-                _ = await self.repo.save(
+                _ = await self.repo.attachDB(db).save(
                     user, {'hash_password': self.pwd_context.hash(data.new_password)}
                 )
                 return {'detail': 'Password change successful'}
@@ -711,7 +713,7 @@ class UserServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def get_referral_code(self, user: GetUserSchema):
+    async def get_referral_code(self, db: Session, user: GetUserSchema):
         try:
             username = user.username
             if not username:
@@ -726,7 +728,7 @@ class UserServices:
                     'referred_users': user.referred_users
                 }
             ref_code = generate_referral_code(username)
-            _ = await self.repo.update(
+            _ = await self.repo.attachDB(db).update(
                 user, {'referral_code': ref_code}
             )
             return {
@@ -741,10 +743,10 @@ class UserServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def delete_user(self, user: GetUserSchema):
+    async def delete_user(self, db: Session, user: GetUserSchema):
         try:
-            user_ = await self.repo.get_by_id(user.id)
-            result = await self.repo.delete(user_)
+            user_ = await self.repo.attachDB(db).get_by_id(user.id)
+            result = await self.repo.attachDB(db).delete(user_)
             if result:
                 return True
         except ExcRaiser as e:
@@ -755,7 +757,7 @@ class UserServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def google_auth(self, data: dict):
+    async def google_auth(self, db: Session, data: dict):
         try:
             user = await self.repo.get_by_email(data.get('email'))
             if not user:
@@ -775,7 +777,7 @@ class UserServices:
                     'role': UserRoles.CLIENT,
                     'google_id': data.get('sub'),
                 }
-                new_user = await self.repo.add(new_user_dict)
+                new_user = await self.repo.attachDB(db).add(new_user_dict)
                 if not new_user:
                     raise ExcRaiser400(detail='Unable to create user')
 
@@ -784,6 +786,7 @@ class UserServices:
                 new_user = GetUserSchema.model_validate(new_user)
                 # Create a notification for the new user
                 _ = await self.notification.create(
+                    db,
                     CreateNotificationSchema(
                         title=NOTIF_TITLE,
                         message=NOTIF_MESSAGE,
@@ -803,15 +806,15 @@ class UserServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def rate_user(self, user_id: str, rating: int):
+    async def rate_user(self, db: Session, user_id: str, rating: int):
         try:
-            user = await self.repo.get_by_id(user_id)
+            user = await self.repo.attachDB(db).get_by_id(user_id)
             if not user:
                 raise ExcRaiser404(message='User not found')
             rating_count = user.rating_count + 1
             rating_sum = user.rating + rating
             rating = round(rating_sum / rating_count, 2)
-            _ = await self.repo.save(
+            _ = await self.repo.attachDB(db).save(
                 user,
                 {
                     'rating': rating,
@@ -826,78 +829,3 @@ class UserServices:
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
-
-    ############################## Static Methods #################################
-
-    @staticmethod
-    def get_from_cookie(request: Request):
-        token = request.cookies.get('access_token', None)
-        return token
-    
-    @staticmethod
-    async def get_ws_user(ws: WebSocket, db: Session = Depends(get_db), token = None):
-        try:
-            if token:
-                user = await UserServices._get_current_user(token, db)
-                return user
-            else:
-                token = ws.headers.get('Authorization')
-                token = token.split(' ')[-1] if token else None
-                return await UserServices._get_current_user(token, db)
-        except:
-            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
-
-    @staticmethod
-    async def _get_current_user(
-        token: Annotated[str, Depends(oauth_bearer), Depends(get_from_cookie)],
-        db: Session = Depends(get_db)
-    ) -> GetUserSchema:
-        repo = UserServices(db).repo
-        try:
-            if not token:
-                raise ExcRaiser(
-                    status_code=401,
-                    message='Unauthenticated',
-                    detail='No token provided'
-                )
-            claims = jwt.decode(
-                token=token,
-                algorithms=app_configs.security.ALGORITHM,
-                key=app_configs.security.JWT_SECRET_KEY
-            )
-
-            if claims and claims.get('email') and claims.get('id'):
-                user = await repo.get_by_attr({'id': claims.get('id')})
-                if user:
-                    return GetUserSchema.model_validate(user)
-            else:
-                raise ExcRaiser(
-                    status_code=401,
-                    message = 'Unauthenticated',
-                    detail="Invalid token"
-                )
-        except ExpiredSignatureError as ex_sig:
-            raise ExcRaiser(
-                status_code=401,
-                message='Unauthenticated',
-                detail=['Expired token', ex_sig.__repr__()]
-            )
-        except (JWTClaimsError, JWTError) as j_e:
-            raise ExcRaiser(
-                status_code=401,
-                message='Unauthenticated',
-                detail=['Invalid token', j_e.__repr__()]
-            )
-        except Exception as e:
-            if type(e) == ExcRaiser:
-                raise e
-            raise ExcRaiser(
-                status_code=401,
-                message='Unauthenticated',
-                detail=e.__repr__()
-            )
-
-
-current_user = Annotated[GetUserSchema, Depends(UserServices._get_current_user)]
-
-

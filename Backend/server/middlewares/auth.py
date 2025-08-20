@@ -1,12 +1,8 @@
 from functools import wraps
-from typing import Union
 from fastapi import HTTPException
-from server.services import current_user
-from server.schemas import GetUserSchema
 from server.enums import ServiceKeys
 from server.enums.user_enums import UserRoles, Permissions
-from server.middlewares.exception_handler import ExcRaiser500, ExcRaiser404
-from enum import Enum
+from server.middlewares.exception_handler import ExcRaiser404
 
 
 # Permissions decorator
@@ -30,9 +26,8 @@ def permissions(
                     entity_id = kwargs.get(service.id)
                     if not entity_id:
                         raise ExcRaiser404("Entity ID not found")
-                    entity = await service.service(kwargs.get('db')).retrieve(entity_id)
+                    entity = await service.service.retrieve(kwargs.get('db'), entity_id)
                     if (getattr(entity, 'users_id', None) != user.id) and (getattr(entity, 'user_id', None) != user.id) and (entity.id != user.id):
-                        print(entity, f'\n{getattr(entity, "user_id", None) == user.id}')
                         raise HTTPException(
                             status_code=403,
                             detail='Unauthorized'

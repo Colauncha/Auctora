@@ -1,16 +1,13 @@
 from sqlalchemy import UUID
-from server.repositories.repository import Repository
+from server.repositories.repository import Repository, no_db_error
 from server.models.items import Items, Categories, Subcategory
-from server.schemas import (
-    GetCategorySchema, CreateCategorySchema,
-    GetSubCategorySchema, CreateSubCategorySchema,
-    GetItemSchema, CreateItemSchema, 
-)
+from server.schemas import GetItemSchema
 
 class ItemRepository(Repository):
-    def __init__(self, db):
-        super().__init__(db, Items)
+    def __init__(self):
+        super().__init__(Items)
 
+    @no_db_error
     async def get_by_seller_id(
             self, id: str|UUID, schema_mode: bool = False
         ) -> GetItemSchema | Items:
@@ -24,8 +21,8 @@ class ItemRepository(Repository):
 
 
 class CategoryRepository(Repository):
-    def __init__(self, db):
-        super().__init__(db, Categories)
+    def __init__(self):
+        super().__init__(Categories)
 
     def get_last_id(self) -> str:
         last_cat = self.all()
@@ -34,8 +31,8 @@ class CategoryRepository(Repository):
 
 
 class SubCategoryRepository(Repository):
-    def __init__(self, db):
-        super().__init__(db, Subcategory)
+    def __init__(self):
+        super().__init__(Subcategory)
 
     def get_last_id(self) -> str:
         last_sub_cat = self.all()

@@ -1,5 +1,7 @@
 import math
 from typing import Any, Type, Union
+from functools import wraps
+
 from sqlalchemy.orm import Session
 from server.models.base import BaseModel
 from server.models.users import Users
@@ -10,7 +12,7 @@ from server.schemas import (
     GetBidSchema
 )
 from server.middlewares.exception_handler import (
-    ExcRaiser, ExcRaiser404
+    ExcRaiser, ExcRaiser404, ExcRaiser500
 )
 from server.utils.helpers import paginator
 
@@ -23,12 +25,33 @@ T = Union[
 ]
 
 
+def no_db_error(func):
+    """
+    Decorator to raise error if DB is not attached\
+    for the Repository class methods
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not args[0].db:
+            raise ExcRaiser500(detail='DB not found or attached')
+        return func(*args, **kwargs)
+    return wrapper
+
+
 class Repository:
     """Store Access"""
-    def __init__(self, db: Session, model: BaseModel):
-        self.db = db
+    db: Session = None
+    def __init__(self, model: BaseModel):
         self._Model = model
 
+    def attachDB(self, db: Session):
+        """Attach database session to the repository"""
+        if not db:
+            raise ExcRaiser(message='DB not found or attached')
+        self.db = db
+        return self
+
+    @no_db_error
     async def add(self, entity: dict):
         """Creates a new entity and persists it in the database"""
         try:
@@ -41,6 +64,7 @@ class Repository:
             self.db.rollback()
             raise e
 
+    @no_db_error
     async def save(self, entity: BaseModel, data: dict):
         try:
             if data:
@@ -55,6 +79,7 @@ class Repository:
             self.db.rollback()
             raise e
 
+    @no_db_error
     async def get_by_id(self, id: str):
         try:
             entity = self.db.query(self._Model).filter(self._Model.id == id).order_by(self._Model.id)
@@ -63,7 +88,8 @@ class Repository:
             raise ExcRaiser404(message='Entity not found')
         except Exception as e:
             raise e
-        
+
+    @no_db_error
     async def get_by_attr(self, attr: dict[str, str | Any], many: bool = False):
         try:
             entity = self.db.query(self._Model).filter_by(**attr)
@@ -74,7 +100,8 @@ class Repository:
             return None
         except Exception as e:
             raise e
-        
+
+    @no_db_error
     async def update(
             self,
             entity: T,
@@ -91,7 +118,8 @@ class Repository:
         except Exception as e:
             self.db.rollback()
             raise e
-        
+
+    @no_db_error
     async def update_jsonb(
         self,
         id: str,
@@ -117,6 +145,7 @@ class Repository:
             self.db.rollback()
             raise e
 
+    @no_db_error
     async def delete(self, entity: BaseModel) -> bool:
         try:
             self.db.delete(entity)
@@ -124,17 +153,20 @@ class Repository:
         except Exception as e:
             raise e
         return True
-    
+
+    @no_db_error
     async def exists(self, filter: dict) -> bool:
         entity = self.db.query(self._Model).filter_by(**filter).first()
         return True if entity else False
 
+    @no_db_error
     def all(self):
         try:
             return self.db.query(self._Model).order_by(self._Model.id).all()
         except Exception as e:
             raise e
-        
+
+    @no_db_error
     async def get_all(
         self,
         filter: dict = None,

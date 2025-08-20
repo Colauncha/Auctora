@@ -9,7 +9,7 @@ from ..models.payment import Payments
 from ..config.database import get_db, app_configs
 from ..enums.auction_enums import AuctionStatus
 from ..enums.payment_enums import PaymentStatus
-from ..services.auction_service import AuctionServices
+from ..services import Services
 
 # Configure logging
 LOG_FILE_PATH = '/var/log/biddius-logs/auction_updater.log'\
@@ -46,7 +46,7 @@ async def update_status():
             elif event.status == AuctionStatus.ACTIVE and current_time >= event.end_date:
                 logger.info(f"♻ Updating status for event {event.id} to {AuctionStatus.COMPLETED}")
                 event.status = AuctionStatus.COMPLETED
-                await AuctionServices(session).close(event.id)
+                await Services.auctionServices.close(session, event.id)
                 logger.info('✅ Event status updated')
                 update = True
 
@@ -81,7 +81,7 @@ async def process_intra_payment():
                 logger.info(
                     f"♻ Updating status for payment {event.id} from {event.from_id} to {event.to_id}"
                 )
-                await AuctionServices(session).finalize_payment(event.auction_id, event.from_id)
+                await Services.auctionServices.finalize_payment(session, event.auction_id, event.from_id)
                 # event.status = 'COMPLETED'
                 print('Done')
                 logger.info('✅ Payment status updated')

@@ -1,24 +1,16 @@
 from enum import Enum
-from server.services.item_service import ItemServices
-from server.services.user_service import (
-    UserServices,
-    UserNotificationServices,
-    UserWalletTransactionServices
-)
-from server.services.category_service import CategoryServices
-from server.services.auction_service import AuctionServices
-from server.services.bid_services import BidServices
+from server.services import Services
 
 
 class ServiceKeys(Enum):
     NONE = (None, None)
-    USER = ('id', UserServices)
-    ITEM = ('item_id', ItemServices)
-    CATEGORY = ('category_id', CategoryServices)
-    AUCTION = ('auction_id', AuctionServices)
-    NOTIFICATION = ('notification_id', UserNotificationServices)
-    BID = ('bid_id', BidServices)
-    WALLET = ('transaction_id', UserWalletTransactionServices)
+    USER = ('id', Services.userServices)
+    ITEM = ('item_id', Services.itemServices)
+    CATEGORY = ('category_id', Services.categoryServices)
+    AUCTION = ('auction_id', Services.auctionServices)
+    NOTIFICATION = ('notification_id', Services.notificationServices)
+    BID = ('bid_id', Services.bidServices)
+    WALLET = ('transaction_id', Services.walletServices)
 
 
     def __init__(self, id, service):

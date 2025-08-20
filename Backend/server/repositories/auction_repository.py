@@ -4,20 +4,20 @@ from sqlalchemy import String
 
 from server.models.auction import Auctions, AuctionParticipants
 from server.models.items import Items
-from server.repositories.repository import Repository
+from server.repositories.repository import Repository, no_db_error
 from server.schemas import PagedResponse
 from server.utils import paginator
 
 
 class AuctionParticipantRepository(Repository):
-    def __init__(self, db):
-        super().__init__(db, AuctionParticipants)
+    def __init__(self):
+        super().__init__(AuctionParticipants)
 
 
 class AuctionRepository(Repository):
-    def __init__(self, db):
-        super().__init__(db, Auctions)
-        self.auction_P = AuctionParticipantRepository(db)
+    def __init__(self, auction_participant: AuctionParticipantRepository):
+        super().__init__(Auctions)
+        self.auction_P = auction_participant
 
     async def validate_participant(self, auction_id: str, participant: str):
         try:
@@ -39,6 +39,7 @@ class AuctionRepository(Repository):
         float_list = [float(figure) for figure in float_list]
         return float_list
 
+    @no_db_error
     async def get_all(
         self,
         filter_ = None,
@@ -55,8 +56,6 @@ class AuctionRepository(Repository):
         start_price = self.queryToFloatList(filter_.pop('start_price', None))
         current_price = self.queryToFloatList(filter_.pop('current_price', None))
         buy_now_price = self.queryToFloatList(filter_.pop('buy_now_price', None))
-
-        print(start_price, current_price, buy_now_price)
 
         limit = per_page
         offset = paginator(page, per_page)
@@ -110,6 +109,7 @@ class AuctionRepository(Repository):
             total=total,
         )
 
+    @no_db_error
     async def search(self, filter_: dict | None = None):
         filter_ = filter_.copy() if filter_ else {}
         page = filter_.pop("page", 1)

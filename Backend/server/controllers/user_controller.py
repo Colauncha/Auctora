@@ -7,7 +7,7 @@ from fastapi.responses import RedirectResponse
 import httpx
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-from server.config import get_db, redis_store, app_configs
+from server.config import get_db, app_configs
 from server.enums import ServiceKeys
 from server.enums.user_enums import (
     Permissions,
@@ -31,13 +31,7 @@ from server.schemas import (
     WalletHistoryQuery, TransferRecipientData,
     AccountDetailsSchema, UpdateUserAddressSchema
 )
-from server.services import (
-    UserServices,
-    current_user,
-    UserNotificationServices,
-    UserWalletTransactionServices
-)
-from server.utils import Emailer
+from server.services import Services, current_user
 from sqlalchemy.orm import Session
 import requests
 
@@ -58,7 +52,7 @@ async def get_users(
     filter: PagedQuery = Depends(PagedQuery),
     db: Session = Depends(get_db)
 ) -> PagedResponse[list[GetUsers]]:
-    users = await UserServices(db).list(filter)
+    users = await Services.userServices.list(db, filter)
     return users
 
 
@@ -77,7 +71,7 @@ async def retrieve_users(
     """
     Get user
     """
-    retrieved_user = await UserServices(db).retrieve(id)
+    retrieved_user = await Services.userServices.retrieve(db, id)
     if retrieved_user.role == UserRoles.ADMIN and user.role != UserRoles.ADMIN:
         raise ExcRaiser(
             status_code=403,
@@ -97,7 +91,7 @@ async def register(
     data: CreateUserSchema,
     db: Session = Depends(get_db)
 ) -> APIResponse:
-    _ = await UserServices(db).create_user(data.model_dump(exclude_unset=True))
+    _ = await Services.userServices.create_user(db, data.model_dump(exclude_unset=True))
     return APIResponse(
         data={
             'message':
@@ -115,7 +109,7 @@ async def register_admin(
 ) -> APIResponse:
     data = data.model_dump(exclude_unset=True)
     data['role'] = UserRoles.ADMIN
-    _ = await UserServices(db).create_user(data)
+    _ = await Services.userServices.create_user(db, data)
 
     return APIResponse(
         data={
@@ -130,7 +124,7 @@ async def verify_otp(
     data: VerifyOtpSchema,
     db: Session = Depends(get_db)
 ) -> APIResponse[dict[str, str]]:
-    response = await UserServices(db).verify_otp(data)
+    response = await Services.userServices.verify_otp(db, data)
     return APIResponse(data=response)
 
 
@@ -139,7 +133,7 @@ async def reset_otp(
     email: str,
     db: Session = Depends(get_db)
 ) -> APIResponse[dict[str, str]]:
-    response = await UserServices(db).new_otp(email)
+    response = await Services.userServices.new_otp(db, email)
     return APIResponse(data=response)    
 
 
@@ -154,7 +148,7 @@ async def login(
     response: Response,
     db: Session = Depends(get_db)
 ) -> APIResponse[LoginToken]:
-    token = await UserServices(db).authenticate(credentials)
+    token, user = await Services.userServices.authenticate(db, credentials)
     response.set_cookie(
         key='access_token',
         value=token.token,
@@ -164,7 +158,10 @@ async def login(
         secure=True if app_configs.ENV == 'production' else False,
         samesite="None" if app_configs.ENV == 'production' else "lax",
     )
-    return APIResponse(data=token)
+    return APIResponse(data={
+        'token': token,
+        'user': user
+    })
 
 
 @route.get("/google/auth")
@@ -206,7 +203,7 @@ async def callback(
         response_data["id_token"], google_requests.Request(), app_configs.GOOGLE_CLIENT_ID
     )
 
-    token, url = await UserServices(db).google_auth(id_info)
+    token, url = await Services.userServices.google_auth(db, id_info)
     if token is None:
         raise ExcRaiser400(detail="Failed to authenticate user")
 
@@ -237,9 +234,9 @@ async def update_user(
     db: Session = Depends(get_db)
 ) -> APIResponse[bool]:
     id = id if (user.role == UserRoles.ADMIN and id) else user.id
-    user_ = await UserServices(db).retrieve(id)
+    user_ = await Services.userServices.retrieve(db, id)
     valid_user = GetUserSchema.model_validate(user_)
-    result = await UserServices(db).update_user(valid_user, data)
+    result = await Services.userServices.update_user(db, valid_user, data)
     return APIResponse(data=result)
 
 
@@ -252,9 +249,9 @@ async def update_address(
     db: Session = Depends(get_db)
 ) -> APIResponse[bool]:
     id = id if user.role == UserRoles.ADMIN else user.id
-    user_ = await UserServices(db).retrieve(id)
+    user_ = await Services.userServices.retrieve(db, id)
     valid_user = GetUserSchema.model_validate(user_)
-    result = await UserServices(db).update_address(valid_user, data)
+    result = await Services.userServices.update_address(db, valid_user, data)
     return APIResponse(data=result)
 
 
@@ -263,7 +260,7 @@ async def get_reset_token(
     email: str,
     db: Session = Depends(get_db)
 ) -> APIResponse:
-    response = await UserServices(db).get_reset_token(email)
+    response = await Services.userServices.get_reset_token(db, email)
     return APIResponse(data=response)
 
 
@@ -272,7 +269,7 @@ async def reset_password(
     data: ResetPasswordSchema,
     db: Session = Depends(get_db)
 ) -> APIResponse:
-    response = await UserServices(db).reset_password(data)
+    response = await Services.userServices.reset_password(db, data)
     return APIResponse(data=response)
 
 
@@ -283,7 +280,7 @@ async def change_password(
     data: ChangePasswordSchema,
     db: Session = Depends(get_db)
 ) -> APIResponse:
-    response = await UserServices(db).change_password(user, data)
+    response = await Services.userServices.change_password(db, user, data)
     return APIResponse(data=response)
 
 
@@ -293,7 +290,7 @@ async def get_referral_code(
     user: current_user,
     db: Session = Depends(get_db)
 ) -> APIResponse:
-    response = await UserServices(db).get_referral_code(user)
+    response = await Services.userServices.get_referral_code(db, user)
     return APIResponse(data=response)
 
 
@@ -303,7 +300,7 @@ async def delete(
     user: current_user,
     db: Session = Depends(get_db)
 ) -> APIResponse:
-    response = await UserServices(db).delete_user(user)
+    response = await Services.userServices.delete_user(db, user)
     return APIResponse(data={}) if response else\
         APIResponse(message='Failed', success=False, data={})
 
@@ -320,7 +317,7 @@ async def rate_user(
         raise ExcRaiser400(detail="You cannot rate yourself")
     if rating < 1 or rating > 5:
         raise ExcRaiser400(detail="Rating must be between 1 and 5")
-    response = await UserServices(db).rate_user(user_id, rating)
+    response = await Services.userServices.rate_user(db, user_id, rating)
     return APIResponse(data=response)
 
 
@@ -337,7 +334,7 @@ async def list(
 ) -> PagedResponse[list[GetNotificationsSchema]]:
     filter.user_id = user.id
     filter = NotificationQuery(**filter.model_dump())
-    notifications = await UserNotificationServices(db).list(filter)
+    notifications = await Services.notificationServices.list(db, filter)
     return notifications
 
 
@@ -348,7 +345,7 @@ async def retrieve(
     notification_id: str,
     db: Session = Depends(get_db)
 ) -> APIResponse[GetNotificationsSchema]:
-    notification = await UserNotificationServices(db).retrieve(notification_id)
+    notification = await Services.notificationServices.retrieve(db, notification_id)
     return APIResponse(data=notification)
 
 
@@ -360,8 +357,8 @@ async def update(
     data: UpdateNotificationSchema,
     db: Session = Depends(get_db)
 ) -> APIResponse:
-    result = await UserNotificationServices(db).update(
-        notification_id, data.read
+    result = await Services.notificationServices.update(
+        db, notification_id, data.read
     )
     return APIResponse(data=result)
 
@@ -378,7 +375,7 @@ async def list(
     db: Session = Depends(get_db)
 ) -> PagedResponse:
     filter.user_id = user.id
-    result = await UserWalletTransactionServices(db).list(filter)
+    result = await Services.walletServices.list(db, filter)
     return result
 
 
@@ -406,8 +403,8 @@ async def get_gateway_url(
     response = requests.post(url, headers=headers, json=data)
     res_data: dict = response.json()
     data = InitializePaymentRes.model_validate(res_data)
-    _ = await UserWalletTransactionServices(db).init_transaction(
-        data, user, amount
+    _ = await Services.walletServices.init_transaction(
+        db, data, user, amount
     )
     return data
 
@@ -450,8 +447,8 @@ async def verify_funding(
     data.amount = float(res_data.get('data').get('amount') / 100)
     data.user_id = str(user.id)
     data.email = user.email
-    _ = await UserWalletTransactionServices(db).create(
-        data.model_dump(), extra
+    _ = await Services.walletServices.create(
+        db, data.model_dump(), extra
     )
     return WalletTransactionSchema(**data.model_dump(), **extra)
 
@@ -462,13 +459,10 @@ async def paystack_webhook(
     db: Session = Depends(get_db)
 ) -> APIResponse:
 
-    print("Webhook received")
     signature = request.headers.get("x-paystack-signature")
     ip = request.client.host
     secret = app_configs.paystack.PAYSTACK_SECRET_KEY.encode()
 
-    print(f"IP: {ip}")
-    print(f"Signature: {signature}")
     if ip not in app_configs.paystack.PAYSTACK_IP_WL:
         raise ExcRaiser400(detail="IP not allowed")
  
@@ -482,8 +476,6 @@ async def paystack_webhook(
     if not hmac.compare_digest(hash_obj.lower(), signature.lower()):
         raise ExcRaiser400(detail="Invalid signature")
 
-    ...
-    print("HMAC verified")
     data = PaystackWebhookSchema.model_validate(json.loads(data_bytes))
     meta = data_json.get('data').get('metadata')
 
@@ -492,7 +484,6 @@ async def paystack_webhook(
     }
 
     # Split event string e.g 'charge.success' == ['charge', 'success']
-    print(data.event)
     event, subevent = data.event.split('.')
     if event == 'charge':
         tranx = {
@@ -508,13 +499,11 @@ async def paystack_webhook(
         extra['description'] = (
             f"{data.data.get('message')}: transaction {extra['status'].value}"
         )
-        print(tranx, extra)
-        _ = await UserWalletTransactionServices(db).create(tranx, extra)
+        _ = await Services.walletServices.create(db, tranx, extra)
 
-        print("Funding transaction completed")
     elif event == 'transfer':
-        transaction = await UserWalletTransactionServices(db).retrieve(data.data.get('reference'))
-        user = await UserServices(db).retrieve(transaction.user_id)
+        transaction = await Services.walletServices.retrieve(db, data.data.get('reference'))
+        user = await Services.userServices.retrieve(db, transaction.user_id)
         tranx = {
             "user_id": user.id,
             "email": user.email,
@@ -533,10 +522,8 @@ async def paystack_webhook(
         extra["transaction_type"] = TransactionTypes.WITHDRAWAL
         extra["description"] = f"{data.data.get('message')}: transfer {subevent}"
 
-        print(tranx, extra)
-        _ = await UserWalletTransactionServices(db).withdraw(tranx, extra)
+        _ = await Services.walletServices.withdraw(db, tranx, extra)
 
-        print("Transfer transaction processed")
     return APIResponse()
 
 
@@ -599,7 +586,7 @@ async def transfer_recipient(
         id=str(user.id)
     )
 
-    acct_data = await UserServices(db).add_recipient_code(account_data, user)
+    acct_data = await Services.userServices.add_recipient_code(db, account_data, user)
     return APIResponse(data=acct_data)
 
 
@@ -611,8 +598,10 @@ async def withdraw(
     credentials: LoginSchema,
     db: Session = Depends(get_db)
 ) -> APIResponse:
-    user = await UserServices(db).repo.get_by_email(user.email)
-    validate = UserServices(db).check_password(
+  
+    user = await Services.userServices.repo.attachDB(db).get_by_email(user.email)
+    validate = await Services.userServices.__check_password(
+
         credentials.password, user.hash_password
     )
 
@@ -645,8 +634,8 @@ async def withdraw(
     print(res_data)
 
     if res_data.get('status') is True:
-        result = await UserWalletTransactionServices(db).init_transaction(
-            data, user, amount, TransactionTypes.WITHDRAWAL
+        result = await Services.walletServices.init_transaction(
+            db, data, user, amount, TransactionTypes.WITHDRAWAL
         )
 
     return APIResponse(

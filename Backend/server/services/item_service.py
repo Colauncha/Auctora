@@ -19,13 +19,13 @@ from starlette.concurrency import run_in_threadpool
 
 
 class ItemServices:
-    def __init__(self, db: Session):
-        self.repo = DBAdaptor(db).item_repo
-        self.subcat_repo = DBAdaptor(db).sub_category_repo
+    def __init__(self, item_repo, sub_cat_repo):
+        self.repo = item_repo
+        self.subcat_repo = sub_cat_repo
 
-    async def create(self, data: dict[str, any]) -> GetItemSchema:
+    async def create(self, db: Session, data: dict[str, any]) -> GetItemSchema:
         try:
-            subcat = await self.subcat_repo.get_by_attr(
+            subcat = await self.subcat_repo.attachDB(db).get_by_attr(
                 {'id': data.get('sub_category_id')}
             )
             if subcat.parent_id != data.get('category_id'):
@@ -34,7 +34,7 @@ class ItemServices:
                     message="Invalid category",
                     detail="Subcategory must be under Category"
                 ) 
-            item = await self.repo.add(data)
+            item = await self.repo.attachDB(db).add(data)
             if item:
                 result = GetItemSchema.model_validate(item)
                 return result
@@ -47,9 +47,9 @@ class ItemServices:
                 detail=repr(e)
             )
 
-    async def retrieve(self, id: str) -> GetItemSchema:
+    async def retrieve(self, db: Session, id: str) -> GetItemSchema:
         try:
-            result = await self.repo.get_by_attr({'id': id})
+            result = await self.repo.attachDB(db).get_by_attr({'id': id})
             if result:                
                 return GetItemSchema.model_validate(result)
             raise ExcRaiser404(message='Item not found')
@@ -63,7 +63,7 @@ class ItemServices:
             )
 
     async def upload_images(
-            self, item, uploads: list[UploadFile]
+            self, db: Session, item, uploads: list[UploadFile]
         ) -> GetItemSchema:
         try:
             cloudn_resp = {}
@@ -77,18 +77,17 @@ class ItemServices:
                 }
                 result = ImageLinkObj.model_validate(result).model_dump()
                 cloudn_resp['image_link' if idx == 1 else f'image_link_{idx}'] = result
-            updated_entity = await self.repo.update(item, cloudn_resp)
+            updated_entity = await self.repo.attachDB(db).update(item, cloudn_resp)
             return GetItemSchema.model_validate(*updated_entity)
         except Exception as e:
             if issubclass(type(e), ExcRaiser):
                 raise e
             raise e
 
-    async def update(self, id: str, data: dict):
+    async def update(self, db: Session, id: str, data: dict):
         try:
-            print(data)
-            entity = await self.repo.get_by_id(id)
-            updated = await self.repo.update(entity, data)
+            entity = await self.repo.attachDB(db).get_by_id(id)
+            updated = await self.repo.attachDB(db).update(entity, data)
             return GetItemSchema.model_validate(updated[0])
         except ExcRaiser as e:
             raise

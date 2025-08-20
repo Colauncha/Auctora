@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, WebSocket
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from server.middlewares.exception_handler import ExcRaiser400
 from server.config import get_db
@@ -7,10 +7,10 @@ from server.schemas import (
     GetAuctionSchema, CreateAuctionSchema,
     RestartAuctionSchema, PagedResponse, AuctionQueryScalar,
 )
-from server.services.auction_service import AuctionServices
+from server.services import Services, current_user
 from server.middlewares.auth import (
     permissions, Permissions,
-    current_user, ServiceKeys
+    ServiceKeys
 )
 
 
@@ -26,7 +26,7 @@ async def create(
 ) -> APIResponse[GetAuctionSchema]:
     data = data.model_dump(exclude_unset=True)
     data["users_id"] = user.id
-    result = await AuctionServices(db).create(data)
+    result = await Services.auctionServices.create(db, data)
     print(result)
     return APIResponse(status_code=201, data=result)
 
@@ -36,7 +36,7 @@ async def list(
     filter: AuctionQueryScalar = Depends(),
     db: Session = Depends(get_db)
 ) -> PagedResponse[list[GetAuctionSchema]]:
-    result = await AuctionServices(db).list(filter)
+    result = await Services.auctionServices.list(db, filter)
     return result
 
 
@@ -45,7 +45,7 @@ async def retrieve(
     id: str,
     db: Session = Depends(get_db)
 ) -> APIResponse[GetAuctionSchema]:
-    result = await AuctionServices(db).retrieve(id)
+    result = await Services.auctionServices.retrieve(db, id)
     return APIResponse(data=result)
 
 
@@ -58,7 +58,7 @@ async def update(
     db: Session = Depends(get_db)
 ) -> APIResponse[GetAuctionSchema]:
     data = data.model_dump(exclude_unset=True)
-    result = await AuctionServices(db).update(auction_id, data)
+    result = await Services.auctionServices.update(db, auction_id, data)
     return APIResponse(data=result)
 
 
@@ -69,7 +69,7 @@ async def delete(
     auction_id: str,
     db: Session = Depends(get_db)
 ) -> APIResponse:
-    result = await AuctionServices(db).delete(auction_id)
+    result = await Services.auctionServices.delete(db, auction_id)
     return APIResponse(data={}) if result else\
     APIResponse(message='Fail', success=False)
 
@@ -81,12 +81,12 @@ async def finalize(
     auction_id: str,
     db: Session = Depends(get_db)
 ) -> APIResponse[bool]:
-    auction = await AuctionServices(db).retrieve(auction_id)
+    auction = await Services.auctionServices.retrieve(db, auction_id)
     if auction.status != 'completed':
         return ExcRaiser400(
             detail='You can only finalize a completed auction'
         )
-    result = await AuctionServices(db).finalize_payment(auction.id, user.id)
+    result = await Services.auctionServices.finalize_payment(db, auction.id, user.id)
     return APIResponse(data=result)
 
 
@@ -97,12 +97,12 @@ async def set_inspecting(
     auction_id: str,
     db: Session = Depends(get_db)
 ) -> APIResponse[bool]:
-    auction = await AuctionServices(db).retrieve(auction_id)
+    auction = await Services.auctionServices.retrieve(db, auction_id)
     if auction.status != 'completed':
         return ExcRaiser400(
             detail='You can only inspect a completed auction'
         )
-    result = await AuctionServices(db).set_inspecting(auction_id, user.id)
+    result = await Services.auctionServices.set_inspecting(db, auction_id, user.id)
     return APIResponse(data=result)
 
 
@@ -113,12 +113,12 @@ async def refund(
     auction_id: str,
     db: Session = Depends(get_db)
 ) -> APIResponse[bool]:
-    auction = await AuctionServices(db).retrieve(auction_id)
+    auction = await Services.auctionServices.retrieve(db, auction_id)
     if auction.status != 'completed':
         return ExcRaiser400(
             detail='You can only refund a completed auction'
         )
-    result = await AuctionServices(db).refund(auction_id, user.id)
+    result = await Services.auctionServices.refund(db, auction_id, user.id)
     return APIResponse(data=result)
 
 
@@ -129,7 +129,7 @@ async def refund_completed(
     auction_id: str,
     db: Session = Depends(get_db)
 ):
-    result = await AuctionServices(db).complete_refund(auction_id, user.id)
+    result = await Services.auctionServices.complete_refund(db, auction_id, user.id)
     return APIResponse(data=result)
 
 
@@ -141,7 +141,7 @@ async def restart(
     data: RestartAuctionSchema,
     db: Session = Depends(get_db)
 ) -> APIResponse[bool]:
-    result = await AuctionServices(db).restart(auction_id, data)
+    result = await Services.auctionServices.restart(db, auction_id, data)
     return APIResponse(data=result)
 
 # @route.put('/{auction_id}/participants')
