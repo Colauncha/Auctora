@@ -359,7 +359,7 @@ class UserServices:
                     identity.password, user.hash_password
                 ):
                 token = await self.__generate_token(user)
-                return token
+                return token, user
             else:
                 raise ExcRaiser(
                     status_code=401,

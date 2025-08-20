@@ -148,7 +148,7 @@ async def login(
     response: Response,
     db: Session = Depends(get_db)
 ) -> APIResponse[LoginToken]:
-    token = await Services.userServices.authenticate(db, credentials)
+    token, user = await Services.userServices.authenticate(db, credentials)
     response.set_cookie(
         key='access_token',
         value=token.token,
@@ -158,7 +158,10 @@ async def login(
         secure=True if app_configs.ENV == 'production' else False,
         samesite="None" if app_configs.ENV == 'production' else "lax",
     )
-    return APIResponse(data=token)
+    return APIResponse(data={
+        'token': token,
+        'user': user
+    })
 
 
 @route.get("/google/auth")
