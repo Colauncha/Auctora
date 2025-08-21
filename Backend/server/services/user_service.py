@@ -355,7 +355,7 @@ class UserServices:
                 user = await self.repo.attachDB(db).get_by_email(identity.identifier)
             else:
                 user = await self.repo.attachDB(db).get_by_username(identity.identifier)
-            if user and self.__check_password(
+            if user and self.check_password(
 
                     identity.password, user.hash_password
                 ):
