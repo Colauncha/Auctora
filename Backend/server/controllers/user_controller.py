@@ -22,14 +22,14 @@ from server.schemas import (
     APIResponse, UpdateUserSchema,
     GetUserSchema, ResetPasswordSchema,
     LoginSchema, ChangePasswordSchema,
-    LoginToken, PagedQuery,
+    PagedQuery, LoginOutput,
     ErrorResponse, PagedResponse,
     GetUsers, GetNotificationsSchema,
     NotificationQuery, UpdateNotificationSchema,
     WalletTransactionSchema, VerifyTransactionData,
     InitializePaymentRes, GetUsersSchemaPublic,
     WalletHistoryQuery, TransferRecipientData,
-    AccountDetailsSchema, UpdateUserAddressSchema
+    AccountDetailsSchema, UpdateUserAddressSchema,
 )
 from server.services import Services, current_user
 from sqlalchemy.orm import Session
@@ -147,7 +147,7 @@ async def login(
     credentials: LoginSchema,
     response: Response,
     db: Session = Depends(get_db)
-) -> APIResponse[LoginToken]:
+) -> APIResponse[LoginOutput]:
     token, user = await Services.userServices.authenticate(db, credentials)
     response.set_cookie(
         key='access_token',
