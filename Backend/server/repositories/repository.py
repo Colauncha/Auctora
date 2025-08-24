@@ -202,3 +202,14 @@ class Repository:
             count=count,
             total=total,
         )
+
+    @no_db_error
+    async def count(self, filter: dict = None) -> int:
+        try:
+            if filter:
+                total = self.db.query(self._Model).filter_by(**filter).count()
+            else:
+                total = self.db.query(self._Model).count()
+            return total
+        except Exception as e:
+            raise e

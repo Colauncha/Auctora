@@ -5,6 +5,7 @@ from sqlalchemy import String
 from server.models.auction import Auctions, AuctionParticipants
 from server.models.items import Items
 from server.repositories.repository import Repository, no_db_error
+from server.enums.auction_enums import AuctionStatus
 from server.schemas import PagedResponse
 from server.utils import paginator
 
@@ -147,3 +148,29 @@ class AuctionRepository(Repository):
             count=len(results),
             total=total,
         )
+
+    @no_db_error
+    async def count(self) -> dict[str, int]:
+        try:
+            total = self.db.query(self._Model).count()
+            if total == 0:
+                return {
+                    'total': 0, 'active': 0, 'completed': 0,
+                    'cancelled': 0, 'pending': 0, 'private': 0
+                }
+            active = self.db.query(self._Model).filter_by(status=AuctionStatus.ACTIVE).count()
+            completed = self.db.query(self._Model).filter_by(status=AuctionStatus.COMPLETED).count()
+            cancelled = self.db.query(self._Model).filter_by(status=AuctionStatus.CANCLED).count()
+            pending = self.db.query(self._Model).filter_by(status=AuctionStatus.PENDING).count()
+            private = self.db.query(self._Model).filter_by(private=True).count()
+            return {
+                'total': total,
+                'active': active,
+                'completed': completed,
+                'cancelled': cancelled,
+                'pending': pending,
+                'private': private
+            }
+        except Exception as e:
+            print(f"Error in count: {e}")
+            raise e

@@ -78,6 +78,16 @@ async def update(
     return APIResponse(data=response)
 
 
+@route.get('/stats/count')
+@permissions(permission_level=Permissions.ADMIN)
+async def count(
+    user: current_user,
+    db: Session = Depends(get_db)
+) -> APIResponse[dict[str, int]]:
+    result = await Services.categoryServices.count(db)
+    return APIResponse(data=result)
+
+
 # Subcategory Routes
 @sub_route.post('/')
 @permissions(permission_level=Permissions.CLIENT)

@@ -24,6 +24,21 @@ class CategoryRepository(Repository):
     def __init__(self):
         super().__init__(Categories)
 
+    @no_db_error
+    async def count(self) -> dict[str, int]:
+        try:
+            categories = self.db.query(Categories).count()
+            sub_category = self.db.query(Subcategory).count()
+
+            return {
+                'categories': categories,
+                'sub_category': sub_category,
+
+            }
+        except Exception as e:
+            print(f"Error in count: {e}")
+            raise e
+
     def get_last_id(self) -> str:
         last_cat = self.all()
         if last_cat:

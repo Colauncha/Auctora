@@ -123,3 +123,17 @@ async def ws_create(
     except Exception as e:
         await ws.close(code=status.WS_1011_INTERNAL_ERROR)
         raise WebSocketException(code=status.WS_1011_INTERNAL_ERROR) from e
+
+
+@route.get('/stats/count')
+@permissions(permission_level=Permissions.ADMIN)
+async def count_bids(
+    user: current_user,
+    auction_id: str = None,
+    db: Session = Depends(get_db)
+) -> APIResponse[dict[str, int]]:
+    result = await Services.bidServices.count(
+        db,
+        {'auction_id': auction_id} if auction_id else None
+    )
+    return APIResponse(data={'result': result})

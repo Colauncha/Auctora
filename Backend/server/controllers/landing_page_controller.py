@@ -1,3 +1,4 @@
+from typing import Union
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -7,7 +8,8 @@ from server.schemas import (
     PagedQuery,
     PagedResponse,
     SearchQuery,
-    GetAuctionSchema
+    GetAuctionSchema,
+    GetUsersSchemaPublic
 )
 
 
@@ -38,7 +40,12 @@ async def get_trending_auctions(db: Session = Depends(get_db)):
 @router.get('/search')
 async def search(
     query: SearchQuery = Depends(),
+    model: str = 'Auction',
     db: Session = Depends(get_db)
-) -> PagedResponse[list[GetAuctionSchema]]:
-    result = await Services.auctionServices.search(db, query)
+) -> PagedResponse[list[Union[GetAuctionSchema, GetUsersSchemaPublic]]]:
+    result = None
+    if model == 'User':
+        result = await Services.userServices.search(db, query)
+    elif model == 'Auction':
+        result = await Services.auctionServices.search(db, query)
     return result

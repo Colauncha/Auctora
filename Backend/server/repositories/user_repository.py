@@ -1,6 +1,10 @@
+import math
+
+from sqlalchemy import String
+from server.utils.helpers import paginator
 from server.repositories.repository import Repository, no_db_error
 from server.models.users import Users, Notifications, WalletTransactions
-from server.schemas import GetUserSchema, WalletTransactionSchema
+from server.schemas import GetUserSchema, PagedResponse, WalletTransactionSchema
 from server.middlewares.exception_handler import ExcRaiser, ExcRaiser404
 from sqlalchemy.exc import SQLAlchemyError
 from server.enums.user_enums import TransactionStatus, TransactionTypes
@@ -204,6 +208,46 @@ class UserRepository(Repository):
                 message='Transaction failed',
                 detail=str(e)
             )
+
+    @no_db_error
+    async def search(self, filter_: dict | None = None):
+        filter_ = filter_.copy() if filter_ else {}
+        page = filter_.pop("page", 1)
+        per_page = filter_.pop("per_page", 10)
+
+        limit = per_page
+        offset = paginator(page, per_page)
+        QueryModel = Users
+
+        try:
+            search_term = filter_.get("q", "").strip()
+            query = self.db.query(QueryModel)
+
+            if search_term:
+                query = query.filter(
+                    QueryModel.first_name.ilike(f"%{search_term}%") |
+                    QueryModel.last_name.ilike(f"%{search_term}%") |
+                    QueryModel.username.ilike(f"%{search_term}%") |
+                    QueryModel.email.ilike(f"%{search_term}%") |
+                    QueryModel.id.cast(String).ilike(f"%{search_term}%") 
+                )
+
+            total = query.count()
+            results = query.limit(limit).offset(offset).all()
+
+        except Exception as e:
+            print(f"[Search Error] {e}")
+            raise
+
+        pages = max(math.ceil(total / limit), 1)
+        return PagedResponse(
+            data=results,
+            pages=pages,
+            page_number=page,
+            per_page=limit,
+            count=len(results),
+            total=total,
+        )
 
 
 class UserNotificationRepository(Repository):

@@ -1,3 +1,4 @@
+import inspect
 from pydantic_core import PydanticSerializationError
 from sqlalchemy.orm import Session
 from server.repositories import DBAdaptor
@@ -179,3 +180,15 @@ class CategoryServices:
                 message="Unable to fetch category/subcategory",
                 detail=repr(e)
             )
+
+    async def count(self, db: Session) -> int:
+        try:
+            count = await self.cat_repo.attachDB(db).count()
+            return count
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
