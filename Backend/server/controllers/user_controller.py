@@ -321,6 +321,16 @@ async def rate_user(
     return APIResponse(data=response)
 
 
+@route.get('/stats/count')
+@permissions(permission_level=Permissions.ADMIN)
+async def get_user_count(
+    user: current_user,
+    role: str = None,
+    db: Session = Depends(get_db)
+) -> APIResponse:
+    count = await Services.userServices.count(db, role)
+    return APIResponse(data={"user_count": count})
+
 ###############################################################################
 ############################ Notification Endpoints ###########################
 ###############################################################################

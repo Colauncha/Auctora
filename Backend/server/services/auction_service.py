@@ -103,6 +103,19 @@ class AuctionServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
+    async def count(self, db: Session) -> int:
+        try:
+            count = await self.repo.attachDB(db).count()
+            return count
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
+
     async def update(self, db: Session, id: str, data: dict):
         try:
             entity = await self.repo.attachDB(db).get_by_id(id)

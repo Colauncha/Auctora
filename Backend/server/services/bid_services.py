@@ -42,6 +42,13 @@ class BidServices:
         except Exception as e:
             raise e
 
+    async def count(self, db: Session, filter: dict) -> int:
+        try:
+            count = await self.repo.attachDB(db).count(filter if filter else None)
+            return count
+        except Exception as e:
+            raise e
+
     async def buy_now(self, db: Session, data: CreateBidSchema) -> GetBidSchema:
         try:
             user = await self.user_repo.attachDB(db).get_by_id(data.user_id)

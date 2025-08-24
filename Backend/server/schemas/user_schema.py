@@ -39,6 +39,14 @@ class GetUsersSchemaPublic(BaseModel):
         description="User's unique email address",
         examples=[app_configs.test_user.EMAIL]
     )
+    created_at: Optional[datetime.datetime] = Field(
+        description="Date and time when the user was created",
+        examples=[str(datetime.datetime.now().astimezone())]
+    )
+    updated_at: Optional[datetime.datetime] = Field(
+        description="Date and time when the user was last updated",
+        examples=[str(datetime.datetime.now().astimezone())]
+    )
     image_link: Optional[dict] = Field(default=None)
     email_verified: Optional[bool] = Field(default=False)
     rating: Optional[float] = Field(default=0.00)

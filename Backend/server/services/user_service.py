@@ -25,7 +25,8 @@ from server.schemas import (
     NotificationQuery, CreateNotificationSchema,
     WalletTransactionSchema, WalletHistoryQuery,
     InitializePaymentRes, AccountDetailsSchema,
-    UpdateUserAddressSchema, ReferralSlots
+    UpdateUserAddressSchema, ReferralSlots,
+    GetUsersSchemaPublic, SearchQuery
 )
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
@@ -557,7 +558,19 @@ class UserServices:
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
-        
+
+    async def count(self, db: Session, role: str) -> int:
+        try:
+            count = await self.repo.attachDB(db).count({'role': role} if role else None)
+            return count
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
     async def new_otp(self, db: Session, email: str):
         try:
             async_redis = await redis_store.get_async_redis()
@@ -822,6 +835,26 @@ class UserServices:
                 }
             )
             return True
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
+    async def search(
+            self,
+            db:Session,
+            filter: SearchQuery,
+        ) -> PagedResponse:
+        try:
+            filter = filter.model_dump()
+            result = await self.repo.attachDB(db).search(filter)
+            result.data = [
+                GetUsersSchemaPublic.model_validate(r) for r in result.data
+            ]
+            return result
         except ExcRaiser as e:
             raise
         except Exception as e:

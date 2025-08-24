@@ -144,6 +144,17 @@ async def restart(
     result = await Services.auctionServices.restart(db, auction_id, data)
     return APIResponse(data=result)
 
+
+@route.get('/stats/count')
+@permissions(permission_level=Permissions.ADMIN)
+async def count_auctions(
+    user: current_user,
+    db: Session = Depends(get_db)
+) -> APIResponse[dict[str, int]]:
+    result = await Services.auctionServices.count(db)
+    return APIResponse(data=result)
+
+
 # @route.put('/{auction_id}/participants')
 # @permissions(permission_level=Permissions.CLIENT, service=ServiceKeys.AUCTION)
 # async def add_participant(
