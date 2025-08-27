@@ -121,8 +121,8 @@ class UserNotificationServices:
 ###############################################################################
 
 class UserWalletTransactionServices:
-    def __init__(self, notif_repo, user_repo, notif_service):
-        self.repo = notif_repo
+    def __init__(self, wallet_repo, user_repo, notif_service):
+        self.repo = wallet_repo
         self.user_repo = user_repo
         self.notification = notif_service
         self.debug = app_configs.DEBUG
