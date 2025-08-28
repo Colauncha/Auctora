@@ -87,7 +87,7 @@ def cache_obj_format(entity: BaseModel | list[BaseModel] | Any) -> str:
     """
     Returns the cache object format.
     """
-    if len(entity) == 0:
+    if isinstance(entity, list) and len(entity) == 0:
         return []
     if isinstance(entity, list):
         temp = []

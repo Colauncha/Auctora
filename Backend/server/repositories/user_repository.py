@@ -70,7 +70,7 @@ class UserRepository(Repository):
                 'transaction_type': TransactionTypes.DEBIT,
                 'status': TransactionStatus.COMPLETED
             }
-            await self.wallet_transaction.add(data)
+            await self.wallet_transaction.attachDB(self.db).add(data)
         except (Exception, SQLAlchemyError) as e:
             self.db.rollback()
             raise ExcRaiser(
@@ -105,7 +105,7 @@ class UserRepository(Repository):
                 'transaction_type': TransactionTypes.CREDIT,
                 'status': TransactionStatus.COMPLETED
             }
-            await self.wallet_transaction.add(data)
+            await self.wallet_transaction.attachDB(self.db).add(data)
         except (Exception, SQLAlchemyError) as e:
             self.db.rollback()
             raise ExcRaiser(
@@ -145,8 +145,8 @@ class UserRepository(Repository):
                 'transaction_type': TransactionTypes.DEBIT,
                 'status': TransactionStatus.COMPLETED
             }
-            await self.wallet_transaction.add(sellers_data)
-            await self.wallet_transaction.add(buyer_data)
+            await self.wallet_transaction.attachDB(self.db).add(sellers_data)
+            await self.wallet_transaction.attachDB(self.db).add(buyer_data)
         except (Exception, SQLAlchemyError) as e:
             self.db.rollback()
             raise ExcRaiser(
@@ -171,9 +171,14 @@ class UserRepository(Repository):
                 user.available_balance += transaction.amount
 
             if update:
-                await self.wallet_transaction.save(exist, transaction.model_dump())
+                # print(f'Transaction: {transaction}\n\nExisting: {exist.to_dict()}')
+                await self.wallet_transaction.attachDB(self.db).update(
+                    exist, transaction.model_dump(exclude_none=True)
+                )
             else:
-                await self.wallet_transaction.add(transaction.model_dump())
+                await self.wallet_transaction.attachDB(self.db).add(
+                    transaction.model_dump(exclude_none=True)
+                )
         except (Exception, SQLAlchemyError) as e:
             self.db.rollback()
             raise ExcRaiser(
@@ -198,9 +203,13 @@ class UserRepository(Repository):
                 user.available_balance -= transaction.amount
 
             if update:
-                await self.wallet_transaction.save(exist, transaction.model_dump())
+                await self.wallet_transaction.attachDB(self.db).save(
+                    exist, transaction.model_dump(exclude_none=True)
+                )
             else:
-                await self.wallet_transaction.add(transaction.model_dump())
+                await self.wallet_transaction.attachDB(self.db).add(
+                    transaction.model_dump(exclude_none=True)
+                )
         except (Exception, SQLAlchemyError) as e:
             self.db.rollback()
             raise ExcRaiser(

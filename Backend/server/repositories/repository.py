@@ -20,7 +20,7 @@ from server.utils.helpers import paginator
 T = Union[
     GetUserSchema, GetCategorySchema,
     GetItemSchema, GetSubCategorySchema,
-    GetAuctionSchema, GetBidSchema
+    GetAuctionSchema, GetBidSchema, BaseModel
 
 ]
 
@@ -109,7 +109,7 @@ class Repository:
         ) -> T:
         """Updates entity"""
         try:
-            entity_to_update = self.db.query(self._Model).filter_by(id=entity.id)
+            entity_to_update = self.db.query(self._Model).filter_by(id=entity.id or str(entity.id))
             if entity_to_update is None:
                 raise ExcRaiser404(message='Entity not found')
             entity_to_update.update(data, synchronize_session="evaluate")
