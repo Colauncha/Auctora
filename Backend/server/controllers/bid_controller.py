@@ -95,7 +95,7 @@ async def ws_create(
     token: str,
     db: Session = Depends(get_db)
 ):
-    _user = await Services.userServices.get_ws_user(ws, db, token)
+    _user = await Services.get_ws_user(ws, db, token)
     await wsmanager.connect(id, ws)
     redis = await redis_store.get_async_redis()
     prev_bids = await redis.get(f'auction:{id}')

@@ -50,7 +50,7 @@ class Services:
     contactUsServices = ContactUsService()
     notificationServices = UserNotificationServices(Plug.notif_repo)
     walletServices = UserWalletTransactionServices(
-        Plug.notif_repo, Plug.user_repo, notificationServices
+        Plug.wallet_repo, Plug.user_repo, notificationServices
     )
     userServices = UserServices(Plug.user_repo, notificationServices)
     itemServices = ItemServices(Plug.item_repo, Plug.sub_category_repo)
