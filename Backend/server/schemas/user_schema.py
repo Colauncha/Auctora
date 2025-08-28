@@ -201,6 +201,9 @@ class WalletTransactionSchema(BaseModel):
     transaction_type: TransactionTypes
     status: TransactionStatus
     reference_id: Optional[Union[str, UUID]]
+    created_at: Optional[datetime.datetime] = Field(default=None)
+    updated_at: Optional[datetime.datetime] = Field(default=None)
+    id: Optional[Union[str, UUID]] = Field(default=None)
 
 
 class VerifyTransactionData(BaseModel):
@@ -233,6 +236,7 @@ class InitializePaymentRes(BaseModel):
     data: Optional[Union[AuthorizationURL, TransferResponseData]] = Field(default=None)
     code: Optional[str] = Field(default=None)
     type: Optional[str] = Field(default=None)
+    amount: Optional[int] = Field(default=None)
 
 
 class TransferRecipientData(BaseModel):

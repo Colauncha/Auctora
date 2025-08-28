@@ -45,8 +45,8 @@ class DBAdaptor:
 
     @user_repo.setter
     def user_repo(self, value):
-        self._user_repo = value(self.wallet_repo) if\
-        value else UserRepository(self.wallet_repo)
+        self._user_repo = value(WalletTranscationRepository()) if\
+        value else UserRepository(WalletTranscationRepository())
 
     # Item
     @property
@@ -93,8 +93,8 @@ class DBAdaptor:
 
     @auction_repo.setter
     def auction_repo(self, value):
-        self._auction_repo = value(self.auction_p_repo) if\
-        value else AuctionRepository(self.auction_p_repo)
+        self._auction_repo = value(AuctionParticipantRepository()) if\
+        value else AuctionRepository(AuctionParticipantRepository())
 
     # Notification
     @property

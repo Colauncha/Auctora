@@ -7,7 +7,8 @@ from fastapi.responses import RedirectResponse
 import httpx
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-from server.config import get_db, app_configs
+from server.utils.helpers import cache_obj_format
+from server.config import get_db, app_configs, redis_store
 from server.enums import ServiceKeys
 from server.enums.user_enums import (
     Permissions,
@@ -412,7 +413,7 @@ async def get_gateway_url(
     }
     response = requests.post(url, headers=headers, json=data)
     res_data: dict = response.json()
-    data = InitializePaymentRes.model_validate(res_data)
+    data = InitializePaymentRes.model_validate({**res_data, "amount": amount * 100})
     _ = await Services.walletServices.init_transaction(
         db, data, user, amount
     )
@@ -461,7 +462,6 @@ async def verify_funding(
         db, data.model_dump(), extra
     )
     return WalletTransactionSchema(**data.model_dump(), **extra)
-
 
 @transac_route.post('/paystack/webhook')
 async def paystack_webhook(
@@ -610,8 +610,7 @@ async def withdraw(
 ) -> APIResponse:
   
     user = await Services.userServices.repo.attachDB(db).get_by_email(user.email)
-    validate = await Services.userServices.__check_password(
-
+    validate = Services.userServices.check_password(
         credentials.password, user.hash_password
     )
 

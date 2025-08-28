@@ -160,7 +160,6 @@ class UserWalletTransactionServices:
             user = await self.user_repo.attachDB(db).get_by_id(transaction.user_id)
             notify = False
 
-            print(transaction, user)
             NOTIF_TITLE = f"Funding Account {transaction.status.value}"
             NOTIF_MESSAGE = (
             f"Your attempt to credit your wallet with N{transaction.amount} "
@@ -187,9 +186,9 @@ class UserWalletTransactionServices:
                 if exist and exist.status == transaction.status:
                     return
                 elif exist and exist.status != transaction.status:
-                    _ = await self.repo.attachDB(db).save(exist, transaction.model_dump())
+                    _ = await self.repo.attachDB(db).update(exist, transaction.model_dump(exclude_none=True))
                 else:
-                    _ = await self.repo.attachDB(db).add(transaction.model_dump())
+                    _ = await self.repo.attachDB(db).add(transaction.model_dump(exclude_none=True))
                     notify = True
             
 
@@ -709,7 +708,7 @@ class UserServices:
     async def change_password(self, db: Session, user: GetUserSchema, data: ChangePasswordSchema):
         try:
             user = await self.repo.attachDB(db).get_by_email(user.email)
-            if not self.__check_password(data.old_password, user.hash_password):
+            if not self.check_password(data.old_password, user.hash_password):
 
                 raise ExcRaiser400(detail='Invalid old password')
             if data.new_password == data.confirm_password:
