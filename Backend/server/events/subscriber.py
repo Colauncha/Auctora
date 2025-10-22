@@ -15,6 +15,9 @@ logging.basicConfig(
 
 async def send_otp_mail(data):
     logging.info('📨 Sending OTP mail 📫')
+    if data.get('email') is None or data.get('otp') is None:
+        logging.error('❌ No email or OTP provided in data for OTP mail')
+        return
     async with Emailer(
         subject='OTP Verification',
         template_name="otp_template.html",
@@ -29,7 +32,17 @@ async def send_otp_mail(data):
 
 async def send_bid_placed_mail(data):
     logging.info('📨 Sending Bid placed mail 📫')
-    ...  # some code
+    if data.get('email') is None:
+        logging.error('❌ No email provided in data for bid placed')
+        return
+    async with Emailer(
+        subject='Bid Placed Successfully',
+        template_name="bid_placed_template.html",
+        to=data.get('email'),
+        user=data.get('user'),
+        link=data.get('link'),
+    ) as emailer:
+        await emailer.send_message()
     await sleep(0.5)
     logging.info(f'♻ Type: {type(data)} -- {data}')
     logging.info('➡ sent ✅')
@@ -37,6 +50,9 @@ async def send_bid_placed_mail(data):
 
 async def send_reset_token_mail(data):
     logging.info('📨 Sending Reset token mail 📫')
+    if data.get('email') is None or data.get('token') is None:
+        logging.error('❌ No email or token provided in data for reset token')
+        return
     async with Emailer(
         subject='Reset Password',
         template_name="reset_token_template.html",
@@ -51,7 +67,16 @@ async def send_reset_token_mail(data):
 
 async def send_outbid_mail(data):
     logging.info('📨 Sending Outbid mail 📫')
-    ...  # some code
+    if data.get('email') is None:
+        logging.error('❌ No email provided in data for outbid')
+        return
+    async with Emailer(
+        subject='You Have been Outbid!',
+        template_name="outbid_template.html",
+        to=data.get('email'),
+        link=data.get('link'),
+    ) as emailer:
+        await emailer.send_message()
     await sleep(0.5)
     logging.info(f'♻ Type: {type(data)} -- {data}')
     logging.info('➡ sent ✅')
@@ -59,15 +84,69 @@ async def send_outbid_mail(data):
 
 async def send_auction_created_mail(data):
     logging.info('📨 Sending Auction Created mail 📫')
-    ...  # some code
+    if data.get('email') is None:
+        logging.error('❌ No email provided in data for auction creation')
+        return
+    async with Emailer(
+        subject='You Are Invited to Participate in an Auction!',
+        template_name="participant_invite_template.html",
+        to=data.get('email'),
+        link=data.get('link'),
+               name=data.get('item')['name'] if data.get('item') else 'N/A',
+        description=data.get('item')['description'] if data.get('item') else 'N/A',
+        start_price=data.get('auction')['start_price'] if data.get('auction') else 'N/A',
+        current_price=data.get('auction')['current_price'] if data.get('auction') else 'N/A',
+        start_date=data.get('auction')['start_date'] if data.get('auction') else 'N/A',
+        end_date=data.get('auction')['end_date'] if data.get('auction') else 'N/A',
+        item_image=data.get('item_image') if data.get('item_image') else None,
+        auction=data.get('auction'),
+    ) as emailer:
+        await emailer.send_message()
     await sleep(0.5)
     logging.info(f'♻ Type: {type(data)} -- {data}')
     logging.info('➡ sent ✅')
 
 
 async def send_win_auction_mail(data):
-    logging.info('📨 Sending Auction Created mail 📫')
-    ...  # some code
+    logging.info('📨 Sending Win Auction mail 📫')
+    if data.get('email') is None:
+        logging.error('❌ No email provided in data for winning auction')
+        return
+    async with Emailer(
+        subject='Auction Won',
+        template_name="win_auction_template.html",
+        to=data.get('email'),
+        user=data.get('user'),
+        link=data.get('link'),
+    ) as emailer:
+        await emailer.send_message()
+    await sleep(0.5)
+    logging.info(f'♻ Type: {type(data)} -- {data}')
+    logging.info('➡ sent ✅')
+
+
+async def send_part_invite_mail(data):
+    logging.info('📨 Sending Participant Invite mail 📫')
+    if data.get('email') is None:
+        logging.error('❌ No email provided in data for participant invite')
+        return
+    print(f'From subscriber.send_part_invite_mail:\n{data}')
+    async with Emailer(
+        subject='You Are Invited to Participate in an Auction!',
+        template_name="participant_invite_template.html",
+        to=data.get('email'),
+        link=data.get('link'),
+        signup_link=data.get('sign_up_link'),
+        name=data.get('item')['name'] if data.get('item') else 'N/A',
+        description=data.get('item')['description'] if data.get('item') else 'N/A',
+        start_price=data.get('auction')['start_price'] if data.get('auction') else 'N/A',
+        current_price=data.get('auction')['current_price'] if data.get('auction') else 'N/A',
+        start_date=data.get('auction')['start_date'] if data.get('auction') else 'N/A',
+        end_date=data.get('auction')['end_date'] if data.get('auction') else 'N/A',
+        item_image=data.get('item_image') if data.get('item_image') else None,
+        auction=data.get('auction'),
+    ) as emailer:
+        await emailer.send_message()
     await sleep(0.5)
     logging.info(f'♻ Type: {type(data)} -- {data}')
     logging.info('➡ sent ✅')
@@ -75,6 +154,9 @@ async def send_win_auction_mail(data):
 
 async def send_fund_account_mail(data):
     logging.info('📨 Sending Funding account mail 📫')
+    if data.get('email') is None:
+        logging.error('❌ No email provided in data for funding account')
+        return
     async with Emailer(
         subject='Transaction Receipt',
         template_name="funding_account_template.html",
@@ -109,6 +191,7 @@ channels = {
     'Contact-us': send_contact_us_mail,
     'Refund-Req-Buyer': send_contact_us_mail,
     'Refund-Req-Seller': send_contact_us_mail,
+    'Participant-Invite': send_part_invite_mail,
 }
 
 

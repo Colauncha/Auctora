@@ -14,6 +14,7 @@ from sqlalchemy.dialects.postgresql import ENUM, JSONB
 from sqlalchemy.orm import relationship
 from passlib.context import CryptContext
 
+from server.config.app_configs import app_configs
 from server.models.base import BaseModel
 from server.enums.user_enums import (
     UserRoles,
@@ -69,7 +70,7 @@ class Users(BaseModel):
     role = Column(
         ENUM(
             UserRoles, name='userroles',
-            create_type=True, schema='auctora_dev'
+            create_type=True, schema=app_configs.DB.SCHEMA
         ), 
         nullable=False, default=UserRoles.CLIENT
     )
@@ -167,14 +168,14 @@ class WalletTransactions(BaseModel):
     transaction_type = Column(
         ENUM(
             TransactionTypes, name='transaction_types',
-            create_type=True, schema='auctora_dev'
+            create_type=True, schema=app_configs.DB.SCHEMA
         ),
         nullable=False, default=TransactionTypes.FUNDING
     )
     status = Column(
         ENUM(
             TransactionStatus, name='transaction_status',
-            create_type=True, schema='auctora_dev'
+            create_type=True, schema=app_configs.DB.SCHEMA
         ), 
         nullable=False, default=TransactionStatus.PENDING
     )

@@ -1,0 +1,19 @@
+{% extends "base_template.html" %}
+{% block title %}Auction Created{% endblock %}
+{% block header %}
+Auction Created Successfully
+{% endblock %}
+
+{% block content %}
+<p>Your auction has been created successfully!</p>
+<div style="text-align: center;">
+    <img src="{{ item_images }}" alt="Item Image" style="max-width: 300px; max-height: 300px; border-radius: 8px;" />
+</div>
+<p>Auction Title: {{ name }}</p>
+<p>Auction Description: {{ description }}</p>
+<p>Auction Starting Price: ₦{{ start_price }}</p>
+<p>Auction Current Price: ₦{{ current_price }}</p>
+<p>Auction Start Time: {{ start_date }}</p>
+<p>Auction End Time: {{ end_date }}</p>
+<p>Share link to friends and participants: </br>{{ link }}</p>
+{% endblock %}

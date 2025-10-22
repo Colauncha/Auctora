@@ -4,6 +4,7 @@ from sqlalchemy import Column, UUID, DateTime, Float, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import relationship
 
+from server.config.app_configs import app_configs
 from server.models.base import BaseModel
 from server.enums.payment_enums import PaymentStatus
 
@@ -24,7 +25,7 @@ class Payments(BaseModel):
     status =  Column(
         ENUM(
             PaymentStatus, name='payment_status', create_type=True,
-            schema='auctora_dev'
+            schema=app_configs.DB.SCHEMA
         ),
         nullable=False, default=PaymentStatus.PENDING, index=True
     )

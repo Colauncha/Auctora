@@ -1,0 +1,21 @@
+{% extends "base_template.html" %}
+{% block title %}Auction Invite{% endblock %}
+{% block header %}
+You Are Invited to Participate in an Auction!
+{% endblock %}
+
+{% block content %}
+<p>You have been invited to participate in a ongoing Auction</p>
+<div style="text-align: center;">
+    <img src="{{ item_images }}" alt="Item Image" style="max-width: 300px; max-height: 300px; border-radius: 8px;">
+</div>
+<p>Auction Title: {{ name }}</p>
+<p>Auction Description: {{ description }}</p>
+<p>Auction Starting Price: ₦{{ start_price }}</p>
+<p>Auction Current Price: ₦{{ current_price }}</p>
+<p>Auction Start Time: {{ start_date }}</p>
+<p>Auction End Time: {{ end_date }}</p>
+<p>If you are new to the platform, Don't worry, you can <a style="color: #7b2335bb; text-decoration: underline;" href="{{ signup_link }}">Sign Up</a> here.</p>
+<div style="text-align: center;"><button><a style="color: white; text-decoration: none;" href={{link}}>View Auction</a></button></div>
+<p>Link to auction: {{ link }}</p>
+{% endblock %}

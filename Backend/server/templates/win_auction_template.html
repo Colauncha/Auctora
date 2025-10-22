@@ -1,0 +1,13 @@
+{% extends "base_template.html" %}
+{% block title %}Auction Winner{% endblock %}
+{% block header %}
+Congratulations! You Won the Auction!
+{% endblock %}
+
+{% block content %}
+<p>You have won the auction you participated in.</p>
+<p>Thank you for being a valued member of our auction community!</p>
+<div style="text-align: center;"><button><a href={{link}}>View
+            Auction</a></button></div>
+<p>Link to auction: {{ link }}</p>
+{% endblock %}

@@ -1,6 +1,6 @@
 import cloudinary
 from server.config.app_configs import app_configs
-from server.config.database import Base, engine, RedisStorage, get_db
+from server.config.database import Base, engine, RedisStorage, get_db, init_db
 from server.config.notification_messages import notification_messages
 
 
@@ -21,9 +21,9 @@ cloudinary_init = cloudinary.config(
 )
 
 
-def init_db():
-    """Initialize the database"""
-    Base.metadata.create_all(engine)
+# def init_db():
+#     """Initialize the database"""
+#     Base.metadata.create_all(engine)
 
 
 redis_store = RedisStorage()

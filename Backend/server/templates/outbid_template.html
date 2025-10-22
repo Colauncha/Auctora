@@ -1,0 +1,12 @@
+{% extends "base_template.html" %}
+{% block title %}Outbid Alert{% endblock %}
+{% block header %}
+Someone Outbid You!
+{% endblock %}
+
+{% block content %}
+<p>You have been outbid on an auction you were participating in.</p>
+<p>Don't worry, you can place a new bid if you wish to stay in the auction.</p>
+<div style="text-align: center;"><button><a href={{link}}>View Auction</a></button></div>
+<p>Link to auction: {{ link }}</p>
+{% endblock %}

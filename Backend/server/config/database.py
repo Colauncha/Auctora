@@ -1,28 +1,54 @@
+"""
+database.py
+Central database configuration and initialization module.
+Ensures schema creation before table creation, and safe Base import order.
+"""
+
+import os
 from contextlib import contextmanager
-from typing import AsyncGenerator, Iterator, Any
-from sqlalchemy.dialects.postgresql import ENUM
-from sqlalchemy import create_engine, schema
+from typing import Generator, AsyncGenerator
+from sqlalchemy import create_engine, schema, text
 from sqlalchemy.orm import (
     declarative_base,
     sessionmaker,
     scoped_session,
     Session,
 )
-from server.config.app_configs import app_configs
 from redis import StrictRedis as SyncRedis
 from redis.asyncio import StrictRedis as AsyncRedis
 from dotenv import load_dotenv
-import os
+from importlib import import_module
+import pkgutil
 
+from server.config.app_configs import app_configs
+
+# -----------------------------------------------------------------------------
+# Load environment
+# -----------------------------------------------------------------------------
 load_dotenv()
-
-# for ci testing
 environment = os.getenv("ENV", "test")
+print(f"🔧 Environment: {environment}")
+
+# -----------------------------------------------------------------------------
+# Database Engine
+# -----------------------------------------------------------------------------
+if environment == "test":
+    DATABASE_URL = app_configs.DB.TEST_DATABASE
+    print("🧪 Using TEST database")
+else:
+    DATABASE_URL = app_configs.DB.DATABASE_URL
+    print(f"🏗️ Using DATABASE: {DATABASE_URL}")
+
+# engine = create_engine(
+#     DATABASE_URL,
+#     pool_size=10 if environment != "test" else None,
+#     max_overflow=5 if environment != "test" else None,
+#     pool_recycle=3600 if environment != "test" else None,
+#     isolation_level="READ COMMITTED",
+# )
 
 engine = (
-    create_engine(
-        app_configs.DB.TEST_DATABASE,
-    )
+    create_engine(app_configs.DB.TEST_DATABASE)
     if environment == "test"
     else create_engine(
         app_configs.DB.DATABASE_URL,
@@ -30,29 +56,85 @@ engine = (
         max_overflow=5,
         pool_recycle=3600,
         isolation_level="READ COMMITTED",
+        )
     )
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-Base = (
-    declarative_base()
-    if environment == "test"
-    else declarative_base(
-        metadata=schema.MetaData(schema=app_configs.DB.SCHEMA)
-    )
-)
+# -----------------------------------------------------------------------------
+# Declarative Base
+# -----------------------------------------------------------------------------
+if environment == "test":
+    default_schema = "public"
+else:
+    default_schema = app_configs.DB.SCHEMA
+
+Base = declarative_base(metadata=schema.MetaData(schema=default_schema))
+
+# -----------------------------------------------------------------------------
+# Session
+# -----------------------------------------------------------------------------
+SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 Base.query = scoped_session(SessionLocal).query_property()
 
+# -----------------------------------------------------------------------------
+# Schema + Table Initialization
+# -----------------------------------------------------------------------------
+def import_all_models():
+    """Dynamically imports all model modules under `server.models`."""
+    import server.models  # ensure models package is imported
 
-def get_db() -> Iterator[Session]:
+    package = server.models
+    for _, module_name, _ in pkgutil.iter_modules(package.__path__):
+        if not module_name.startswith("__") or module_name not in ("base",):
+            import_module(f"{package.__name__}.{module_name}")
+
+
+def init_db():
+    """
+    Initializes the database schema and creates all tables.
+    Ensures:
+    1. Schema exists
+    2. All models are imported and registered
+    3. Tables and ENUMs are created in the correct schema, in the same transaction
+    """
+    # Import models AFTER Base is defined, BEFORE schema creation
+    import_all_models()
+
+    with engine.begin() as conn:
+        print(f"🗄️  Initializing database schema '{default_schema}'...")
+        # 1️⃣ Create schema (inside same transaction)
+        res = conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {default_schema}"))
+        print(f"✅ Ensured schema '{res}' exists.")
+
+        # 2️⃣ Bind Base to this same connection so ENUMs are created correctly
+        Base.metadata.create_all(bind=conn)
+
+    print("✅ Registered models:", list(Base.metadata.tables.keys()))
+
+
+
+# -----------------------------------------------------------------------------
+# Dependency for FastAPI
+# -----------------------------------------------------------------------------
+def get_db() -> Generator[Session, None, None]:
+    """Yields a database session for dependency injection."""
+    db: Session = SessionLocal()
     try:
-        db: Session = SessionLocal()
         yield db
-    except Exception as e:
-        raise e
     finally:
         db.expire_on_commit
         db.close()
+
+
+
+# def get_db() -> Iterator[Session]:
+#     try:
+#         db: Session = SessionLocal()
+#         yield db
+#     except Exception as e:
+#         raise e
+#     finally:
+#         db.expire_on_commit
+#         db.close()
 
 
 class RedisStorage:
