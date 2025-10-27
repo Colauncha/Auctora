@@ -6,6 +6,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import relationship
+from server.config.app_configs import app_configs
 from server.enums.auction_enums import AuctionStatus
 from server.models.base import BaseModel
 from server.models.bids import Bids
@@ -45,7 +46,7 @@ class Auctions(BaseModel):
     status = Column(
         ENUM(
             AuctionStatus, name='auction_status', create_type=True,
-            schema='auctora_dev'
+            schema=app_configs.DB.SCHEMA
         ),
         nullable=False, default=AuctionStatus.PENDING, index=True
     )

@@ -42,7 +42,7 @@ class ExcRaiser500(ExcRaiser):
     def __init__(self, detail: str | Any = None, exception: BaseException = None):
         super().__init__(500, 'Internal server error', detail or self.default_detail)
         if exception:
-            print(exception.with_traceback())
+            print(exception.with_traceback(self.__traceback__))
 
 
 async def exception_handler(request: Request, exc: ExcRaiser | BaseException):

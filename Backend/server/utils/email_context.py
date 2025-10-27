@@ -72,6 +72,7 @@ class Emailer:
         return self
 
     async def send_message(self):
+        # TODO: check user settings if `to` allows emails
         self.server.send_message(self.message)
         await self.close()
     

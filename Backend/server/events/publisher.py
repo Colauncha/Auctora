@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from typing import Union
 from asyncio import run
@@ -6,6 +7,7 @@ from uuid import UUID as PyUUID
 
 from sqlalchemy import UUID as SAUUID, Enum as SAEnum
 from server.config import redis_store
+from server.models.base import BaseModel
 
 
 UUIDType = Union[PyUUID, SAUUID]
@@ -26,6 +28,16 @@ async def dump_data(data: str | dict[str, any]) -> dict[str, any]:
             data[key] = str(value)
         elif isinstance(value, dict):
             data[key] = await dump_data(value)
+        elif isinstance(value, BaseModel) or hasattr(value, "to_dict"):
+            data[key] = await dump_data(value.to_dict())
+        elif isinstance(value, list):
+            data[key] = [
+                await dump_data(item) if isinstance(item, dict)
+                else str(item) if isinstance(item, UUIDType)
+                else item for item in value
+            ]
+        elif isinstance(value, datetime):
+            data[key] = value.isoformat()
     return data
 
 
@@ -67,3 +79,6 @@ async def publish_refund_req_buyer(data: dict[str, any]):
 
 async def publish_refund_req_seller(data: dict[str, any]):
     await publish_event('Refund-Req-Seller', data)
+
+async def publish_participant_invite(data: dict[str, any]):
+    await publish_event('Participant-Invite', data)

@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 import json
 from fastapi import WebSocket
 from sqlalchemy.orm import Session
+from server.config import app_configs
+from server.enums.notification_enums import NotificationClasses
 from server.config import redis_store
 from server.models.bids import Bids
 from server.services.user_service import UserNotificationServices
@@ -10,6 +12,7 @@ from server.repositories import DBAdaptor
 from server.middlewares.exception_handler import ExcRaiser400, ExcRaiser
 from server.enums.auction_enums import AuctionStatus
 from server.utils.ws_manager import WSManager
+from server.events.publisher import publish_bid_placed, publish_outbid
 from server.schemas import (
     CreateNotificationSchema,
     GetBidSchema, CreateBidSchema
@@ -101,17 +104,17 @@ class BidServices:
             )
             if exist:
                 await self.auctions_services.close(
-                    data.auction_id,
+                    db=db,
+                    id=data.auction_id,
                     caller='buy_now',
                     existing_amount=e_amount,
-                    db=db
                 )
             else:
                 await self.auctions_services.close(
-                    data.auction_id,
+                    db=db,
+                    id=data.auction_id,
                     caller='buy_now',
                     existing_amount=0.0,
-                    db=db
                 )
             return bid
         except Exception as e:
@@ -187,8 +190,21 @@ class BidServices:
             _ = await self.user_repo.attachDB(db).wtab(user.id, data.amount)
             bid = await self.repo.attachDB(db).add(data.model_dump())
             if bid:
-                await self.notify(db, user.id, NOTIF_TITLE, NOTIF_BODY)
+                await self.notify(
+                    db,
+                    user.id,
+                    NOTIF_TITLE,
+                    NOTIF_BODY,
+                    links=[f'{app_configs.FRONTEND_URL}/product-details/{auction.id}']
+                )
                 await self.nphb(db, bid.auction_id, user.id)
+                await publish_bid_placed({
+                    "auction_id": data.auction_id,
+                    "bid_user": user.id,
+                    "amount": data.amount,
+                    "link": f'{app_configs.FRONTEND_URL}/product-details/{auction.id}',
+                    "email": user.email
+                })
             await self.auction_repo.attachDB(db).update(
                 auction, {'current_price': data.amount}
             )
@@ -324,8 +340,21 @@ class BidServices:
                 _ = await self.user_repo.attachDB(db).wtab(user.id, amount_)
                 bid = await self.repo.attachDB(db).update(exists, {'amount': amount})
                 if bid:
-                    await self.notify(db, user.id, NOTIF_TITLE, NOTIF_BODY)
+                    await self.notify(
+                        db,
+                        user.id,
+                        NOTIF_TITLE,
+                        NOTIF_BODY,
+                        links=[f'{app_configs.FRONTEND_URL}/product-details/{auction.id}']
+                    )
                     await self.nphb(db, bid.auction_id, user.id)
+                    await publish_bid_placed({
+                        "auction_id": auc__id,
+                        "bid_user": user.id,
+                        "amount": amount,
+                        "link": f'{app_configs.FRONTEND_URL}/product-details/{auc__id}',
+                        "email": user.email
+                    })
             else:
                 raise ExcRaiser400(message='Bid not found')
             auction = await self.auction_repo.attachDB(db).get_by_id(auc__id)
@@ -340,11 +369,19 @@ class BidServices:
         ...
 
     # Notifications
-    async def notify(self, db: Session, user_id: str, title: str, message: str):
+    async def notify(
+        self,
+        db: Session,
+        user_id: str,
+        title: str,
+        message: str,
+        links: list = None,
+    ):
         try:
             notice = CreateNotificationSchema(
                 title=title, message=message,
-                user_id=user_id
+                user_id=user_id, class_name=NotificationClasses.BID.value,
+                links=links or []
             )
             await self.notification.create(db, notice)
         except Exception as e:
@@ -356,12 +393,19 @@ class BidServices:
             NOTIF_TITLE = 'You Have been Outbid!'
             NOTIF_BODY = f'Someone placed a higher bid in auction: {id}'
             auction = await self.auction_repo.attachDB(db).get_by_id(id)
+            links = [f'{app_configs.FRONTEND_URL}/product-details/{auction.id}']
 
             # phb: previous highest bidder
             bids = sorted(auction.bids, key=lambda x: x.amount)
             phb = bids[0].user_id
             if phb == current_id:
                 return
-            await self.notify(db, phb, NOTIF_TITLE, NOTIF_BODY)
+            await self.notify(db, phb, NOTIF_TITLE, NOTIF_BODY, links=links)
+            await publish_outbid({
+                "auction_id": id,
+                "outbid_user": phb,
+                "link": f'{app_configs.FRONTEND_URL}/product-details/{auction.id}',
+                "email": (await self.user_repo.attachDB(db).get_by_id(phb)).email
+            })
         except Exception as e:
             raise e

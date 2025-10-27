@@ -8,7 +8,7 @@ from server.models.items import Items
 from server.enums.notification_enums import NotificationClasses
 from server.enums.auction_enums import AuctionStatus
 from server.enums.payment_enums import PaymentStatus
-from server.events.publisher import publish_win_auction
+from server.events import publisher as publ
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
 )
@@ -51,11 +51,23 @@ class AuctionServices:
             if result.private == True:
                 for p in participants:
                     await self.create_participants(
-                        db, {'auction_id': result.id, 'participant_email': p}
+                        db, {'auction_id': result.id, 'participant_email': p},
+                        auction=GetAuctionSchema.model_validate(result)
                     )
             await self.notify(
                 db, user_id, NOTIF_TITLE,
-                NOTIF_BODY_PRIV if result.private else NOTIF_BODY
+                NOTIF_BODY_PRIV if result.private else NOTIF_BODY,
+                links=[f'{app_configs.FRONTEND_URL}/product-details/{result.id}'],
+                class_name=NotificationClasses.AUCTION.value
+            )
+            await publ.publish_create_auction(
+                {
+                    'email': data.get('users_email'),
+                    'link': f'{app_configs.FRONTEND_URL}/product-details/{result.id}',
+                    'auction': result,
+                    'item': item,
+                    'item_image': item.get('image_link').get('link') if item.get('image_link') else None,
+                }
             )
             return GetAuctionSchema.model_validate(result)
         except ExcRaiser as e:
@@ -115,7 +127,6 @@ class AuctionServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-
     async def update(self, db: Session, id: str, data: dict):
         try:
             entity = await self.repo.attachDB(db).get_by_id(id)
@@ -133,7 +144,8 @@ class AuctionServices:
     async def create_participants(
             self,
             db: Session,
-            data: CreateAuctionParticipantsSchema
+            data: CreateAuctionParticipantsSchema,
+            auction: dict = None
     ):
         try:
             NOTIF_TITLE = 'Auction Invitation'
@@ -142,9 +154,29 @@ class AuctionServices:
                 f"Auction ID: {data.get('auction_id')}"
             )
             user =  await self.user_repo.attachDB(db).get_by_email(data.get('participant_email'))
-            if user:
-                await self.notify(db, str(user.id), NOTIF_TITLE, NOTIF_BODY)
             _ = await self.participant_repo.attachDB(db).add(data)
+            if user:
+                await self.notify(
+                    db,
+                    str(user.id),
+                    NOTIF_TITLE,
+                    NOTIF_BODY,
+                    links=[f'{app_configs.FRONTEND_URL}/product-details/{data.get("auction_id")}'],
+                    class_name=NotificationClasses.AUCTION.value
+                )
+            auct = auction.model_dump() if auction else None
+            item = auction.item[0].model_dump() if auction and auction.item else None
+            image_link = item.get('image_link').get('link') if item and item.get('image_link') else None
+            await publ.publish_create_auction(
+                {
+                    'email': data.get('participant_email'),
+                    'link': f'{app_configs.FRONTEND_URL}/product-details/{data.get("auction_id")}',
+                    'auction': auct,
+                    'sign_up_link': f'{app_configs.FRONTEND_URL}/sign-up',
+                    'item': item,
+                    'item_image': image_link
+                }
+            )
         except ExcRaiser as e:
             raise
         except Exception as e:
@@ -174,13 +206,16 @@ class AuctionServices:
         existing_amount: float = 0.0
     ):
         try:
+            # Get the auction, bids and winner's details
             auction = await self.repo.attachDB(db).get_by_id(id)
             bids: list = auction.bids
             winner = None
             if len(bids) > 0:
                 winner = max(bids, key=lambda x: x.amount)
+
+            # If auction exists
             if auction:
-                # check if price >= reserve price
+                # check if price >= reserve price else cancel auction
                 if auction.use_reserve_price and\
                     auction.reserve_price >= winner.amount:
                     await self.repo.attachDB(db).update(
@@ -194,11 +229,12 @@ class AuctionServices:
                         _ = await self.user_repo.attachDB(db).abtw(bid.user_id, bid.amount)
                         await self.notify(
                             db, bid.user_id, 'Auction Lost',
-                            'You have lost the auction, Amount has been returned'
+                            'You have lost the auction, Amount has been returned',
+                            class_name=NotificationClasses.AUCTION.value
                         )
                         return
 
-
+                # Update auction status to completed
                 await self.repo.attachDB(db).update(
                     auction, {'status': AuctionStatus.COMPLETED}
                 )
@@ -211,20 +247,25 @@ class AuctionServices:
                         from_id=winner.user_id, to_id=auction.users_id,
                         auction_id=auction.id, amount=winner.amount,
                         due_data=datetime.now().astimezone()\
-                            + timedelta(minutes=10.0)
+                            + timedelta(minutes=app_configs.PAYMENT_DUE_DAYS),
                     ),
                     caller=caller,
                     existing_amount=existing_amount
                 )
                 await self.notify(
                     db, winner.user_id, 'Auction Won',
-                    'Congratulations, you have won the auction'
-                )
-                await publish_win_auction(
+                    'Congratulations, you have won the auction',
+                    links=[f'{app_configs.FRONTEND_URL}/product/finalize/{id}'],
+                    class_name=NotificationClasses.AUCTION.value
+                ) 
+                await publ.publish_win_auction(
                     {
                         'auction_id': id,
                         'winner': winner.user_id,
-                        'amount': winner.amount
+                        'user': winner.user,
+                        'email': winner.user.email,
+                        'amount': winner.amount,
+                        'link': f'{app_configs.FRONTEND_URL}/product/finalize/{id}'
                     }
                 )
                 # TODO: Develop system to move amount to company's account
@@ -234,7 +275,9 @@ class AuctionServices:
                     _ = await self.user_repo.attachDB(db).abtw(bid.user_id, bid.amount)
                     await self.notify(
                         db, bid.user_id, 'Auction Lost',
-                        'You have lost the auction, Amount has been returned'
+                        'You have lost the auction, Amount has been returned',
+                        class_name=NotificationClasses.AUCTION.value,
+                        links=[f'{app_configs.FRONTEND_URL}/product-details/{auction.id}']
                     )
         except ExcRaiser as e:
             raise

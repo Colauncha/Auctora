@@ -69,7 +69,7 @@ class AppConfig(BaseSettings):
     APP_NAME: str
     URI_PREFIX: str = '/api'
     SWAGGER_DOCS_URL: str = f'{URI_PREFIX}/docs'
-    FRONTEND_URL: str = 'https://biddius.com'
+    FRONTEND_URL: str = 'https://biddius.com' if ENV == 'production' else 'http://localhost:5173'
     DB: DataBaseSettings = DataBaseSettings()
     test_user: TestUser = TestUser()
     security: JWTSettings= JWTSettings()
@@ -92,6 +92,7 @@ class AppConfig(BaseSettings):
 
     # Payment
     COMPANY_TAX: float = 0.05
+    PAYMENT_DUE_DAYS: int = 7200 if ENV == "production" else 5
 
     # Redis
     REDIS_CACHE_EXPIRATION_LANDING: int = 60 * 60 * 24 * 1

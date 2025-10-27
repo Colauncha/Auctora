@@ -127,8 +127,8 @@ class AuctionRepository(Repository):
             if search_term:
                 query = query.filter(
                     QueryModel.item.any(
-                        (Items.name.ilike(f"%{search_term}%"))
-                        # (Items.id.cast(String).ilike(f"%{search_term}%"))
+                        (Items.name.ilike(f"%{search_term}%")) |
+                        (Items.description.ilike(f"%{search_term}%"))
                     )
                 )
 

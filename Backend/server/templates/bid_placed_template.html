@@ -1,0 +1,11 @@
+{% extends "base_template.html" %}
+{% block title %}Bid Placed{% endblock %}
+{% block header %}
+Bid Placed Successfully
+{% endblock %}
+
+{% block content %}
+<p>Your bid has been placed successfully!</p>
+<div style="text-align: center;"><button><a href={{link}}>View Auction</a></button></div>
+<p>Link to auction: {{ link }}</p>
+{% endblock %}

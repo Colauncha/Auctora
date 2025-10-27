@@ -41,6 +41,38 @@ def run_migrations_offline(database_url: str) -> None:
         context.run_migrations()
 
 
+# def run_migrations_online(database_url: str, schema: str) -> None:
+#     """Run migrations in 'online' mode for a specific database."""
+#     connectable = engine_from_config(
+#         config.get_section(config.config_ini_section, {}),
+#         prefix="sqlalchemy.",
+#         poolclass=pool.NullPool,
+#         url=database_url
+#     )
+
+#     def include_name(name, type_, parent_names):
+#         if type_ == "schema":
+#             return name in [schema]
+#         else:
+#             return True
+
+#     with connectable.connect() as connection:
+#         context.configure(
+#             connection=connection,
+#             target_metadata=target_metadata,
+#             include_name=include_name,
+#             include_schemas=True,
+#             compare_type=True,
+#             version_table_schema=schema,
+#             compare_server_default=True
+#         )
+#         connection.execute(
+#             text(f"CREATE SCHEMA IF NOT EXISTS {schema}")
+#         )
+
+#         with context.begin_transaction():
+#             context.run_migrations()
+
 def run_migrations_online(database_url: str, schema: str) -> None:
     """Run migrations in 'online' mode for a specific database."""
     connectable = engine_from_config(
@@ -50,24 +82,19 @@ def run_migrations_online(database_url: str, schema: str) -> None:
         url=database_url
     )
 
-    def include_name(name, type_, parent_names):
-        if type_ == "schema":
-            return name in [schema]
-        else:
-            return True
-
     with connectable.connect() as connection:
+        # Ensure schema exists
+        connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+
+        # Configure Alembic to always use the given schema
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            include_name=include_name,
-            include_schemas=True,
+            include_schemas=True,               # <- include all schemas
+            version_table_schema=schema,        # <- store alembic_version table in your schema
             compare_type=True,
-            version_table_schema=schema,
-            compare_server_default=True
-        )
-        connection.execute(
-            text(f"CREATE SCHEMA IF NOT EXISTS {schema}")
+            compare_server_default=True,
+            render_as_batch=True,               # <- safer for schema-bound migrations
         )
 
         with context.begin_transaction():
