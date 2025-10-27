@@ -9,10 +9,11 @@ from server.services.misc_service import ContactUsService
 from server.services.user_service import *
 from server.services.item_service import *
 from server.services.category_service import *
+from server.blog.blogService import BlogService
 
 from server.repositories import DBAdaptor
 
-# from server.repositories.repository import Repository
+from server.blog.blogRepo import BlogRepository, BlogCommentRepository
 from server.repositories.bid_repository import BidRepository
 from server.repositories.payment_repository import PaymentRepository
 from server.repositories.auction_repository import (
@@ -45,6 +46,8 @@ class Services:
     Plug.bid_repo = BidRepository
     Plug.wallet_repo = WalletTranscationRepository
     Plug.payment_repo = PaymentRepository
+    Plug.blog_repo = BlogRepository
+    Plug.blog_comment_repo = BlogCommentRepository
 
     # Services
     contactUsServices = ContactUsService()
@@ -65,6 +68,7 @@ class Services:
         Plug.bid_repo, Plug.user_repo, Plug.auction_repo,
         notificationServices, auctionServices
     )
+    blogServices = BlogService(Plug.blog_repo, Plug._blog_comment_repo)
 
     @staticmethod
     def get_from_cookie(request: Request):

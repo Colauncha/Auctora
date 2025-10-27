@@ -1,8 +1,10 @@
 import math
-from typing import Any, Type, Union
+from typing import Any, Union
 from functools import wraps
 
 from sqlalchemy.orm import Session
+
+from server.config.app_configs import app_configs
 from server.models.base import BaseModel
 from server.models.users import Users
 from server.schemas import (
@@ -15,6 +17,7 @@ from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500
 )
 from server.utils.helpers import paginator
+from server.utils.ex_inspect import ExtInspect
 
 
 T = Union[
@@ -43,6 +46,8 @@ class Repository:
     db: Session = None
     def __init__(self, model: BaseModel):
         self._Model = model
+        self._inspect = ExtInspect()
+        self.configs = app_configs
 
     def attachDB(self, db: Session):
         """Attach database session to the repository"""
@@ -62,6 +67,8 @@ class Repository:
             return new_entity
         except Exception as e:
             self.db.rollback()
+            if self.configs.DEBUG:
+                self._inspect.info()
             raise e
 
     @no_db_error
@@ -77,6 +84,8 @@ class Repository:
             return entity
         except Exception as e:
             self.db.rollback()
+            if self.configs.DEBUG:
+                self._inspect.info()
             raise e
 
     @no_db_error
@@ -99,6 +108,8 @@ class Repository:
                 return entity.all()
             return None
         except Exception as e:
+            if self.configs.DEBUG:
+                self._inspect.info()
             raise e
 
     @no_db_error
@@ -117,6 +128,8 @@ class Repository:
             return entity_to_update.all()
         except Exception as e:
             self.db.rollback()
+            if self.configs.DEBUG:
+                self._inspect.info()
             raise e
 
     @no_db_error
@@ -143,6 +156,8 @@ class Repository:
             return entity
         except Exception as e:
             self.db.rollback()
+            if self.configs.DEBUG:
+                self._inspect.info()
             raise e
 
     @no_db_error
@@ -150,9 +165,11 @@ class Repository:
         try:
             self.db.delete(entity)
             self.db.commit()
+            return True
         except Exception as e:
+            if self.configs.DEBUG:
+                self._inspect.info()
             raise e
-        return True
 
     @no_db_error
     async def exists(self, filter: dict) -> bool:
@@ -162,8 +179,10 @@ class Repository:
     @no_db_error
     def all(self):
         try:
-            return self.db.query(self._Model).order_by(self._Model.id).all()
+            return self.db.query(self._Model).order_by(self._Model.created_at).all()
         except Exception as e:
+            if self.configs.DEBUG:
+                self._inspect.info()
             raise e
 
     @no_db_error
@@ -212,4 +231,6 @@ class Repository:
                 total = self.db.query(self._Model).count()
             return total
         except Exception as e:
+            if self.configs.DEBUG:
+                self._inspect.info()
             raise e

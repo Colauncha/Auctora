@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from server.repositories.repository import Repository
+from server.blog.blogRepo import BlogRepository, BlogCommentRepository
 from server.repositories.auction_repository import (
     AuctionRepository, AuctionParticipantRepository
 )
@@ -14,7 +14,6 @@ from server.repositories.user_repository import (
     UserRepository, UserNotificationRepository,
     WalletTranscationRepository
 )
-from server.middlewares.exception_handler import ExcRaiser500
 
 
 class DBAdaptor:
@@ -28,6 +27,8 @@ class DBAdaptor:
     _bid_repo = None
     _wallet_repo = None
     _payment_repo = None
+    _blog_repo = None
+    _blog_comment_repo = None
 
     # Wallet
     @property
@@ -122,3 +123,21 @@ class DBAdaptor:
     @payment_repo.setter
     def payment_repo(self, value):
         self._payment_repo = value() if value else PaymentRepository()
+
+    # Blog
+    @property
+    def blog_repo(self):
+        return self._blog_repo
+    
+    @blog_repo.setter
+    def blog_repo(self, value):
+        self._blog_repo = value() if value else BlogRepository()
+
+    # BlogComment
+    @property
+    def blog_comment_repo(self):
+        return self._blog_comment_repo
+
+    @blog_comment_repo.setter
+    def blog_comment_repo(self, value):
+        self._blog_comment_repo = value() if value else BlogCommentRepository
