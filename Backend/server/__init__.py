@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from server.config import app_configs, init_db, get_db
 from server.controllers import routes
+from server.middlewares.multipart_large_file import LargeFileMiddleware
 from server.middlewares.exception_handler import (
     ExcRaiser, RequestValidationError,
     HTTPException, IntegrityError, DataError, OperationalError,
@@ -37,6 +38,7 @@ def create_app(app_name: str = 'temporary') -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(LargeFileMiddleware)
 
     @app.get("/", include_in_schema=False)
     def redirect():

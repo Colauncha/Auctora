@@ -31,6 +31,7 @@ from server.schemas import (
     InitializePaymentRes, GetUsersSchemaPublic,
     WalletHistoryQuery, TransferRecipientData,
     AccountDetailsSchema, UpdateUserAddressSchema,
+    GetUsersNoAuction
 )
 from server.services import Services, current_user
 from sqlalchemy.orm import Session
@@ -52,7 +53,7 @@ async def get_users(
     user: current_user,
     filter: PagedQuery = Depends(PagedQuery),
     db: Session = Depends(get_db)
-) -> PagedResponse[list[GetUsers]]:
+) -> PagedResponse[list[GetUsersNoAuction]]:
     users = await Services.userServices.list(db, filter)
     return users
 
