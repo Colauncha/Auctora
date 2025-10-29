@@ -3,7 +3,6 @@ from typing import Optional, Union
 from uuid import UUID
 from fastapi import Query
 from pydantic import BaseModel, Field, ConfigDict
-from server.models.users import Users
 from server.config import app_configs
 from server.enums.user_enums import (
     UserRoles, TransactionTypes, TransactionStatus
@@ -258,3 +257,8 @@ class ReferralSlots(BaseModel):
     created_at: str = Field(
         default_factory=lambda: datetime.datetime.now().isoformat()
     )
+
+class ListUsers(BaseModel):
+    page: int = Query(1, ge=1)
+    per_page: int = Query(10, ge=1, le=100)
+    order: Optional[str] = Field(default='asc')

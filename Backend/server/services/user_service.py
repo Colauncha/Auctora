@@ -26,7 +26,8 @@ from server.schemas import (
     WalletTransactionSchema, WalletHistoryQuery,
     InitializePaymentRes, AccountDetailsSchema,
     UpdateUserAddressSchema, ReferralSlots,
-    GetUsersSchemaPublic, SearchQuery
+    GetUsersSchemaPublic, SearchQuery,
+    GetUsersNoAuction
 )
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
@@ -533,7 +534,11 @@ class UserServices:
             raise ExcRaiser500(detail=str(e))
 
     # Not optimal (The auction list should be trauncated)
-    async def list(self, db: Session, filter: PagedQuery) ->PagedResponse[list[GetUsers]]:
+    async def list(
+        self,
+        db: Session,
+        filter: PagedQuery
+    ) ->PagedResponse[list[GetUsersNoAuction]]:
         try:
             result = await self.repo.attachDB(db).get_all(filter.model_dump(exclude_unset=True))
             if result:

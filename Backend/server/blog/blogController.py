@@ -27,6 +27,7 @@ async def create_blog(
 
     # Ensure main image is provided
     file = form.get('main_image')
+
     filesize = file.size
 
     if filesize <= 0:

@@ -55,10 +55,15 @@ class PagedResponse(APIResponse):
 class PagedQuery(pyd.BaseModel):
     page: int = Query(1, ge=1)
     per_page: int = Query(10, ge=1, le=100)
+    order: Optional[str] = Query(default='asc')
     # attr: Optional[str|int] = Query(default=None, description="Attribute to filter by")
 
 
 # User related
+class GetUsersNoAuction(GetUsersSchemaPublic):
+    model_config = {"from_attributes": True}    
+
+
 class GetUsers(GetUsersSchemaPublic):
     model_config = {"from_attributes": True}
     auctions: Optional[list[GetAuctionSchema]] = Field(default=[])

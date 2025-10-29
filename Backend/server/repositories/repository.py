@@ -191,11 +191,11 @@ class Repository:
         filter: dict = None,
         relative: bool = False,
         sort: str = 'created_at',
-#        order: str = 'desc'
     ) -> PagedResponse:
     
         page = filter.pop('page') if (filter and filter.get('page')) else 1
         per_page = filter.pop('per_page') if (filter and filter.get('per_page')) else 10
+        order = filter.pop('order') if (filter and filter.get('order')) else 'asc'
         limit = per_page
         offset = paginator(page, per_page)
         QueryModel = self._Model
@@ -207,7 +207,12 @@ class Repository:
             else:
                 query = self.db.query(QueryModel)
                 total = query.count()
-            query = query.order_by(getattr(QueryModel, sort))
+            order_by_clause = getattr(QueryModel, sort)
+            if order == "asc":
+                order_by_clause = order_by_clause.asc()
+            else:
+                order_by_clause = order_by_clause.desc()
+            query = query.order_by(order_by_clause)
             results = query.limit(limit).offset(offset).all()
         except Exception as e:
             raise e
