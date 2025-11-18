@@ -27,7 +27,6 @@ async def create(
     data = data.model_dump(exclude_unset=True)
     data["users_id"] = user.id
     result = await Services.auctionServices.create(db, data)
-    print(result)
     return APIResponse(status_code=201, data=result)
 
 

@@ -2,6 +2,7 @@ import math
 
 from sqlalchemy import String
 from server.utils.helpers import paginator
+from server.config.database import get_db
 from server.repositories.repository import Repository, no_db_error
 from server.models.users import Users, Notifications, WalletTransactions
 from server.schemas import GetUserSchema, PagedResponse, WalletTransactionSchema
@@ -260,6 +261,7 @@ class UserRepository(Repository):
 
 
 class UserNotificationRepository(Repository):
-    def __init__(self):
+    def __init__(self, db=get_db()):
         super().__init__(Notifications)
+        super().attachDB(next(db))
             

@@ -52,6 +52,10 @@ class UserNotificationServices:
         self.repo = notif_repo
         self.debug = app_configs.DEBUG
 
+    @staticmethod
+    def user_notif_channel(user_id: str) -> str:
+        return f"user_notif_{user_id}"
+
     async def list(self, db: Session, notice: NotificationQuery):
         try:
             result = await self.repo.attachDB(db).get_all(notice.model_dump(exclude_unset=True))
@@ -88,9 +92,18 @@ class UserNotificationServices:
         
     async def create(self, db: Session, data: CreateNotificationSchema):
         try:
+            channel = self.user_notif_channel(data.user_id)
             result = await self.repo.attachDB(db).add(data.model_dump())
             if result:
-                return GetNotificationsSchema.model_validate(result)
+                valid_result = GetNotificationsSchema.model_validate(result)
+                if valid_result:
+                    # publish to redis
+                    async_redis = await redis_store.get_async_redis()
+                    _ = await async_redis.publish(
+                        channel,
+                        valid_result.model_dump_json()
+                    )
+                return valid_result
             raise ExcRaiser400(message='Unable to create Notification')
         except ExcRaiser as e:
             raise
@@ -116,6 +129,24 @@ class UserNotificationServices:
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
+    async def count(self, user_id: str):
+        try:
+            notice = await self.repo.get_by_attr(attr={'user_id': user_id}, many=True)
+            if notice:
+                unread_len = len([n for n in notice if not n.read])
+                total = len(notice)
+                return {
+                    'unread': unread_len,
+                    'total': total
+                }
+            raise ExcRaiser404(message='Notification not found')
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
 
 ###############################################################################
 ############################ Notification Services ############################
