@@ -15,6 +15,7 @@ from server.repositories import DBAdaptor
 
 from server.blog.blogRepo import BlogRepository, BlogCommentRepository
 from server.repositories.bid_repository import BidRepository
+from server.chat.chatRepo import ChatRepository
 from server.repositories.payment_repository import PaymentRepository
 from server.repositories.auction_repository import (
     AuctionRepository, AuctionParticipantRepository
@@ -48,6 +49,7 @@ class Services:
     Plug.payment_repo = PaymentRepository
     Plug.blog_repo = BlogRepository
     Plug.blog_comment_repo = BlogCommentRepository
+    Plug.chat_repo = ChatRepository
 
     # Services
     contactUsServices = ContactUsService()

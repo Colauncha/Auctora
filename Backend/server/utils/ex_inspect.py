@@ -1,8 +1,9 @@
 import inspect
 
 class ExtInspect(inspect.Signature):
-    def __init__(self):
-        pass
+    def __init__(self, class_name: str):
+        self.class_name = class_name
+        return self
 
     def info(self):
         module_name = inspect.stack()[1].frame.f_globals["__name__"]
@@ -11,6 +12,7 @@ class ExtInspect(inspect.Signature):
         line = inspect.currentframe().f_back.f_lineno
         trace_info = self.trace(skip=2)
         info = {
+            'class_name': self.class_name,
             'module_name': module_name,
             'method_name': method_name,
             'caller_name': caller_name,

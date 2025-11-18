@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from server.blog.blogRepo import BlogRepository, BlogCommentRepository
+from server.chat.chatRepo import ChatRepository
 from server.repositories.auction_repository import (
     AuctionRepository, AuctionParticipantRepository
 )
@@ -29,6 +30,7 @@ class DBAdaptor:
     _payment_repo = None
     _blog_repo = None
     _blog_comment_repo = None
+    _chat_repo = None
 
     # Wallet
     @property
@@ -140,4 +142,13 @@ class DBAdaptor:
 
     @blog_comment_repo.setter
     def blog_comment_repo(self, value):
-        self._blog_comment_repo = value() if value else BlogCommentRepository
+        self._blog_comment_repo = value() if value else BlogCommentRepository()
+
+    # Chat
+    @property
+    def chat_repo(self):
+        return self._chat_repo
+
+    @chat_repo.setter
+    def chat_repo(self, value):
+        self._chat_repo = value() if value else ChatRepository()
