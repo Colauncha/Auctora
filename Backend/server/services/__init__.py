@@ -101,6 +101,16 @@ class Services:
                     message='Unauthenticated',
                     detail='No token provided'
                 )
+
+            async_redis = await redis_store.get_async_redis()
+            blacklisted = await async_redis.get(f"blacklist_{token}")
+            if blacklisted:
+                raise ExcRaiser(
+                    status_code=401,
+                    message='Unauthenticated',
+                    detail='No token provided'
+                )
+
             claims = jwt.decode(
                 token=token,
                 algorithms=app_configs.security.ALGORITHM,
@@ -137,6 +147,33 @@ class Services:
                 message='Unauthenticated',
                 detail=e.__repr__()
             )
+
+    @staticmethod
+    async def verify_token(
+        request: Request,
+    ) -> bool:
+        try:
+            token = request.cookies.get('access_token', None)
+            if not token:
+                return False
+
+            async_redis = await redis_store.get_async_redis()
+            blacklisted = await async_redis.get(f"blacklist_{token}")
+            if blacklisted:
+                return False
+
+            claims = jwt.decode(
+                token=token,
+                algorithms=app_configs.security.ALGORITHM,
+                key=app_configs.security.JWT_SECRET_KEY
+            )
+
+            if claims:
+                return True
+            return False
+        except Exception:
+            return False
+
 
 Services = Services()
 current_user = Annotated[GetUserSchema, Depends(Services._get_current_user)]

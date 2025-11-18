@@ -81,7 +81,11 @@ class AppConfig(BaseSettings):
     CORS_ALLOWED: list[str] | str = [
         "http://localhost:5173", "https://auctora.vercel.app",
         "https://biddius.vercel.app", "https://biddius.com",
-        "https://www.biddius.com"
+        "https://www.biddius.com", "http://localhost:4173"
+    ] if ENV in ["development", "test"] else [
+        'https://biddius.com',
+        'https://www.biddius.com',
+        "https://biddius.vercel.app"
     ]
 
     # Google OAuth

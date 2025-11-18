@@ -1,9 +1,10 @@
 import json
 import hashlib
 import hmac
+import asyncio
 from typing import Union
 from fastapi import APIRouter, Depends, Request, Response
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 import httpx
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
@@ -222,7 +223,16 @@ async def callback(
 
 
 @route.post('/logout')
-async def logout(response: Response) -> APIResponse[str]:
+async def logout(request: Request, response: Response) -> APIResponse[str]:
+    token = request.cookies.get('access_token')
+    async_redis = await redis_store.get_async_redis()
+    if not token:
+        return APIResponse(data='No active session found')
+    await async_redis.setex(
+        f"blacklist_{token}",
+        app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
+        cache_obj_format({"token": token})
+    )
     response.delete_cookie(key='access_token')
     return APIResponse(data='Logout successful')
 
@@ -336,6 +346,41 @@ async def get_user_count(
 ###############################################################################
 ############################ Notification Endpoints ###########################
 ###############################################################################
+
+def user_notif_channel(user_id: str) -> str:
+    return f"user_notif_{user_id}"
+
+
+@notif_route.get('/subscribe')
+@permissions(permission_level=Permissions.CLIENT)
+async def subscribe_notifications(
+    user: current_user,
+    request: Request,
+):
+    async def event_generator():
+        async_redis = await redis_store.get_async_redis()
+        pubsub = async_redis.pubsub()
+        await pubsub.subscribe(user_notif_channel(user.id))
+        try:
+            while True:
+                active_user = await Services.verify_token(request)
+                if not active_user:
+                    break
+                if await request.is_disconnected():
+                    break
+                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=30.0)
+                if message is None:
+                    count = await Services.notificationServices.count(user.id)
+                    yield f"event: count\ndata: {json.dumps(count)}\n\n"
+                    continue
+                else:
+                    yield f"data: {message['data']}\n\n"
+                await asyncio.sleep(0.5)
+        finally:
+            await pubsub.unsubscribe(user_notif_channel(user.id))
+            await pubsub.close()
+    return StreamingResponse(event_generator(), media_type='text/event-stream')
+
 
 @notif_route.get('/')
 @permissions(permission_level=Permissions.CLIENT)
