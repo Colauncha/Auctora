@@ -1,4 +1,5 @@
-from sqlalchemy import Column, ForeignKey, UUID, String, JSONB
+from sqlalchemy import Column, ForeignKey, UUID
+from sqlalchemy.dialects.postgresql import JSONB
 
 from server.models.base import BaseModel
 

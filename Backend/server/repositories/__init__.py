@@ -1,5 +1,8 @@
+from functools import lru_cache
 from sqlalchemy.orm import Session
+from fastapi import Depends
 
+from server.config import get_db
 from server.blog.blogRepo import BlogRepository, BlogCommentRepository
 from server.chat.chatRepo import ChatRepository
 from server.repositories.auction_repository import (
@@ -17,138 +20,117 @@ from server.repositories.user_repository import (
 )
 
 
+# Database Adaptor for Repositories
 class DBAdaptor:
-    _user_repo = None
-    _item_repo = None
-    _category_repo = None
-    _sub_category_repo = None
-    _auction_repo = None
-    _auction_p_repo = None
-    _notif_repo = None
-    _bid_repo = None
-    _wallet_repo = None
-    _payment_repo = None
-    _blog_repo = None
-    _blog_comment_repo = None
-    _chat_repo = None
 
-    # Wallet
-    @property
-    def wallet_repo(self):
-        return self._wallet_repo
+    class Factory:
+        user_repo: UserRepository = UserRepository
+        item_repo: ItemRepository = ItemRepository
+        category_repo: CategoryRepository = CategoryRepository
+        sub_category_repo: SubCategoryRepository = SubCategoryRepository
+        auction_repo: AuctionRepository = AuctionRepository
+        auction_p_repo: AuctionParticipantRepository = AuctionParticipantRepository
+        notif_repo: UserNotificationRepository = UserNotificationRepository
+        bid_repo: BidRepository = BidRepository
+        wallet_repo: WalletTranscationRepository = WalletTranscationRepository
+        payment_repo: PaymentRepository = PaymentRepository
+        blog_repo: BlogRepository = BlogRepository
+        blog_comment_repo: BlogCommentRepository = BlogCommentRepository
+        chat_repo: ChatRepository = ChatRepository
 
-    @wallet_repo.setter
-    def wallet_repo(self, value):
-        self._wallet_repo = value() if value else WalletTranscationRepository()
+    @lru_cache(maxsize=1)
+    def factory(self):
+        """
+        A factory method to retrieve all repository classes.
 
-    # User
-    @property
-    def user_repo(self):
-        return self._user_repo
+        This method provides a centralized way to access all repository classes 
+        by returning a dictionary where the keys are repository identifiers and 
+        the values are the corresponding repository classes.
 
-    @user_repo.setter
-    def user_repo(self, value):
-        self._user_repo = value(WalletTranscationRepository()) if\
-        value else UserRepository(WalletTranscationRepository())
+        Returns:
+            dict: A dictionary mapping repository identifiers to their respective classes.
 
-    # Item
-    @property
-    def item_repo(self):
-        return self._item_repo
+        Example:
+            ```python
+            from server.repositories import DBAdaptor
 
-    @item_repo.setter
-    def item_repo(self, value):
-        self._item_repo = value() if value else ItemRepository()
+            repos = DBAdaptor().factory()
+            user_repo = repos.user_repo  # Access the UserRepository class
+            ```
+        """
+        return self.Factory()
 
-    # Category
-    @property
-    def category_repo(self):
-        return self._category_repo
 
-    @category_repo.setter
-    def category_repo(self, value):
-        self._category_repo = value() if value else CategoryRepository()
+# Repository dependencies
+factory = DBAdaptor().factory()
 
-    # SubCategory
-    @property
-    def sub_category_repo(self):
-        return self._sub_category_repo
 
-    @sub_category_repo.setter
-    def sub_category_repo(self, value):
-        self._sub_category_repo = value() if\
-        value else SubCategoryRepository()
+def get_wallet_repo(db: Session = Depends(get_db)):
+    WalletRepo = factory.wallet_repo
+    return WalletRepo(db)
 
-    # Auction Participant
-    @property
-    def auction_p_repo(self):
-        return self._auction_p_repo
 
-    @auction_p_repo.setter
-    def auction_p_repo(self, value):
-        self._auction_p_repo = value() if\
-        value else AuctionParticipantRepository()
+def get_user_repo(
+    wallet_repo: WalletTranscationRepository = Depends(get_wallet_repo),
+    db: Session = Depends(get_db)
+):
+    UserRepo = factory.user_repo
+    return UserRepo(wallet_transaction=wallet_repo, db=db)
 
-    # Auction
-    @property
-    def auction_repo(self):
-        return self._auction_repo
 
-    @auction_repo.setter
-    def auction_repo(self, value):
-        self._auction_repo = value(AuctionParticipantRepository()) if\
-        value else AuctionRepository(AuctionParticipantRepository())
+def get_payment_repo(db: Session = Depends(get_db)):
+    PaymentRepo = factory.payment_repo
+    return PaymentRepo(db)
 
-    # Notification
-    @property
-    def notif_repo(self):
-        return self._notif_repo
 
-    @notif_repo.setter
-    def notif_repo(self, value):
-        self._notif_repo = value() if value else UserNotificationRepository()
+def get_chat_repo(db: Session = Depends(get_db)):
+    ChatRepo = factory.chat_repo
+    return ChatRepo(db)
 
-    # Bids
-    @property
-    def bid_repo(self):
-        return self._bid_repo
 
-    @bid_repo.setter
-    def bid_repo(self, value):
-        self._bid_repo = value() if value else BidRepository()
+def get_blog_repo(db: Session = Depends(get_db)):
+    BlogRepo = factory.blog_repo
+    return BlogRepo(db)
 
-    # Payment
-    @property
-    def payment_repo(self):
-        return self._payment_repo
 
-    @payment_repo.setter
-    def payment_repo(self, value):
-        self._payment_repo = value() if value else PaymentRepository()
+def get_blog_comment_repo(db: Session = Depends(get_db)):
+    BlogCommentRepo = factory.blog_comment_repo
+    return BlogCommentRepo(db)
 
-    # Blog
-    @property
-    def blog_repo(self):
-        return self._blog_repo
-    
-    @blog_repo.setter
-    def blog_repo(self, value):
-        self._blog_repo = value() if value else BlogRepository()
 
-    # BlogComment
-    @property
-    def blog_comment_repo(self):
-        return self._blog_comment_repo
+def get_auction_p_repo(db: Session = Depends(get_db)):
+    AuctionPRepo = factory.auction_p_repo
+    return AuctionPRepo(db)
 
-    @blog_comment_repo.setter
-    def blog_comment_repo(self, value):
-        self._blog_comment_repo = value() if value else BlogCommentRepository()
 
-    # Chat
-    @property
-    def chat_repo(self):
-        return self._chat_repo
+def get_auction_repo(
+    auction_p_repo: AuctionParticipantRepository = Depends(get_auction_p_repo),
+    db: Session = Depends(get_db)
+):
+    AuctionRepo = factory.auction_repo
+    return AuctionRepo(auction_participant=auction_p_repo, db=db)
 
-    @chat_repo.setter
-    def chat_repo(self, value):
-        self._chat_repo = value() if value else ChatRepository()
+
+def get_bid_repo(db: Session = Depends(get_db)):
+    BidRepo = factory.bid_repo
+    return BidRepo(db)
+
+
+def get_category_repo(db: Session = Depends(get_db)):
+    CategoryRepo = factory.category_repo
+    return CategoryRepo(db)
+
+
+def get_sub_category_repo(db: Session = Depends(get_db)):
+    SubCategoryRepo = factory.sub_category_repo
+    return SubCategoryRepo(db)
+
+
+def get_item_repo(db: Session = Depends(get_db)):
+    ItemRepo = factory.item_repo
+    return ItemRepo(db)
+
+
+def get_notification_repo(db: Session = Depends(get_db)):
+    NotifRepo = factory.notif_repo
+    return NotifRepo(db)

@@ -1,6 +1,6 @@
 import math
 
-from sqlalchemy import String
+from sqlalchemy.orm import Session
 
 from server.models.auction import Auctions, AuctionParticipants
 from server.models.items import Items
@@ -11,13 +11,17 @@ from server.utils import paginator
 
 
 class AuctionParticipantRepository(Repository):
-    def __init__(self):
+    def __init__(self, db: Session = None):
         super().__init__(AuctionParticipants)
+        if db:
+            super().attachDB(db)
 
 
 class AuctionRepository(Repository):
-    def __init__(self, auction_participant: AuctionParticipantRepository):
+    def __init__(self, auction_participant: AuctionParticipantRepository, db: Session = None):
         super().__init__(Auctions)
+        if db:
+            super().attachDB(db)
         self.auction_P = auction_participant
 
     async def validate_participant(self, auction_id: str, participant: str):

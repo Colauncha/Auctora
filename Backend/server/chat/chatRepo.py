@@ -1,9 +1,11 @@
-from server.config.database import get_db
+from sqlalchemy.orm import Session
+
 from server.repositories.repository import Repository
 from server.chat.chat import Chats
 
 
 class ChatRepository(Repository):
-    def __init__(self, db=get_db()):
+    def __init__(self, db: Session =None):
         super().__init__(Chats)
-        super().attachDB(next(db))
+        if db:
+            super().attachDB(db)

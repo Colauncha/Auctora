@@ -1,14 +1,17 @@
-from server.config.database import get_db
+from sqlalchemy.orm import Session
+
 from server.repositories.repository import Repository
 from server.blog.blogModel import BlogModel, BlogCommentModel
 
 
 class BlogRepository(Repository):
-    def __init__(self, db=get_db()):
+    def __init__(self, db: Session = None):
         super().__init__(BlogModel)
-        super().attachDB(next(db))
+        if db:
+            super().attachDB(db)
 
 class BlogCommentRepository(Repository):
-    def __init__(self, db=get_db()):
+    def __init__(self, db: Session = None):
         super().__init__(BlogCommentModel)
-        super().attachDB(next(db))
+        if db:
+            super().attachDB(db)

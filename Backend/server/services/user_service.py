@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 from server.models.users import Users
 from server.enums.user_enums import TransactionStatus, TransactionTypes, UserRoles
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer
 from server.config import app_configs, redis_store
 from jose.exceptions import JWTError
 from server.utils import (
@@ -38,9 +37,6 @@ from server.events import (
     publish_fund_account
 )
 from fastapi import HTTPException
-
-
-oauth_bearer = OAuth2PasswordBearer(tokenUrl=f"api/users/login")
 
 
 ###############################################################################

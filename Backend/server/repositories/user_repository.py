@@ -1,6 +1,7 @@
 import math
-
 from sqlalchemy import String
+from sqlalchemy.orm import Session
+
 from server.utils.helpers import paginator
 from server.config.database import get_db
 from server.repositories.repository import Repository, no_db_error
@@ -12,13 +13,17 @@ from server.enums.user_enums import TransactionStatus, TransactionTypes
 
 
 class WalletTranscationRepository(Repository):
-    def __init__(self):
+    def __init__(self, db: Session = None):
         super().__init__(WalletTransactions)
+        if db:
+            super().attachDB(db)
 
 
 class UserRepository(Repository):
-    def __init__(self, wallet_transaction: WalletTranscationRepository):
+    def __init__(self, wallet_transaction: WalletTranscationRepository, db: Session = None):
         super().__init__(Users)
+        if db:
+            super().attachDB(db)
         self.wallet_transaction = wallet_transaction
 
     @no_db_error
@@ -261,7 +266,8 @@ class UserRepository(Repository):
 
 
 class UserNotificationRepository(Repository):
-    def __init__(self, db=get_db()):
+    def __init__(self, db: Session = None):
         super().__init__(Notifications)
-        super().attachDB(next(db))
+        if db:
+            super().attachDB(db)
             

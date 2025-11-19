@@ -46,7 +46,7 @@ class Repository:
     db: Session = None
     def __init__(self, model: BaseModel):
         self._Model = model
-        self._inspect = ExtInspect()
+        self._inspect = ExtInspect(self.__class__.__name__)
         self.configs = app_configs
 
     def attachDB(self, db: Session):
@@ -139,6 +139,7 @@ class Repository:
         data: dict = None,
         new_slot: bool = True,
         model: BaseModel = Users,
+        attr = 'referred_users',
     ):
         try:
             if not data:
@@ -147,9 +148,13 @@ class Repository:
             if entity is None:
                 raise ExcRaiser404(message='Entity not found')
 
-            entity.referred_users = data
-            if new_slot:
-                entity.referral_slots_used += 1
+            if hasattr(entity, attr):
+                setattr(entity, attr, data)
+                if attr == 'referred_users' and new_slot:
+                    entity.referral_slots_used += 1
+            # entity.referred_users = data
+            # if new_slot:
+            #     entity.referral_slots_used += 1
 
             self.db.add(entity)
             self.db.commit()

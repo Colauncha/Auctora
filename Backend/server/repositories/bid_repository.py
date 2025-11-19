@@ -1,3 +1,5 @@
+from sqlalchemy.orm import Session
+
 from server.repositories.repository import Repository, no_db_error
 from server.models.bids import Bids
 from server.schemas.bid_schema import GetBidSchema
@@ -5,8 +7,10 @@ from server.middlewares.exception_handler import ExcRaiser404
 
 
 class BidRepository(Repository):
-    def __init__(self):
+    def __init__(self, db: Session = None):
         super().__init__(Bids)
+        if db:
+            super().attachDB(db)
 
     @no_db_error
     async def exists(self, filter: dict) -> bool:

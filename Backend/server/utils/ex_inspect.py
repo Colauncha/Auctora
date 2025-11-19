@@ -1,9 +1,8 @@
 import inspect
 
 class ExtInspect(inspect.Signature):
-    def __init__(self, class_name: str):
+    def __init__(self, class_name: str = None):
         self.class_name = class_name
-        return self
 
     def info(self):
         module_name = inspect.stack()[1].frame.f_globals["__name__"]

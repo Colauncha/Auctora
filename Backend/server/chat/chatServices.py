@@ -1,7 +1,7 @@
 from server.middlewares.exception_handler import ExcRaiser500, ExcRaiser
 from server.chat.chatSchema import CreateChatSchema, GetChatSchema
 from server.utils.ex_inspect import ExtInspect
-from server.config.app_configs import app_configs
+from server.config.app_configs import app_configs, AppConfig
 
 
 class ChatServices:
@@ -10,7 +10,7 @@ class ChatServices:
         Plug = Services.Plug
         self.chat_repo = Plug.chat_repo()
         self.inspect = ExtInspect(self.__class__.__name__).info
-        self.config = app_configs
+        self.config: AppConfig = app_configs
 
     async def create_chat(self, chat_data: CreateChatSchema) -> GetChatSchema:
         try:
@@ -19,20 +19,20 @@ class ChatServices:
         except ExcRaiser as e:
             raise e
         except Exception as e:
-            if self.config.debug:
+            if self.config.DEBUG:
                 self.inspect.info()
                 raise ExcRaiser500(detail=str(e), exception=e)
             raise ExcRaiser500(detail=str(e))
 
     # To be redesigned
-    async def update_chat(self, chat_id: int, chat_data: CreateChatSchema) -> GetChatSchema:
+    async def update_chat(self, chat_id: str, chat_data: CreateChatSchema) -> GetChatSchema:
         try:
-            updated_chat = await self.chat_repo.update(chat_id, chat_data.model_dump())
+            updated_chat = await self.chat_repo.update_jsonb(chat_id, chat_data.model_dump())
             return GetChatSchema.model_validate(updated_chat)
         except ExcRaiser as e:
             raise e
         except Exception as e:
-            if self.config.debug:
+            if self.config.DEBUG:
                 self.inspect.info()
                 raise ExcRaiser500(detail=str(e), exception=e)
             raise ExcRaiser500(detail=str(e))
