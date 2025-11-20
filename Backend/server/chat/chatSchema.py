@@ -9,7 +9,7 @@ class ConversationSchema(BaseModel):
         'extra': 'ignore'
     }
 
-    timestamp: datetime = Field(default_factory=datetime.now(timezone.utc + 1))
+    timestamp: datetime = Field(default=datetime.now(timezone.utc))
     message: str = Field(...)
     sender_id: str = Field(...)
     read: bool = False

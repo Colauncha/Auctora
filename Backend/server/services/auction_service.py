@@ -12,6 +12,7 @@ from server.events import publisher as publ
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
 )
+from server.utils.ex_inspect import ExtInspect
 from server.schemas import (
     GetAuctionSchema,
     CreateNotificationSchema, CreateAuctionParticipantsSchema,
@@ -19,18 +20,25 @@ from server.schemas import (
     SearchQuery, GetPaymentSchema, RestartAuctionSchema
 )
 
+from server.services.base_service import BaseService
 
-class AuctionServices:
+
+class AuctionServices(BaseService):
     def __init__(
         self, auction_repo, auction_p_repo,
-        user_repo, payment_repo, notif_service
+        user_repo, payment_repo, notif_service,
+        chat_service
     ):
         self.repo = auction_repo
         self.participant_repo = auction_p_repo
         self.user_repo = user_repo
-        self.notification = notif_service
         self.payment_repo = payment_repo
+
+        self.notification = notif_service
+        self.chat_service = chat_service
+
         self.debug = app_configs.DEBUG
+        self.inspect = ExtInspect(self.__class__.__name__).info
 
     # Auction services
     async def create(self, db: Session, data: dict):
@@ -88,8 +96,8 @@ class AuctionServices:
             raise
         except Exception as e:
             if self.debug:
-                method_name = inspect.stack()[0].frame.f_code.co_name
-                print(f"Unexpected error in {method_name}: {e}")
+                self.inspect()
+                raise ExcRaiser500(detail=str(e))
             raise ExcRaiser500(detail=str(e))
 
     async def list(
@@ -266,6 +274,14 @@ class AuctionServices:
                         'email': winner.user.email,
                         'amount': winner.amount,
                         'link': f'{app_configs.FRONTEND_URL}/product/finalize/{id}'
+                    }
+                )
+                await self.chat_service.create_chat(
+                    {
+                        'auctions_id': auction.id,
+                        'buyer_id': winner.user_id,
+                        'seller_id': auction.users_id,
+                        'conversation': []
                     }
                 )
                 # TODO: Develop system to move amount to company's account

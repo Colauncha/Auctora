@@ -9,7 +9,7 @@ from server.schemas import (
 )
 from server.services import current_user, AuctionServices, get_auction_service
 from server.middlewares.auth import (
-    permissions, Permissions,
+    RequirePermission, permissions, Permissions,
     ServiceKeys
 )
 

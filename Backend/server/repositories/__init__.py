@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 
 from server.config import get_db
+from server.repositories.repository import Repository
 from server.blog.blogRepo import BlogRepository, BlogCommentRepository
 from server.chat.chatRepo import ChatRepository
 from server.repositories.auction_repository import (
@@ -24,6 +25,7 @@ from server.repositories.user_repository import (
 class DBAdaptor:
 
     class Factory:
+        base_repo: Repository = Repository
         user_repo: UserRepository = UserRepository
         item_repo: ItemRepository = ItemRepository
         category_repo: CategoryRepository = CategoryRepository
@@ -63,6 +65,10 @@ class DBAdaptor:
 
 # Repository dependencies
 factory = DBAdaptor().factory()
+
+def get_db_repo():
+    BaseRepo = factory.base_repo
+    return BaseRepo
 
 
 def get_wallet_repo(db: Session = Depends(get_db)):

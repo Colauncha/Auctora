@@ -28,6 +28,7 @@ from server.schemas import (
     GetUsersSchemaPublic, SearchQuery,
     GetUsersNoAuction
 )
+from server.services.base_service import BaseService
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
 )
@@ -43,7 +44,7 @@ from fastapi import HTTPException
 ############################ Notification Services ############################
 ###############################################################################
 
-class UserNotificationServices:
+class UserNotificationServices(BaseService):
     def __init__(self, notif_repo):
         self.repo = notif_repo
         self.debug = app_configs.DEBUG
@@ -148,7 +149,7 @@ class UserNotificationServices:
 ############################ Notification Services ############################
 ###############################################################################
 
-class UserWalletTransactionServices:
+class UserWalletTransactionServices(BaseService):
     def __init__(self, wallet_repo, user_repo, notif_service):
         self.repo = wallet_repo
         self.user_repo = user_repo
@@ -344,7 +345,7 @@ class UserWalletTransactionServices:
 ################################ User Services ###############################
 ##############################################################################
 
-class UserServices:
+class UserServices(BaseService):
     def __init__(self, user_repo, notif_service):
         self.repo = user_repo
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

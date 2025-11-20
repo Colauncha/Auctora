@@ -1,7 +1,6 @@
 import inspect
-from pydantic_core import PydanticSerializationError
 from sqlalchemy.orm import Session
-from server.repositories import DBAdaptor
+from server.services.base_service import BaseService
 from server.schemas import (
     CreateCategorySchema, GetCategorySchema,
     CreateSubCategorySchema, GetSubCategorySchema,
@@ -12,7 +11,7 @@ from server.middlewares.exception_handler import (
 )
 
 
-class CategoryServices:
+class CategoryServices(BaseService):
     def __init__(self, category_repo, sub_category_repo):
         self.cat_repo = category_repo
         self.sub_cat_repo = sub_category_repo

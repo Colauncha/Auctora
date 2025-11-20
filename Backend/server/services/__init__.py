@@ -10,6 +10,7 @@ from server.services.user_service import *
 from server.services.item_service import *
 from server.services.category_service import *
 from server.blog.blogService import BlogService
+from server.chat.chatServices import ChatServices
 
 from server.repositories import *
 
@@ -61,6 +62,14 @@ def get_wallet_service(
 ):
     return UserWalletTransactionServices(wallet, user_repo, notification_service)
 
+
+def get_chat_service(
+    chat_repo: ChatRepository = Depends(get_chat_repo)
+):
+    return ChatServices(chat_repo)
+    ...
+
+
 def get_item_service(
     item_repo: ItemRepository = Depends(get_item_repo),
     sub_cat_repo: SubCategoryRepository = Depends(
@@ -68,6 +77,7 @@ def get_item_service(
     )
 ):
     return ItemServices(item_repo, sub_cat_repo)
+
 
 def get_category_service(
     category_repo: CategoryRepository = Depends(get_category_repo),
@@ -87,10 +97,13 @@ def get_auction_service(
     payment_repo: PaymentRepository = Depends(get_payment_repo),
     notification_service: UserNotificationServices = Depends(
         get_notification_service
-    )
+    ),
+    chat_service: ChatServices = Depends(get_chat_service)
 ):
     return AuctionServices(
-        auction_repo, auction_p_repo, user_repo, payment_repo, notification_service
+        auction_repo, auction_p_repo,
+        user_repo, payment_repo, notification_service,
+        chat_service
     )
 
 
@@ -116,13 +129,6 @@ def get_blog_service(
     )
 ):
     return BlogService(blog_repo, blog_comment_repo)
-
-
-def get_chat_service(
-    chat_repo: ChatRepository = Depends(get_chat_repo)
-):
-    # return ChatService(chat_repo)
-    ...
 
 
 # Auth related services and dependencies
