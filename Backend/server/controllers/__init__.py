@@ -11,6 +11,7 @@ from server.controllers.landing_page_controller import (
     router as landing_page_router
 )
 from server.blog.blogController import route as blog_route
+from server.chat.chatController import route as chat_route
 
 
 routes = APIRouter(prefix=app_configs.URI_PREFIX)
@@ -25,3 +26,4 @@ routes.include_router(auction_route)
 routes.include_router(misc_route)
 routes.include_router(landing_page_router)
 routes.include_router(blog_route)
+routes.include_router(chat_route)

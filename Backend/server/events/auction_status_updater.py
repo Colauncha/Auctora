@@ -9,7 +9,12 @@ from ..models.payment import Payments
 from ..config.database import get_db, app_configs
 from ..enums.auction_enums import AuctionStatus
 from ..enums.payment_enums import PaymentStatus
-from ..services import Services
+from ..services import (
+    AuctionServices,
+    DBAdaptor,
+    UserNotificationServices,
+    ChatServices
+)
 
 # Configure logging
 LOG_FILE_PATH = '/var/log/biddius-logs/auction_updater.log'\
@@ -25,7 +30,7 @@ logger = logging.getLogger(__name__)
 # Scheduler instance
 scheduler = AsyncIOScheduler()
 
-async def update_status():
+async def update_status(auctionServices: AuctionServices):
     session: Session = next(get_db())
     count = 1
     try:
@@ -46,7 +51,7 @@ async def update_status():
             elif event.status == AuctionStatus.ACTIVE and current_time >= event.end_date:
                 logger.info(f"♻ Updating status for event {event.id} to {AuctionStatus.COMPLETED}")
                 event.status = AuctionStatus.COMPLETED
-                await Services.auctionServices.close(session, event.id)
+                await auctionServices.close(session, event.id)
                 logger.info('✅ Event status updated')
                 update = True
 
@@ -64,7 +69,7 @@ async def update_status():
         session.close()
 
 
-async def process_intra_payment():
+async def process_intra_payment(auctionServices: AuctionServices):
     session: Session = next(get_db())
     update = False
 
@@ -81,9 +86,8 @@ async def process_intra_payment():
                 logger.info(
                     f"♻ Updating status for payment {event.id} from {event.from_id} to {event.to_id}"
                 )
-                await Services.auctionServices.finalize_payment(session, event.auction_id, event.from_id)
+                await auctionServices.finalize_payment(session, event.auction_id, event.from_id)
                 # event.status = 'COMPLETED'
-                print('Done')
                 logger.info('✅ Payment status updated')
                 update = True
         
@@ -100,9 +104,40 @@ async def process_intra_payment():
 
 # Keep the script running
 async def main():
-    scheduler.add_job(update_status, 'interval', seconds=15)
-    scheduler.add_job(process_intra_payment, 'interval', seconds=30)
+    # Services and Repos
+    factory = DBAdaptor().factory()
+
+    notif_service = UserNotificationServices(factory.notif_repo())
+    chat_service = ChatServices(factory.chat_repo())
+
+    auction_service = AuctionServices(
+        auction_p_repo=factory.auction_p_repo(),
+        auction_repo=factory.auction_repo(
+            factory.auction_p_repo()
+        ),
+        user_repo=factory.user_repo(
+            factory.wallet_repo()
+        ),
+        payment_repo=factory.payment_repo(),
+        notif_service=notif_service,
+        chat_service=chat_service,
+    )
+
+
+    scheduler.add_job(
+        update_status,
+        'interval',
+        seconds=15,
+        args=[auction_service]
+    )
+    scheduler.add_job(
+        process_intra_payment,
+        'interval',
+        seconds=30,
+        args=[auction_service]
+    )
     scheduler.start()
+
     try:
         logger.info("⏳ Scheduler started. Press Ctrl+C to exit.")
         while True:

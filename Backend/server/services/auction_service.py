@@ -89,6 +89,7 @@ class AuctionServices(BaseService):
     async def retrieve(self, db: Session, id: str):
         try:
             result = await self.repo.attachDB(db).get_by_id(id)
+            # print(result.chat)
             if not result:
                 raise ExcRaiser404("Auction not found")
             return GetAuctionSchema.model_validate(result)

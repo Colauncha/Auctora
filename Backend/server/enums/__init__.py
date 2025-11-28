@@ -5,6 +5,7 @@ from server.models.users import Users, Notifications, WalletTransactions
 from server.models.auction import Auctions
 from server.models.items import Items, Categories
 from server.models.bids import Bids
+from server.chat.chat import Chats
 
 
 class ServiceKeys(Enum):
@@ -16,6 +17,7 @@ class ServiceKeys(Enum):
     NOTIFICATION = ('notification_id', UserNotificationServices, Notifications)
     BID = ('bid_id', BidServices, Bids)
     WALLET = ('transaction_id', UserWalletTransactionServices, WalletTransactions)
+    CHAT = ('chat_id', ChatServices, Chats)
 
 
     def __init__(self, id, service, model=None):

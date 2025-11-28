@@ -67,7 +67,6 @@ def get_chat_service(
     chat_repo: ChatRepository = Depends(get_chat_repo)
 ):
     return ChatServices(chat_repo)
-    ...
 
 
 def get_item_service(
@@ -142,24 +141,69 @@ class AuthServices:
         token = request.cookies.get('access_token', None)
         return token
     
+    # @staticmethod
+    # async def get_ws_user(
+    #     ws: WebSocket,
+    #     db: Session = Depends(get_db),
+    #     token = None,
+    #     user_repo: UserRepository = Depends(get_user_repo),
+    # ):
+    #     try:
+    #         if not token:
+    #             token = ws.headers.get('Authorization')
+    #             token = token.split(' ')[-1] if token else None
+
+    #         claims = jwt.decode(
+    #             token=token,
+    #             algorithms=app_configs.security.ALGORITHM,
+    #             key=app_configs.security.JWT_SECRET_KEY
+    #         )
+
+    #         if claims and claims.get('email') and claims.get('id'):
+    #             user = await user_repo.attachDB(db).get_by_attr({'id': claims.get('id')})
+    #             print(user)
+    #             if user:
+    #                 return GetUserSchema.model_validate(user)
+    #     except:
+    #         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
     @staticmethod
-    async def get_ws_user(ws: WebSocket, db: Session = Depends(get_db), token = None):
+    async def get_ws_user(ws: WebSocket):
         try:
+            token = ws.headers.get('Authorization')
             if token:
-                user = await UserServices._get_current_user(token, db)
-                return user
-            else:
-                token = ws.headers.get('Authorization')
-                token = token.split(' ')[-1] if token else None
-                return await AuthServices._get_current_user(token, db)
-        except:
+                token = token.split(' ')[-1]
+
+            if not token:
+                raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+
+            claims = jwt.decode(
+                token,
+                app_configs.security.JWT_SECRET_KEY,
+                algorithms=[app_configs.security.ALGORITHM]
+            )
+
+            # Get DB and repo manually (NOT via Depends)
+            db = next(get_db())               # call generator
+            user_repo = get_user_repo()   # if this returns a class/service
+
+            user = await user_repo.attachDB(db).get_by_attr({'id': claims["id"]})
+
+            if not user:
+                raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+
+            return GetUserSchema.model_validate(user)
+
+        except WebSocketException:
+            raise
+        except Exception:
             raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+
 
     @staticmethod
     async def _get_current_user(
         token: Annotated[str, Depends(oauth_bearer), Depends(get_from_cookie)],
         user_repo: UserRepository = Depends(get_user_repo),
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
     ) -> GetUserSchema:
         repo = user_repo
         try:

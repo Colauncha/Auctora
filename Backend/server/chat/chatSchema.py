@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 from uuid import UUID
+from typing import Optional
 
 
 class ConversationSchema(BaseModel):
@@ -9,17 +10,20 @@ class ConversationSchema(BaseModel):
         'extra': 'ignore'
     }
 
-    timestamp: datetime = Field(default=datetime.now(timezone.utc))
+    chat_number: int = Field(default=0)
+    timestamp: Optional[str] = Field(default=datetime.now().astimezone().isoformat())
     message: str = Field(...)
-    sender_id: str = Field(...)
-    read: bool = False
+    sender_id: Optional[str] = Field(default=None)
+    status: str = Field(default='sending', examples=['sending', 'read', 'delivered', 'failed'])
     sender_type: str = Field(default='buyer', examples=['buyer', 'seller'])
+    is_visible: bool = True
 
 
 class CreateChatSchema(BaseModel):
     model_config = {
         'from_attributes': True,
-        'extra': 'ignore'
+        'extra': 'ignore',
+        'arbitrary_types_allowed': True
     }
 
     auctions_id: UUID
@@ -30,7 +34,18 @@ class CreateChatSchema(BaseModel):
 
 class GetChatSchema(CreateChatSchema):
     id: UUID
+    auctions_id: UUID
+    buyer_id: UUID
+    seller_id: UUID
+    convo_len: int = Field(default=0)
 
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.convo_len = len(self.conversation) if self.conversation else 0
+
+    @field_serializer("id", "auctions_id", "buyer_id", "seller_id")
+    def serialize_uuid(self, value: UUID, _info):
+        return str(value)
 
 class UpdateChatSchema(BaseModel):
     model_config = {

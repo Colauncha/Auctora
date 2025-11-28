@@ -1,5 +1,6 @@
 from sqlalchemy import Column, ForeignKey, UUID
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import relationship
 
 from server.models.base import BaseModel
 
@@ -17,5 +18,9 @@ class Chats(BaseModel):
     seller_id = Column(
         UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), index=True
     )
-
     conversation = Column(JSONB, nullable=True, default=[])
+
+    # Relationships
+    auction = relationship(
+        'Auctions', back_populates='chat', uselist=False
+    )

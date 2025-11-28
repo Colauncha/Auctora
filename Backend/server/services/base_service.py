@@ -30,6 +30,10 @@ class BaseService:
                 is_owner = True
             elif getattr(entity, 'user_id', None) == user_id:
                 is_owner = True
+            elif getattr(entity, 'seller_id', None) == user_id:
+                is_owner = True
+            elif getattr(entity, 'buyer_id', None) == user_id:
+                is_owner = True
             elif entity.id == user_id:
                 is_owner = True
 

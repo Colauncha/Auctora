@@ -7,6 +7,7 @@ from server.schemas.item_category_schema import *
 from server.schemas.auction_schema import *
 from server.schemas.bid_schema import *
 from server.schemas.payment_schema import *
+from server.chat.chatSchema import *
 
 
 T = t.TypeVar("T")
@@ -85,6 +86,7 @@ class GetItemLite(BaseModel):
     )
 
 
+# Auction related
 class GetAuctionItem(BaseModel):
     model_config = {"from_attributes": True}
     item: Optional[list[GetItemLite]] = Field(default={})

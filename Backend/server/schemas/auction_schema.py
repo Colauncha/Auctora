@@ -8,6 +8,7 @@ from server.schemas import GetItemSchema, CreateItemSchema
 from server.schemas.user_schema import GetUsersSchemaPublic
 from server.schemas.bid_schema import GetBidSchema
 from server.schemas.payment_schema import GetPaymentSchema
+from server.chat.chatSchema import GetChatSchema
 
 
 class CreateAuctionParticipantsSchema(BaseModel):
@@ -90,6 +91,7 @@ class GetAuctionSchema(CreateAuctionSchema):
     logistic_type: Optional[Union[list, str]] = Field(default=None)
     logistic_fee: Optional[float] = Field(default=None)
     payment: Optional[GetPaymentSchema] = Field(default=None)
+    chat: Optional[GetChatSchema] = Field(default=None)
 
     def __init__(self, **data):
         super().__init__(**data)
