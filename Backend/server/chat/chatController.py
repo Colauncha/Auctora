@@ -56,20 +56,20 @@ async def connect(
     wsmanager: WSManager = Depends(get_wsmanager),
     chatServices: ChatServices = Depends(get_chat_service)
 ):
-    user = await AuthServices.get_ws_user(ws)
+    user, db = await AuthServices.get_ws_user(ws)
+    db.close()
     chat = await chatServices.get_chat_by_id(chat_id)
     await wsmanager.create_chatroom(
         str(chat.id), str(chat.buyer_id), str(chat.seller_id)
     )
     await wsmanager.enter_chatroom(str(chat.id), str(user.id), ws)
     try:
-        await ws.accept()
         if chat:
-            await ws.send_json(chat.model_dump())
+            await ws.send_json({'type': 'chat' ,'payload': chat.model_dump()})
         while True:
             data = await ws.receive_json()
             if data.get('type') != 'websocket.disconnect':
-                data = ConversationSchema.model_validate(data)
+                data = ConversationSchema.model_validate(data.get('payload'))
                 data.sender_id = str(user.id)
                 new_convo = await chatServices.update_chat(chat_id, data)
                 if new_convo:

@@ -86,7 +86,10 @@ class WSManager:
                 if socket is None:
                     return
                 
-                await socket.send_json(payload)
+                await socket.send_json({
+                    'type': 'new_message',
+                    'payload': payload
+                })
         except Exception as e:
             await sender_socket.send_json({'notice': 'Message not Delivered'})
             print(e)

@@ -24,3 +24,15 @@ class Chats(BaseModel):
     auction = relationship(
         'Auctions', back_populates='chat', uselist=False
     )
+
+    buyer = relationship(
+        "Users",
+        foreign_keys=[buyer_id],
+        back_populates="buyer_chats"
+    )
+
+    seller = relationship(
+        "Users",
+        foreign_keys=[seller_id],
+        back_populates="seller_chats"
+    )

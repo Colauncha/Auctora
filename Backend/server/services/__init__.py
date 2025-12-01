@@ -166,13 +166,19 @@ class AuthServices:
     #                 return GetUserSchema.model_validate(user)
     #     except:
     #         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+
     @staticmethod
     async def get_ws_user(ws: WebSocket):
         try:
-            token = ws.headers.get('Authorization')
-            if token:
+            token = None
+            protocols = ws.headers.get('sec-websocket-protocol').split(",")
+            if len(protocols) > 1:
+                token = protocols[1].strip()
+            else:
+                token = ws.headers.get('Authorization', None)
                 token = token.split(' ')[-1]
 
+            await ws.accept(subprotocol="auth")
             if not token:
                 raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
@@ -182,20 +188,22 @@ class AuthServices:
                 algorithms=[app_configs.security.ALGORITHM]
             )
 
-            # Get DB and repo manually (NOT via Depends)
-            db = next(get_db())               # call generator
-            user_repo = get_user_repo()   # if this returns a class/service
+            db = next(get_db())
+            user_repo = get_user_repo()
 
             user = await user_repo.attachDB(db).get_by_attr({'id': claims["id"]})
+
+            # db.close()
 
             if not user:
                 raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
-            return GetUserSchema.model_validate(user)
+            return GetUserSchema.model_validate(user), db
 
         except WebSocketException:
             raise
-        except Exception:
+        except Exception as e:
+            print(e)
             raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
 

@@ -106,6 +106,7 @@ class GetUserSchema(GetUsersSchemaPublic):
     bids: Optional[list[GetBidSchemaExt]] = Field(default=[])
     referred_by: Optional[str] = Field(default='')
     referred_users: Optional[dict] = Field(default={})
+    chats: Optional[list[GetChatSchema]] = Field(default=[])
 
     wallet: float = Field(
         description="User's wallet balance",
@@ -114,7 +115,7 @@ class GetUserSchema(GetUsersSchemaPublic):
     available_balance: float = Field(
         description="User's available balance",
         examples=[900.00]
-    )    
+    )
 
 
 # Notification related
