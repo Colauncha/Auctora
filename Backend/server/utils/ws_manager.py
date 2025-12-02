@@ -1,5 +1,6 @@
 from fastapi import WebSocket
 from functools import lru_cache
+from pydantic import BaseModel
 from fastapi import WebSocket, WebSocketException, status
 
 
@@ -74,10 +75,11 @@ class WSManager:
         self,
         chat_id,
         user_id,
-        message
+        message,
+        type = 'new_message'
     ):
         chatroom = self.chatroom.get(chat_id, {})
-        payload = message.model_dump()
+        payload = message.model_dump() if isinstance(message, BaseModel) else message
         sender_socket = chatroom.get(user_id)
         try:
             for key, socket in chatroom.items():
@@ -87,7 +89,7 @@ class WSManager:
                     return
                 
                 await socket.send_json({
-                    'type': 'new_message',
+                    'type': type,
                     'payload': payload
                 })
         except Exception as e:

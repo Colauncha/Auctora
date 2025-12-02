@@ -68,7 +68,8 @@ async def connect(
             await ws.send_json({'type': 'chat' ,'payload': chat.model_dump()})
         while True:
             data = await ws.receive_json()
-            if data.get('type') != 'websocket.disconnect':
+            data_type = data.get('type')
+            if data_type == 'send_message':
                 data = ConversationSchema.model_validate(data.get('payload'))
                 data.sender_id = str(user.id)
                 new_convo = await chatServices.update_chat(chat_id, data)
@@ -76,6 +77,14 @@ async def connect(
                     data.status = "delivered"
                     await wsmanager.message_chatroom(
                         chat_id, str(user.id), data
+                    )
+            elif data_type == 'read_message':
+                data = data.get('payload')
+                chat = await chatServices.mark_read(
+                    chat_id, data.get('chat_number')
+                )
+                await wsmanager.message_chatroom(
+                        chat_id, str(user.id), chat, type='chat'
                     )
             else:
                 print(data)

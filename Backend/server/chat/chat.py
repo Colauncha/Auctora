@@ -1,5 +1,6 @@
 from sqlalchemy import Column, ForeignKey, UUID
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import relationship
 
 from server.models.base import BaseModel
@@ -18,7 +19,7 @@ class Chats(BaseModel):
     seller_id = Column(
         UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), index=True
     )
-    conversation = Column(JSONB, nullable=True, default=[])
+    conversation = Column(MutableList.as_mutable(JSONB), nullable=True, default=list)
 
     # Relationships
     auction = relationship(

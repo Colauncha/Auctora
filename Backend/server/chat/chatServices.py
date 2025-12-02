@@ -41,7 +41,6 @@ class ChatServices(BaseService):
                 raise ExcRaiser500(detail=str(e), exception=e)
             raise ExcRaiser500(detail=str(e))
 
-    # To be redesigned
     async def update_chat(
         self,
         chat_id: str,
@@ -64,3 +63,20 @@ class ChatServices(BaseService):
                 self.inspect()
                 raise ExcRaiser500(detail=str(e), exception=e)
             raise ExcRaiser500(detail=str(e))
+
+    async def mark_read(
+            self,
+            chat_id: str,
+            msg_id: int | str
+    ) -> GetChatSchema:
+        try:
+            chat = await self.chat_repo.mark_read(chat_id, msg_id)
+            return GetChatSchema.model_validate(chat)
+        except ExcRaiser as e:
+            raise e
+        except Exception as e:
+            if self.config.DEBUG:
+                self.inspect()
+                raise ExcRaiser500(detail=str(e), exception=e)
+            raise ExcRaiser500(detail=str(e))
+
