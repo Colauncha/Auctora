@@ -84,8 +84,8 @@ async def connect(
                     chat_id, data.get('chat_number')
                 )
                 await wsmanager.message_chatroom(
-                        chat_id, str(user.id), chat, type='chat'
-                    )
+                    chat_id, str(user.id), chat, type='read_message'
+                )
             else:
                 print(data)
     except WebSocketDisconnect:

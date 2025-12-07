@@ -26,13 +26,13 @@ from server.schemas import (
     LoginSchema, ChangePasswordSchema,
     PagedQuery, LoginOutput,
     ErrorResponse, PagedResponse,
-    GetUsers, GetNotificationsSchema,
+    GetUserAuctions, GetNotificationsSchema,
     NotificationQuery, UpdateNotificationSchema,
     WalletTransactionSchema, VerifyTransactionData,
     InitializePaymentRes, GetUsersSchemaPublic,
     WalletHistoryQuery, TransferRecipientData,
     AccountDetailsSchema, UpdateUserAddressSchema,
-    GetUsersNoAuction
+    GetUsersNoAuction, GetUserBids, GetUserChats
 )
 from server.services import (
     current_user,
@@ -90,6 +90,36 @@ async def retrieve_users(
             detail='You do not have the permission to access this endpoint'
         )
     return APIResponse(data=retrieved_user)
+
+
+@route.get('/auctions')
+async def get_user_auctions(
+    user: current_user,
+    filter: PagedQuery = Depends(PagedQuery),
+    userServices: get_user_service = Depends(get_user_service)
+) -> PagedResponse[list]:
+    auctions = await userServices.get_auctions(user.id, filter)
+    return auctions
+
+
+@route.get('/bids')
+async def get_user_bids(
+    user: current_user,
+    filter: PagedQuery = Depends(PagedQuery),
+    userServices: get_user_service = Depends(get_user_service)
+) -> PagedResponse[list]:
+    bids = await userServices.get_bids(user.id, filter)
+    return bids
+
+
+@route.get('/chats')
+async def get_user_chats(
+    user: current_user,
+    filter: PagedQuery = Depends(PagedQuery),
+    userServices: get_user_service = Depends(get_user_service)
+) -> PagedResponse[list]:
+    chats = await userServices.get_chats(user.id, filter)
+    return chats
 
 
 @route.post(

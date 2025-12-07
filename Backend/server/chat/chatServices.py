@@ -70,8 +70,10 @@ class ChatServices(BaseService):
             msg_id: int | str
     ) -> GetChatSchema:
         try:
-            chat = await self.chat_repo.mark_read(chat_id, msg_id)
-            return GetChatSchema.model_validate(chat)
+            _ = await self.chat_repo.update_convo(chat_id, msg_id)
+            return {
+                'read': True, 'chat_number': msg_id
+            }
         except ExcRaiser as e:
             raise e
         except Exception as e:
@@ -80,3 +82,23 @@ class ChatServices(BaseService):
                 raise ExcRaiser500(detail=str(e), exception=e)
             raise ExcRaiser500(detail=str(e))
 
+
+    async def hide_msg(
+        self,
+        chat_id: str,
+        msg_id: int | str
+    ) -> GetChatSchema:
+        try:
+            _ = await self.chat_repo.update_convo(
+                chat_id, msg_id, msg_attr='is_visible', value=False
+            )
+            return {
+                'Deleted': True, 'chat_number': msg_id
+            }
+        except ExcRaiser as e:
+            raise e
+        except Exception as e:
+            if self.config.DEBUG:
+                self.inspect()
+                raise ExcRaiser500(detail=str(e), exception=e)
+            raise ExcRaiser500(detail=str(e))

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from pydantic import BaseModel, Field, field_serializer
 from uuid import UUID
 from typing import Optional
@@ -43,8 +43,20 @@ class GetChatSchema(CreateChatSchema):
         super().__init__(**data)
         self.convo_len = len(self.conversation) if self.conversation else 0
 
-    @field_serializer("id", "auctions_id", "buyer_id", "seller_id")
-    def serialize_uuid(self, value: UUID, _info):
+    @field_serializer(
+        "id",
+        "auctions_id",
+        "buyer_id",
+        "seller_id",
+        "convo_len",
+        'conversation'
+    )
+    def serialize_uuid(self, value: UUID | list | int, _info):
+        if isinstance(value, list):
+            convo = list(filter(lambda x: x.is_visible is True, value))
+            return convo
+        if isinstance(value, int):
+            return len(self.conversation)
         return str(value)
 
 class UpdateChatSchema(BaseModel):

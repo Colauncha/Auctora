@@ -12,12 +12,18 @@ class ChatRepository(Repository):
         if db:
             super().attachDB(db)
 
-    async def mark_read(self, chat_id: str, msg_id: int | str):
+    async def update_convo(
+        self,
+        chat_id: str,
+        msg_id: int | str,
+        msg_attr: str ='status',
+        value: str | bool | int ='read'
+    ) -> Chats:
         msg_id = int(msg_id)
 
         def update_func(msg):
             if int(msg.get('chat_number')) == msg_id:
-                msg['status'] = 'read'
+                msg[msg_attr] = value
             return msg
 
         try:
