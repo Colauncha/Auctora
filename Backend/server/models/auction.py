@@ -75,6 +75,9 @@ class Auctions(BaseModel):
         'Payments', back_populates='auction',
         uselist=False
     )
+    chat = relationship(
+        'Chats', back_populates='auction', uselist=False
+    )
 
     def __str__(self):
         return f'id: {self.id} - {self.status}'

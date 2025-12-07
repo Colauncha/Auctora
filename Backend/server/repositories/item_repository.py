@@ -1,11 +1,15 @@
 from sqlalchemy import UUID
+from sqlalchemy.orm import Session
+
 from server.repositories.repository import Repository, no_db_error
 from server.models.items import Items, Categories, Subcategory
 from server.schemas import GetItemSchema
 
 class ItemRepository(Repository):
-    def __init__(self):
+    def __init__(self, db: Session = None):
         super().__init__(Items)
+        if db:
+            super().attachDB(db)
 
     @no_db_error
     async def get_by_seller_id(
@@ -21,8 +25,10 @@ class ItemRepository(Repository):
 
 
 class CategoryRepository(Repository):
-    def __init__(self):
+    def __init__(self, db: Session = None):
         super().__init__(Categories)
+        if db:
+            super().attachDB(db)
 
     @no_db_error
     async def count(self) -> dict[str, int]:
@@ -46,8 +52,10 @@ class CategoryRepository(Repository):
 
 
 class SubCategoryRepository(Repository):
-    def __init__(self):
+    def __init__(self, db: Session = None):
         super().__init__(Subcategory)
+        if db:
+            super().attachDB(db)
 
     def get_last_id(self) -> str:
         last_sub_cat = self.all()

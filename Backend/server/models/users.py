@@ -97,6 +97,18 @@ class Users(BaseModel):
         cascade='all, delete-orphan'
     )
 
+    buyer_chats = relationship(
+        'Chats',
+        foreign_keys="Chats.buyer_id",
+        back_populates='buyer'
+    )
+
+    seller_chats = relationship(
+        'Chats',
+        foreign_keys="Chats.seller_id",
+        back_populates='seller'
+    )
+
     def __init__(
             self,
             password: str,
@@ -123,6 +135,10 @@ class Users(BaseModel):
         # To be removed
         self.wallet = 0.00
         self.available_balance = 0.00
+
+    @property
+    def chats(self):
+        return self.buyer_chats + self.seller_chats
 
     def _hash_password(self, password: str) -> str:
         context = CryptContext(schemes=["bcrypt"], deprecated="auto")

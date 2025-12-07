@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from server.config import get_db
 # from server.services.user_service import current_user
 from server.middlewares.auth import permissions, Permissions
-from server.services import Services, current_user
+from server.services import current_user, get_item_service, ItemServices
 from server.schemas import (
     APIResponse,
     CreateItemSchema, GetItemSchema,
@@ -21,11 +21,12 @@ route = APIRouter(prefix='/items', tags=['Items'])
 async def create(
     user: current_user,
     data: CreateItemSchema,
-    db: Session = Depends(get_db) 
+    db: Session = Depends(get_db),
+    itemServices: ItemServices = Depends(get_item_service)
 ) -> APIResponse[GetItemSchema]:
     _data = CreateItemSchema.model_dump(data, exclude_unset=True)
     _data["users_id"] = user.id
-    result = await Services.itemServices.create(db, _data)
+    result = await itemServices.create(db, _data)
     return APIResponse(data=result)
 
 
@@ -43,9 +44,10 @@ async def get_items(
 async def get_items(
     user: current_user,
     id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    itemServices: ItemServices = Depends(get_item_service)
 ) -> APIResponse[GetItemSchema]:
-    result = await Services.itemServices.retrieve(db, id)
+    result = await itemServices.retrieve(db, id)
     return APIResponse(data=result)
 
 
@@ -59,10 +61,11 @@ async def upload_images(
     image3: Optional[UploadFile] = File(None),
     image4: Optional[UploadFile] = File(None),
     image5: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    itemServices: ItemServices = Depends(get_item_service)
 ) -> APIResponse[GetItemSchema]:
     
-    item = await Services.itemServices.repo.attachDB(db).get_by_attr({'id': item_id})
+    item = await itemServices.repo.attachDB(db).get_by_attr({'id': item_id})
 
     images = [image1, image2, image3, image4, image5]
     content_type = [
@@ -76,7 +79,7 @@ async def upload_images(
         for image in images
     ]
 
-    result = await Services.itemServices.upload_images(db, item, uploads)
+    result = await itemServices.upload_images(db, item, uploads)
     return APIResponse(data=result)
 
 
@@ -86,10 +89,11 @@ async def update(
     user: current_user,
     item_id: str,
     data: UpdateItemSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    itemServices: ItemServices = Depends(get_item_service)
 ) -> APIResponse[GetItemSchema]:
     data = data.model_dump(exclude_unset=True, exclude_none=True)
-    result = await Services.itemServices.update(db, item_id, data)
+    result = await itemServices.update(db, item_id, data)
     return APIResponse(data=result)
 
 # @route.get('/get_items')

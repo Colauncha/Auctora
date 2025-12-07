@@ -1,16 +1,18 @@
 import inspect
+from server.config.app_configs import app_configs
 
 class ExtInspect(inspect.Signature):
-    def __init__(self):
-        pass
+    def __init__(self, class_name: str = None):
+        self.class_name = class_name
 
-    def info(self):
+    def info(self, trace_len: int = app_configs.TRACE_LEN):
         module_name = inspect.stack()[1].frame.f_globals["__name__"]
         method_name = inspect.stack()[1].function
         caller_name = inspect.stack()[2].function
         line = inspect.currentframe().f_back.f_lineno
-        trace_info = self.trace(skip=2)
+        trace_info = self.trace(skip=2)[:trace_len]
         info = {
+            'class_name': self.class_name,
             'module_name': module_name,
             'method_name': method_name,
             'caller_name': caller_name,

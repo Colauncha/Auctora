@@ -1,3 +1,5 @@
+from sqlalchemy.orm import Session
+
 from server.config import app_configs
 from server.middlewares.exception_handler import ExcRaiser404
 from server.models.payment import Payments
@@ -12,8 +14,10 @@ from server.schemas.payment_schema import (
 
 
 class PaymentRepository(Repository):
-    def __init__(self):
+    def __init__(self, db: Session =None):
         super().__init__(Payments)
+        if db:
+            super().attachDB(db)
         self._Model = Payments
 
     @no_db_error

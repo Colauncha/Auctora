@@ -15,7 +15,12 @@ from server.schemas import (
     APIResponse, BidQuery, PagedResponse
 )
 from server.utils.ws_manager import WSManager
-from server.services import Services, current_user
+from server.services import (
+    current_user,
+    BidServices,
+    get_bid_service,
+    AuthServices,
+)
 
 
 route = APIRouter(prefix='/bids', tags=['bids'])
@@ -27,12 +32,13 @@ wsmanager = WSManager()
 async def create(
     user: current_user,
     data: CreateBidSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    bidServices: BidServices = Depends(get_bid_service)
 ) -> APIResponse[GetBidSchema]:
     data = data.model_dump()
     data["user_id"] = user.id
     data["username"] = user.username
-    result = await Services.bidServices.create(db, CreateBidSchema(**data))
+    result = await bidServices.create(db, CreateBidSchema(**data))
     return APIResponse(data=result)
 
 
@@ -41,12 +47,13 @@ async def create(
 async def buy_now(
     user: current_user,
     data: CreateBidSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    bidServices: BidServices = Depends(get_bid_service)
 ) -> APIResponse[GetBidSchema]:
     data = data.model_dump()
     data["user_id"] = user.id
     data["username"] = user.username
-    result = await Services.bidServices.buy_now(db, CreateBidSchema(**data))
+    result = await bidServices.buy_now(db, CreateBidSchema(**data))
     return APIResponse(data=result)
 
 
@@ -57,10 +64,11 @@ async def update(
     user: current_user,
     bid_id: str,
     amount: UpdateBidSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    bidServices: BidServices = Depends(get_bid_service)
 ) -> APIResponse[GetBidSchema]:
-    existing_bid = await Services.bidServices.retrieve(db, bid_id)
-    result = await Services.bidServices.update(
+    existing_bid = await bidServices.retrieve(db, bid_id)
+    result = await bidServices.update(
         amount.amount, exisiting_bid=existing_bid
     )
     return result
@@ -71,9 +79,10 @@ async def update(
 async def list(
     user: current_user,
     query: BidQuery = Depends(BidQuery),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    bidServices: BidServices = Depends(get_bid_service)
 ) -> PagedResponse:
-    result = await Services.bidServices.list(db, query.model_dump(exclude_unset=True))
+    result = await bidServices.list(db, query.model_dump(exclude_unset=True))
     return result
 
 
@@ -82,9 +91,10 @@ async def list(
 async def retrieve(
     user: current_user,
     id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    bidServices: BidServices = Depends(get_bid_service)
 ) -> APIResponse[GetBidSchema]:
-    result = await Services.bidServices.retrieve(db, id)
+    result = await bidServices.retrieve(db, id)
     return result
 
 
@@ -93,26 +103,27 @@ async def ws_create(
     id: str,
     ws: WebSocket,
     token: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    bidServices: BidServices = Depends(get_bid_service)
 ):
-    _user = await Services.get_ws_user(ws, db, token)
+    _user = await AuthServices.get_ws_user(ws, db, token)
     await wsmanager.connect(id, ws)
     redis = await redis_store.get_async_redis()
     prev_bids = await redis.get(f'auction:{id}')
     if prev_bids:
         await wsmanager.send_data(json.loads(prev_bids), ws)
     else:
-        prev_bids = await Services.bidServices.list_ws(db, id)
+        prev_bids = await bidServices.list_ws(db, id)
         await wsmanager.send_data(prev_bids, ws)
     try:
         watcher = ws.client.host
-        await Services.bidServices.add_watcher(db, id, watcher)
+        await bidServices.add_watcher(db, id, watcher)
         while True:
             data = await ws.receive_json(mode="text")
             if data.get('type') != 'websocket.disconnect':
                 data["user_id"] = str(_user.id)
                 data["username"] = _user.username
-                bids = await Services.bidServices.create_ws(db, CreateBidSchema(**data), wsmanager, ws)
+                bids = await bidServices.create_ws(db, CreateBidSchema(**data), wsmanager, ws)
                 if bids:
                     await wsmanager.broadcast(id, {'type': 'new_bid', 'payload': bids})
     except WebSocketDisconnect:
@@ -130,9 +141,10 @@ async def ws_create(
 async def count_bids(
     user: current_user,
     auction_id: str = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    bidServices: BidServices = Depends(get_bid_service)
 ) -> APIResponse[dict[str, int]]:
-    result = await Services.bidServices.count(
+    result = await bidServices.count(
         db,
         {'auction_id': auction_id} if auction_id else None
     )

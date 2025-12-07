@@ -1,14 +1,12 @@
-from datetime import datetime, timezone
+from datetime import datetime
 import json
 from fastapi import WebSocket
 from sqlalchemy.orm import Session
+from server.services.base_service import BaseService
 from server.config import app_configs
 from server.enums.notification_enums import NotificationClasses
 from server.config import redis_store
 from server.models.bids import Bids
-from server.services.user_service import UserNotificationServices
-from server.services.auction_service import AuctionServices
-from server.repositories import DBAdaptor
 from server.middlewares.exception_handler import ExcRaiser400, ExcRaiser
 from server.enums.auction_enums import AuctionStatus
 from server.utils.ws_manager import WSManager
@@ -19,7 +17,7 @@ from server.schemas import (
 )
 
 
-class BidServices:
+class BidServices(BaseService):
     def __init__(
             self, bid_repo, user_repo, auction_repo,
             notif_service, auction_service

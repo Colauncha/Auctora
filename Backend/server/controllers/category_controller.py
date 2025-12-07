@@ -9,7 +9,12 @@ from server.schemas import (
     UpdateSubCategorySchema
 )
 # from server.services.user_service import current_user
-from server.services import Services, current_user
+from server.services import (
+    current_user,
+    CategoryServices,
+    SubCategoryRepository,
+    get_category_service,
+)
 from sqlalchemy.orm import Session
 from server.config import app_configs, get_db, redis_store
 from server.utils.helpers import cache_obj_format, load_obj_from_cache
@@ -25,25 +30,28 @@ sub_route = APIRouter(prefix='/subcategories', tags=['subcategories'])
 async def create_category(
     user: current_user,
     category: CreateCategorySchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    categoryServices: CategoryServices = Depends(get_category_service)
 ) -> APIResponse[GetCategorySchema]:
-    new_cat = await Services.categoryServices.create_category(db, category)
+    new_cat = await categoryServices.create_category(db, category)
     return APIResponse(data=new_cat)
 
 
 @route.get('/{id}')
 async def get_category(
     id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    categoryServices: CategoryServices = Depends(get_category_service)
 ) -> APIResponse[GetCategorySchema]:
     id = id.upper()
-    category = await Services.categoryServices.get_cat_by_id(db, id)
+    category = await categoryServices.get_cat_by_id(db, id)
     return APIResponse(data=category)
 
 
 @route.get('/')
 async def list_categories(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    categoryServices: CategoryServices = Depends(get_category_service)
 ) -> APIResponse[list[GetCategorySchema]]:
     redis = await redis_store.get_async_redis()
     category_cache = await redis.get('category_cache')
@@ -56,7 +64,7 @@ async def list_categories(
                 detail="Error loading category cache",
                 exception=e
             )
-    categories = await Services.categoryServices.list_categories(db)
+    categories = await categoryServices.list_categories(db)
     formated_categories = cache_obj_format(categories)
     await redis.set(
         'category_cache',
@@ -72,9 +80,10 @@ async def update(
     user: current_user,
     id: str,
     data: UpdateCategorySchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    categoryServices: CategoryServices = Depends(get_category_service)
 ) -> APIResponse[bool]:
-    response = await Services.categoryServices.update_category(db, id.upper(), data)
+    response = await categoryServices.update_category(db, id.upper(), data)
     return APIResponse(data=response)
 
 
@@ -82,9 +91,10 @@ async def update(
 @permissions(permission_level=Permissions.ADMIN)
 async def count(
     user: current_user,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    categoryServices: CategoryServices = Depends(get_category_service)
 ) -> APIResponse[dict[str, int]]:
-    result = await Services.categoryServices.count(db)
+    result = await categoryServices.count(db)
     return APIResponse(data=result)
 
 
@@ -94,25 +104,28 @@ async def count(
 async def create_sub_category(
     user: current_user,
     sub_cat: CreateSubCategorySchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    categoryServices: CategoryServices = Depends(get_category_service)
 ) -> APIResponse[GetSubCategorySchema]:
-    new_sub_cat = await Services.categoryServices.create_sub_category(db, sub_cat)
+    new_sub_cat = await categoryServices.create_sub_category(db, sub_cat)
     return APIResponse(data=new_sub_cat)
 
 
 @sub_route.get('/{id}')
 async def get_sub_category(
     id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    categoryServices: CategoryServices = Depends(get_category_service)
 ) -> APIResponse[GetSubCategorySchema]:
     id = id.upper()
-    sub_category = await Services.categoryServices.get_subcat_by_id(db, id)
+    sub_category = await categoryServices.get_subcat_by_id(db, id)
     return APIResponse(data=sub_category)
 
 
 @sub_route.get('/')
 async def list_sub_categories(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    categoryServices: CategoryServices = Depends(get_category_service)
 ) -> APIResponse[list[GetSubCategorySchema]]:
 
     redis = await redis_store.get_async_redis()
@@ -126,7 +139,7 @@ async def list_sub_categories(
                 detail="Error loading subcategory cache",
                 exception=e
             )
-    sub_categories = await Services.categoryServices.list_sub_categories(db)
+    sub_categories = await categoryServices.list_sub_categories(db)
 
     formated_categories = cache_obj_format(sub_categories)
     await redis.set(
@@ -143,7 +156,8 @@ async def update(
     user: current_user,
     id: str,
     data: UpdateSubCategorySchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    categoryServices: CategoryServices = Depends(get_category_service)
 ):
-    response = await Services.categoryServices.update_sub_category(db, id.upper(), data)
+    response = await categoryServices.update_sub_category(db, id.upper(), data)
     return APIResponse(data=response)

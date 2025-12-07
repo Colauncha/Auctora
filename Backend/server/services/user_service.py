@@ -4,10 +4,10 @@ from datetime import datetime, timezone, timedelta
 import inspect
 
 from sqlalchemy.orm import Session
+from server.utils.ex_inspect import ExtInspect
 from server.models.users import Users
 from server.enums.user_enums import TransactionStatus, TransactionTypes, UserRoles
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer
 from server.config import app_configs, redis_store
 from jose.exceptions import JWTError
 from server.utils import (
@@ -27,8 +27,10 @@ from server.schemas import (
     InitializePaymentRes, AccountDetailsSchema,
     UpdateUserAddressSchema, ReferralSlots,
     GetUsersSchemaPublic, SearchQuery,
-    GetUsersNoAuction
+    GetUsersNoAuction, GetAuctionSchema,
+    GetBidSchema, GetChatSchema
 )
+from server.services.base_service import BaseService
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
 )
@@ -40,14 +42,11 @@ from server.events import (
 from fastapi import HTTPException
 
 
-oauth_bearer = OAuth2PasswordBearer(tokenUrl=f"api/users/login")
-
-
 ###############################################################################
 ############################ Notification Services ############################
 ###############################################################################
 
-class UserNotificationServices:
+class UserNotificationServices(BaseService):
     def __init__(self, notif_repo):
         self.repo = notif_repo
         self.debug = app_configs.DEBUG
@@ -152,7 +151,7 @@ class UserNotificationServices:
 ############################ Notification Services ############################
 ###############################################################################
 
-class UserWalletTransactionServices:
+class UserWalletTransactionServices(BaseService):
     def __init__(self, wallet_repo, user_repo, notif_service):
         self.repo = wallet_repo
         self.user_repo = user_repo
@@ -348,12 +347,13 @@ class UserWalletTransactionServices:
 ################################ User Services ###############################
 ##############################################################################
 
-class UserServices:
+class UserServices(BaseService):
     def __init__(self, user_repo, notif_service):
         self.repo = user_repo
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         self.notification = notif_service
         self.debug = app_configs.DEBUG
+        self.inspect = ExtInspect(self.__class__.__name__).info
 
     def check_password(self, password, hashed_password) -> bool:
         return self.pwd_context.verify(password, hashed_password)
@@ -876,6 +876,69 @@ class UserServices:
             if self.debug:
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
+    async def get_auctions(self, id, filter: PagedQuery):
+        try:
+            auctions = await self.repo.get_relations(
+                id,
+                model='auctions',
+                _filter=filter.model_dump(exclude_unset=True)
+            )
+            if auctions:
+                auctions.data = [
+                    GetAuctionSchema.model_validate(auction)
+                    for auction in auctions.data
+                ]
+            return auctions
+        except ExcRaiser as e:
+            raise e
+        except Exception as e:
+            if self.debug:
+                self.inspect()
+                raise ExcRaiser500(detail=str(e), exception=e)
+            raise ExcRaiser500(detail=str(e))
+
+    async def get_bids(self, id, filter: PagedQuery):
+        try:
+            bids = await self.repo.get_relations(
+                id,
+                model='bids',
+                _filter=filter.model_dump(exclude_unset=True)
+            )
+            if bids:
+                bids.data = [
+                    GetBidSchema.model_validate(bid)
+                    for bid in bids.data
+                ]
+            return bids
+        except ExcRaiser as e:
+            raise e
+        except Exception as e:
+            if self.debug:
+                self.inspect()
+                raise ExcRaiser500(detail=str(e), exception=e)
+            raise ExcRaiser500(detail=str(e))
+
+    async def get_chats(self, id, filter: PagedQuery):
+        try:
+            chats = await self.repo.get_relations(
+                id,
+                model='chats',
+                _filter=filter.model_dump(exclude_unset=True)
+            )
+            if chats:
+                chats.data = [
+                    GetChatSchema.model_validate(chat)
+                    for chat in chats.data
+                ]
+            return chats
+        except ExcRaiser as e:
+            raise e
+        except Exception as e:
+            if self.debug:
+                self.inspect()
+                raise ExcRaiser500(detail=str(e), exception=e)
             raise ExcRaiser500(detail=str(e))
 
     async def search(

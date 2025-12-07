@@ -16,7 +16,7 @@ class BlogService:
     def __init__(self, blog_repo, blog_comment_repo):
         self.blog_repo = blog_repo
         self.blog_comment_repo = blog_comment_repo
-        self.ext_inspect = ExtInspect()
+        self.ext_inspect = ExtInspect(self.__class__.__name__)
         self.configs = app_configs
 
     async def get_all(self):

@@ -46,7 +46,7 @@ class Repository:
     db: Session = None
     def __init__(self, model: BaseModel):
         self._Model = model
-        self._inspect = ExtInspect()
+        self._inspect = ExtInspect(self.__class__.__name__)
         self.configs = app_configs
 
     def attachDB(self, db: Session):
@@ -69,6 +69,7 @@ class Repository:
             self.db.rollback()
             if self.configs.DEBUG:
                 self._inspect.info()
+                raise e
             raise e
 
     @no_db_error
@@ -86,6 +87,7 @@ class Repository:
             self.db.rollback()
             if self.configs.DEBUG:
                 self._inspect.info()
+                raise e
             raise e
 
     @no_db_error
@@ -96,6 +98,9 @@ class Repository:
                 return entity.first()
             raise ExcRaiser404(message='Entity not found')
         except Exception as e:
+            if self.configs.DEBUG:
+                self._inspect.info()
+                raise e
             raise e
 
     @no_db_error
@@ -110,6 +115,7 @@ class Repository:
         except Exception as e:
             if self.configs.DEBUG:
                 self._inspect.info()
+                raise e
             raise e
 
     @no_db_error
@@ -130,6 +136,7 @@ class Repository:
             self.db.rollback()
             if self.configs.DEBUG:
                 self._inspect.info()
+                raise e
             raise e
 
     @no_db_error
@@ -139,6 +146,7 @@ class Repository:
         data: dict = None,
         new_slot: bool = True,
         model: BaseModel = Users,
+        attr = 'referred_users',
     ):
         try:
             if not data:
@@ -147,9 +155,17 @@ class Repository:
             if entity is None:
                 raise ExcRaiser404(message='Entity not found')
 
-            entity.referred_users = data
-            if new_slot:
-                entity.referral_slots_used += 1
+            if hasattr(entity, attr):
+                if attr == 'conversation':
+                    convo = list(entity.conversation or [])
+                    convo.append(data)
+                    setattr(entity, attr, convo)
+                elif attr == 'referred_users' and new_slot:
+                    setattr(entity, attr, data)
+                    entity.referral_slots_used += 1
+            else:
+                raise ExcRaiser404(message="Attribute doesn't exist")
+
 
             self.db.add(entity)
             self.db.commit()
@@ -158,6 +174,7 @@ class Repository:
             self.db.rollback()
             if self.configs.DEBUG:
                 self._inspect.info()
+                raise e
             raise e
 
     @no_db_error
@@ -169,6 +186,7 @@ class Repository:
         except Exception as e:
             if self.configs.DEBUG:
                 self._inspect.info()
+                raise e
             raise e
 
     @no_db_error
@@ -183,6 +201,7 @@ class Repository:
         except Exception as e:
             if self.configs.DEBUG:
                 self._inspect.info()
+                raise e
             raise e
 
     @no_db_error
@@ -215,6 +234,9 @@ class Repository:
             query = query.order_by(order_by_clause)
             results = query.limit(limit).offset(offset).all()
         except Exception as e:
+            if self.configs.DEBUG:
+                self._inspect.info()
+                raise e
             raise e
         count = len(results)
         pages = math.ceil(total / limit) or 1
@@ -238,4 +260,5 @@ class Repository:
         except Exception as e:
             if self.configs.DEBUG:
                 self._inspect.info()
+                raise e
             raise e

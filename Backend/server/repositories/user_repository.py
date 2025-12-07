@@ -1,6 +1,7 @@
 import math
-
 from sqlalchemy import String
+from sqlalchemy.orm import Session
+
 from server.utils.helpers import paginator
 from server.config.database import get_db
 from server.repositories.repository import Repository, no_db_error
@@ -10,15 +11,24 @@ from server.middlewares.exception_handler import ExcRaiser, ExcRaiser404
 from sqlalchemy.exc import SQLAlchemyError
 from server.enums.user_enums import TransactionStatus, TransactionTypes
 
+from server.models.auction import Auctions
+from server.models.bids import Bids
+from server.chat.chat import Chats
+
+
 
 class WalletTranscationRepository(Repository):
-    def __init__(self):
+    def __init__(self, db: Session = None):
         super().__init__(WalletTransactions)
+        if db:
+            super().attachDB(db)
 
 
 class UserRepository(Repository):
-    def __init__(self, wallet_transaction: WalletTranscationRepository):
+    def __init__(self, wallet_transaction: WalletTranscationRepository, db: Session = None):
         super().__init__(Users)
+        if db:
+            super().attachDB(db)
         self.wallet_transaction = wallet_transaction
 
     @no_db_error
@@ -259,9 +269,55 @@ class UserRepository(Repository):
             total=total,
         )
 
+    @no_db_error
+    async def get_relations(self, id: str, _filter: dict, model=None):
+        relations_map = {
+            'auctions': (Auctions, Auctions.users_id),
+            'bids': (Bids, Bids.user_id),
+            'chats': (Chats, (Chats.seller_id, Chats.buyer_id)),
+        }
+
+        try:
+            page = _filter.pop('page') if (_filter and _filter.get('page')) else 1
+            per_page = _filter.pop('per_page') if (_filter and _filter.get('per_page')) else 10
+            order = _filter.pop('order') if (_filter and _filter.get('order')) else 'asc'
+            limit = per_page
+            offset = paginator(page, per_page)
+            QueryModel = relations_map.get(model, None)[0] if model else Auctions
+
+            if model == 'chats':
+                query = self.db.query(QueryModel).filter(
+                    (relations_map.get(model, None)[1][0] == id) |
+                    (relations_map.get(model, None)[1][1] == id)
+                )
+            else:
+                query = self.db.query(QueryModel).filter(
+                    relations_map.get(model, None)[1].in_([id])
+                )
+            query = query.order_by(QueryModel.created_at.desc()
+                if order == 'desc' else QueryModel.created_at.asc()
+            )
+            total = query.count()
+            result = query.offset(offset).limit(limit).all()
+
+            pages = max(math.ceil(total / limit), 1)
+            return PagedResponse(
+                data=result,
+                pages=pages,
+                page_number=page,
+                per_page=limit,
+                count=len(result),
+                total=total,
+            )
+        except Exception as e:
+            if self.configs.DEBUG:
+                self._inspect.info()
+                raise e
+            raise e
 
 class UserNotificationRepository(Repository):
-    def __init__(self, db=get_db()):
+    def __init__(self, db: Session = None):
         super().__init__(Notifications)
-        super().attachDB(next(db))
+        if db:
+            super().attachDB(db)
             

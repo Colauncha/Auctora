@@ -136,11 +136,6 @@ class LoginToken(BaseModel):
     token_type: str = Field(default='Bearer')
 
 
-class LoginOutput(BaseModel):
-    model_config = {"from_attributes": True}
-    user: GetUsersSchemaPublic
-    token: LoginToken
-
 class VerifyOtpSchema(BaseModel):
     otp: str
     email: str

@@ -32,7 +32,7 @@ class Payments(BaseModel):
     auction_id = Column(
         UUID(as_uuid=True),
         ForeignKey('auctions.id', ondelete='SET NULL'),
-        index=True
+        index=True, unique=True
     )
     amount = Column(Float, nullable=False)
     due_data = Column(

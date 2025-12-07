@@ -7,6 +7,7 @@ from server.schemas.item_category_schema import *
 from server.schemas.auction_schema import *
 from server.schemas.bid_schema import *
 from server.schemas.payment_schema import *
+from server.chat.chatSchema import *
 
 
 T = t.TypeVar("T")
@@ -58,17 +59,8 @@ class PagedQuery(pyd.BaseModel):
     order: Optional[str] = Query(default='asc')
     # attr: Optional[str|int] = Query(default=None, description="Attribute to filter by")
 
-
-# User related
-class GetUsersNoAuction(GetUsersSchemaPublic):
-    model_config = {"from_attributes": True}    
-
-
-class GetUsers(GetUsersSchemaPublic):
-    model_config = {"from_attributes": True}
-    auctions: Optional[list[GetAuctionSchema]] = Field(default=[])
-
-
+# =====
+# Items related
 class GetItemLite(BaseModel):
     model_config = {"from_attributes": True}
     name: str = Field(
@@ -85,6 +77,7 @@ class GetItemLite(BaseModel):
     )
 
 
+# Auction related
 class GetAuctionItem(BaseModel):
     model_config = {"from_attributes": True}
     item: Optional[list[GetItemLite]] = Field(default={})
@@ -92,27 +85,6 @@ class GetAuctionItem(BaseModel):
 
 class GetBidSchemaExt(GetBidSchema):
     auction: Optional[GetAuctionItem] = Field(default={})
-
-
-class GetUserSchema(GetUsersSchemaPublic):
-    acct_no: Optional[str]
-    acct_name: Optional[str]
-    bank_code: Optional[str]
-    bank_name: Optional[str]
-    recipient_code: Optional[str]
-    auctions: Optional[list[GetAuctionSchema]] = Field(default=None)
-    bids: Optional[list[GetBidSchemaExt]] = Field(default=[])
-    referred_by: Optional[str] = Field(default='')
-    referred_users: Optional[dict] = Field(default={})
-
-    wallet: float = Field(
-        description="User's wallet balance",
-        examples=[1000.00]
-    )
-    available_balance: float = Field(
-        description="User's available balance",
-        examples=[900.00]
-    )    
 
 
 # Notification related
@@ -143,6 +115,58 @@ class AuctionQueryScalar(PagedQuery):
 # Bid related
 class BidQuery(PagedQuery):
     auction_id: Optional[str] = Query(default=None, description="Auction ID")
+
+# User related
+class GetUsersNoAuction(GetUsersSchemaPublic):
+    model_config = {"from_attributes": True}    
+
+
+class GetUsers(GetUsersSchemaPublic):
+    model_config = {"from_attributes": True}
+    auctions: Optional[list[GetAuctionSchema]] = Field(default=[])
+
+
+class GetUserSchema(GetUsersSchemaPublic):
+    acct_no: Optional[str]
+    acct_name: Optional[str]
+    bank_code: Optional[str]
+    bank_name: Optional[str]
+    recipient_code: Optional[str]
+    auctions: Optional[list[GetAuctionSchema]] = Field(default=None)
+    bids: Optional[list[GetBidSchemaExt]] = Field(default=[])
+    referred_by: Optional[str] = Field(default='')
+    referred_users: Optional[dict] = Field(default={})
+    chats: Optional[list[GetChatSchema]] = Field(default=[])
+
+    wallet: float = Field(
+        description="User's wallet balance",
+        examples=[1000.00]
+    )
+    available_balance: float = Field(
+        description="User's available balance",
+        examples=[900.00]
+    )
+
+
+class GetUserAuctions(BaseModel):
+    model_config = {"from_attributes": True}
+    auctions: Optional[list[GetAuctionSchema]] = Field(default=[])
+
+
+class GetUserBids(BaseModel):
+    model_config = {"from_attributes": True}
+    bids: Optional[list[GetBidSchema]] = Field(default=[])
+
+
+class GetUserChats(BaseModel):
+    model_config = {"from_attributes": True}
+    chats: Optional[list[GetChatSchema]] = Field(default=[])
+
+
+class LoginOutput(BaseModel):
+    model_config = {"from_attributes": True}
+    user: GetUserSchema
+    token: LoginToken
 
 
 # Paystack related

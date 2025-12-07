@@ -1,14 +1,15 @@
 import cloudinary
 import cloudinary.uploader
 import inspect
+
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
+
 from server.config import cloudinary_init
-from server.repositories import DBAdaptor
-from server.models.items import Items
+from server.services.base_service import BaseService
 from server.schemas import (
-    GetItemSchema, CreateItemSchema,
-    UpdateItemSchema, ImageLinkObj
+    GetItemSchema,
+    ImageLinkObj
 )
 from server.middlewares.exception_handler import (
     ExcRaiser,
@@ -18,7 +19,7 @@ from server.middlewares.exception_handler import (
 from starlette.concurrency import run_in_threadpool
 
 
-class ItemServices:
+class ItemServices(BaseService):
     def __init__(self, item_repo, sub_cat_repo):
         self.repo = item_repo
         self.subcat_repo = sub_cat_repo
