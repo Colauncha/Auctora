@@ -146,6 +146,15 @@ class GetUserSchema(GetUsersSchemaPublic):
         description="User's available balance",
         examples=[900.00]
     )
+    auctioned_amount: float = Field(
+        description="User's auctioned balance", examples=[100.00]
+    )
+    withdrawable_amount: Optional[float] = Field(
+        default=0.00, description="User's available balance", examples=[900.00]
+    )
+    bid_point: Optional[float] = Field(
+        default=0.00, description="User's available balance", examples=[900.00]
+    )
 
 
 class GetUserAuctions(BaseModel):

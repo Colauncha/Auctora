@@ -20,7 +20,7 @@ class DataBaseSettings(BaseSettings):
     TEST_DATABASE: Optional[str]
 
     def all(self):
-        return [self.DATABASE_URL, self.TEST_DATABASE, self.NEON_DB_URL]
+        return [self.DATABASE_URL, self.TEST_DATABASE]
 
 
 class JWTSettings(BaseSettings):

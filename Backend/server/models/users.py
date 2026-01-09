@@ -41,6 +41,8 @@ class Users(BaseModel):
     wallet = Column(Float, nullable=True, default=0.00)
     available_balance = Column(Float, nullable=True, default=0.00)
     auctioned_amount = Column(Float, nullable=True, default=0.00)
+    withdrawable_amount = Column(Float, nullable=True, default=0.00)
+    bid_point = Column(Float, nullable=True, default=0.00)
     acct_no = Column(String, nullable=True)
     acct_name = Column(String, nullable=True)
     bank_code = Column(String, nullable=True)
@@ -143,10 +145,10 @@ class Users(BaseModel):
     def _hash_password(self, password: str) -> str:
         context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         return context.hash(password)
-    
+
     def __str__(self):
         return f'Name: {self.username}, Email: {self.email}, referrals: {self.referred_users}'
-    
+
 
 class Notifications(BaseModel):
     __tablename__ = 'notifications'
@@ -168,7 +170,7 @@ class Notifications(BaseModel):
 
     def __str__(self):
         return f'{self.message} - {self.read}'
-    
+
 
 class WalletTransactions(BaseModel):
     __tablename__ = 'wallet_transactions'
