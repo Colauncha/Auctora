@@ -2,6 +2,7 @@ from functools import lru_cache
 from sqlalchemy.orm import Session
 from fastapi import Depends
 
+from server.repositories.rewardhistory_repository import RewardHistoryRepository
 from server.config import get_db
 from server.repositories.repository import Repository
 from server.blog.blogRepo import BlogRepository, BlogCommentRepository
@@ -39,6 +40,7 @@ class DBAdaptor:
         blog_repo: BlogRepository = BlogRepository
         blog_comment_repo: BlogCommentRepository = BlogCommentRepository
         chat_repo: ChatRepository = ChatRepository
+        rewardhistory_repo: "RewardHistoryRepository" = RewardHistoryRepository
 
     @lru_cache(maxsize=1)
     def factory(self):
@@ -140,3 +142,8 @@ def get_item_repo(db: Session = Depends(get_db)):
 def get_notification_repo(db: Session = Depends(get_db)):
     NotifRepo = factory.notif_repo
     return NotifRepo(db)
+
+
+def get_rewardhistory_repo(db: Session = Depends(get_db)):
+    RewardHistoryRepo = factory.rewardhistory_repo
+    return RewardHistoryRepo(db)

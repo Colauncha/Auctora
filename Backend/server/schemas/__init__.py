@@ -135,7 +135,7 @@ class GetUserSchema(GetUsersSchemaPublic):
     auctions: Optional[list[GetAuctionSchema]] = Field(default=None)
     bids: Optional[list[GetBidSchemaExt]] = Field(default=[])
     referred_by: Optional[str] = Field(default='')
-    referred_users: Optional[dict] = Field(default={})
+    # referred_users: Optional[dict] = Field(default={})
     chats: Optional[list[GetChatSchema]] = Field(default=[])
 
     wallet: float = Field(

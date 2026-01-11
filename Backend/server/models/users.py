@@ -59,12 +59,12 @@ class Users(BaseModel):
     kyc_id_number = Column(String, nullable=True)
 
     # Referral
-    referred_by = Column(String, nullable=True)
-    referral_debt_settled = Column(Boolean, default=False)
-    referral_commisions_paid = Column(Integer, default=0)
+    # referred_by = Column(String, nullable=True)
+    # referral_debt_settled = Column(Boolean, default=False)
+    # referral_commisions_paid = Column(Integer, default=0)
     referral_code = Column(String, nullable=True)
-    referral_slots_used = Column(Integer, default=0)
-    referred_users = Column(JSONB, nullable=True, default={})
+    # referral_slots_used = Column(Integer, default=0)
+    # referred_users = Column(JSONB, nullable=True, default={})
 
     # Additional INFO
     rating = Column(Float, nullable=True, default=0.00)

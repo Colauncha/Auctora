@@ -73,7 +73,7 @@ class UserNotificationServices(BaseService):
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
-        
+
     async def retrieve(self, db: Session, id: str):
         try:
             notice = await self.repo.attachDB(db).get_by_id(id)
@@ -88,7 +88,7 @@ class UserNotificationServices(BaseService):
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
-        
+
     async def create(self, db: Session, data: CreateNotificationSchema):
         try:
             channel = self.user_notif_channel(data.user_id)
@@ -111,7 +111,7 @@ class UserNotificationServices(BaseService):
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
-        
+
     async def update(self, db: Session, id: str, read: bool):
         try:
             notice = await self.repo.attachDB(db).get_by_id(id)
@@ -138,7 +138,7 @@ class UserNotificationServices(BaseService):
                     'unread': unread_len,
                     'total': total
                 }
-            raise ExcRaiser404(message='Notification not found')
+            return {"unread": 0, "total": 0}
         except ExcRaiser as e:
             raise
         except Exception as e:
@@ -407,34 +407,34 @@ class UserServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def update_referral_users(
-        self,
-        db: Session,
-        referrer: GetUserSchema,
-        referree: GetUserSchema,
-    ):
-        try:
-            refered_slots = referrer.referred_users.copy()
-            if not referrer.referral_code:
-                raise ExcRaiser400(
-                    message='Referrer not eligible for referrals, Proceed to Login'
-                )
+    # async def update_referral_users(
+    #     self,
+    #     db: Session,
+    #     referrer: GetUserSchema,
+    #     referree: GetUserSchema,
+    # ):
+    #     try:
+    #         refered_slots = referrer.referred_users.copy()
+    #         if not referrer.referral_code:
+    #             raise ExcRaiser400(
+    #                 message='Referrer not eligible for referrals, Proceed to Login'
+    #             )
 
-            # new data
-            refered_user = ReferralSlots(
-                user_id=str(referree.id), email=referree.email
-            )
-            refered_slots[f'slot_{referree.email}'] = refered_user.model_dump()
-            _ = await self.repo.attachDB(db).update_jsonb(referrer.id, refered_slots)
+    #         # new data
+    #         refered_user = ReferralSlots(
+    #             user_id=str(referree.id), email=referree.email
+    #         )
+    #         refered_slots[f'slot_{referree.email}'] = refered_user.model_dump()
+    #         _ = await self.repo.attachDB(db).update_jsonb(referrer.id, refered_slots)
 
-            return True
-        except ExcRaiser as e:
-            raise
-        except Exception as e:
-            if self.debug:
-                method_name = inspect.stack()[0].frame.f_code.co_name
-                print(f"Unexpected error in {method_name}: {e}")
-            raise ExcRaiser500(detail=str(e))
+    #         return True
+    #     except ExcRaiser as e:
+    #         raise
+    #     except Exception as e:
+    #         if self.debug:
+    #             method_name = inspect.stack()[0].frame.f_code.co_name
+    #             print(f"Unexpected error in {method_name}: {e}")
+    #         raise ExcRaiser500(detail=str(e))
 
     async def create_user(self, db: Session, data: dict) -> dict[str, str]:
         try:
@@ -479,7 +479,7 @@ class UserServices(BaseService):
                     _ = await self.repo.attachDB(db).update(
                         new_user, {'referred_by': str(ref_user.id)}
                     )
-                    await self.update_referral_users(db, ref_user, new_user)
+                    # await self.update_referral_users(db, ref_user, new_user)
 
                 # OTP
                 otp = otp_generator()
@@ -535,7 +535,7 @@ class UserServices(BaseService):
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
-        
+
     async def add_recipient_code(
         self,
         db: Session,
@@ -551,7 +551,7 @@ class UserServices(BaseService):
 
     async def retrieve(self, db: Session, id) -> GetUserSchema:
         try:
-            user = await self.repo.attachDB(db).get_by_attr({'id': id})
+            user = await self.repo.get_by_attr({"id": id})
             if user:
                 valid_user = GetUserSchema.model_validate(user)
                 return valid_user
@@ -699,7 +699,7 @@ class UserServices(BaseService):
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
-        
+
     async def get_reset_token(self, db: Session, email: str):
         try:
             user = await self.repo.attachDB(db).get_by_email(email)
@@ -740,7 +740,7 @@ class UserServices(BaseService):
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
-        
+
     async def change_password(self, db: Session, user: GetUserSchema, data: ChangePasswordSchema):
         try:
             user = await self.repo.attachDB(db).get_by_email(user.email)

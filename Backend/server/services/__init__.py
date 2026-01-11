@@ -29,11 +29,18 @@ from server.repositories.user_repository import (
     UserRepository, UserNotificationRepository,
     WalletTranscationRepository
 )
+from server.services.rewardhistory_service import RewardHistoryService
 
 
 # Service dependencies
 def get_contact_us_service():
     return ContactUsService()
+
+
+def get_rewardhistory_service(
+    rewardhistory_repo: RewardHistoryRepository = Depends(get_rewardhistory_repo),
+):
+    return RewardHistoryService(rewardhistory_repo)
 
 
 def get_notification_service(

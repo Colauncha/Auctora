@@ -16,7 +16,6 @@ from server.models.bids import Bids
 from server.chat.chat import Chats
 
 
-
 class WalletTranscationRepository(Repository):
     def __init__(self, db: Session = None):
         super().__init__(WalletTransactions)
@@ -199,6 +198,35 @@ class UserRepository(Repository):
             )
 
     @no_db_error
+    async def fund_withdraw_balance(
+        self, user_id: str, amount: float, reverse: bool = True
+    ):
+        """
+        Move funds between bid_credit and withdrawable balance.\n
+        Args:
+            - user_id <str>: User's id
+            - amount <float>: Transaction amount
+            - reverse <bool>: True for withdrawable to bid_credit,
+            False for bid_credit to withdraw
+        """
+        try:
+            with self.db.begin(nested=True):
+                user = await self.get_by_id(user_id)
+                if not user:
+                    raise ExcRaiser404(message="User not found")
+                if reverse:
+                    user.withdrawable_amount -= amount
+                    user.available_balance += amount
+                else:
+                    user.available_balance -= amount
+                    user.withdrawable_amount += amount
+        except (Exception, SQLAlchemyError) as e:
+            self.db.rollback()
+            raise ExcRaiser(
+                status_code=500, message="Transaction failed", detail=str(e)
+            )
+
+    @no_db_error
     async def withdraw(
         self,
         transaction: WalletTransactionSchema,
@@ -210,8 +238,7 @@ class UserRepository(Repository):
                 user = await self.get_by_id(transaction.user_id)
                 if not user:
                     raise ExcRaiser404(message="User not found")
-                user.wallet -= transaction.amount
-                user.available_balance -= transaction.amount
+                user.withdrawable_amount -= transaction.amount
 
             if update:
                 await self.wallet_transaction.attachDB(self.db).save(
@@ -320,4 +347,3 @@ class UserNotificationRepository(Repository):
         super().__init__(Notifications)
         if db:
             super().attachDB(db)
-            
