@@ -18,15 +18,22 @@ from server.schemas import (
 
 
 class BidServices(BaseService):
+
     def __init__(
-            self, bid_repo, user_repo, auction_repo,
-            notif_service, auction_service
+        self,
+        bid_repo,
+        user_repo,
+        auction_repo,
+        notif_service,
+        auction_service,
+        reward_service,
     ):
         self.repo = bid_repo
         self.user_repo = user_repo
         self.auction_repo = auction_repo
         self.notification = notif_service
         self.auctions_services = auction_service
+        self.reward_service = reward_service
 
     async def retrieve(self, db: Session, id: str) -> GetBidSchema:
         try:
@@ -34,7 +41,7 @@ class BidServices(BaseService):
             return GetBidSchema.model_validate(bid)
         except Exception as e:
             raise e
-        
+
     async def list(self, db: Session, filter: dict) -> list[GetBidSchema]:
         try:
             bids = await self.repo.attachDB(db).get_all(filter=filter)
@@ -63,10 +70,10 @@ class BidServices(BaseService):
                 )
             if auction.end_date < date:
                 raise ExcRaiser400('Auction has ended')
-            
+
             if auction.users_id == user.id:
                 raise ExcRaiser400('You cannot bid on your own auction')
-            
+
             if not auction.buy_now:
                 raise ExcRaiser400('Buy now is not enabled')
 
@@ -134,14 +141,14 @@ class BidServices(BaseService):
 
             if auction.end_date < date:
                 raise ExcRaiser400('Auction has ended')
-            
+
             if auction.users_id == user.id:
                 raise ExcRaiser400('You cannot bid on your own auction')
 
             # TODO: Check if price >= auction.buy_now_price
             if auction.buy_now:
-              if data.amount >= auction.buy_now_price:
-                  return await self.buy_now(db, data)
+                if data.amount >= auction.buy_now_price:
+                    return await self.buy_now(db, data)
 
             # Check if price is within 10% of buy_now_price
             if auction.buy_now:
@@ -169,7 +176,7 @@ class BidServices(BaseService):
                         message='Unauthorized',
                         detail='You are not a participant in this auction'
                     )
-            
+
             # Check is user had placed a prev bid
             # If so, call update instead.
             exist = await self.repo.attachDB(db).exists(
@@ -179,11 +186,11 @@ class BidServices(BaseService):
                 return await self.update(
                     db=db, exisiting_bid=exist, amount=data.amount
                 )
-            
+
             # Check available balance against bid amount
             if user.available_balance < data.amount:
                 raise ExcRaiser400('Insufficient wallet balance')
-            
+
             # Move funds from users wallet to users auctioned_amount
             _ = await self.user_repo.attachDB(db).wtab(user.id, data.amount)
             bid = await self.repo.attachDB(db).add(data.model_dump())
@@ -203,6 +210,10 @@ class BidServices(BaseService):
                     "link": f'{app_configs.FRONTEND_URL}/product-details/{auction.id}',
                     "email": user.email
                 })
+                # Reward user for placing a bid
+                _ = await self.reward_service.save_reward_history(
+                    user.id, reward_type="PLACE_BID"
+                )
             await self.auction_repo.attachDB(db).update(
                 auction, {'current_price': data.amount}
             )
@@ -237,7 +248,7 @@ class BidServices(BaseService):
                 return json.loads(prev_bids_)
         except Exception as e:
             raise e
-        
+
     async def create_ws(
         self,
         db: Session,
@@ -309,13 +320,12 @@ class BidServices(BaseService):
             NOTIF_TITLE = 'Bid Placed'
             NOTIF_BODY = f'Bid submitted successfully in auction: {auc__id}'
 
-            
             if exisiting_bid:
                 amount_ = amount - exisiting_bid.amount
 
                 if user.available_balance < amount_:
                     raise ExcRaiser400('Insufficient wallet balance')
-            
+
                 # Move funds from users wallet to users auctioned_amount
                 _ = await self.user_repo.attachDB(db).wtab(user.id, amount_)
                 bid = await self.repo.attachDB(db).update(exisiting_bid, {'amount': amount})
@@ -333,7 +343,7 @@ class BidServices(BaseService):
 
                 if user.available_balance < amount_:
                     raise ExcRaiser400('Insufficient wallet balance')
-            
+
                 # Move funds from users wallet to users auctioned_amount
                 _ = await self.user_repo.attachDB(db).wtab(user.id, amount_)
                 bid = await self.repo.attachDB(db).update(exists, {'amount': amount})
@@ -384,7 +394,7 @@ class BidServices(BaseService):
             await self.notification.create(db, notice)
         except Exception as e:
             raise e
-        
+
     async def nphb(self, db: Session, id: str, current_id: str):
         """nphb: NOTIFY PREVIOUS HIGHEST BIDDER"""
         try:

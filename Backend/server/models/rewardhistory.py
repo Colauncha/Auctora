@@ -11,3 +11,11 @@ class RewardHistory(BaseModel):
     )
     amount = Column(Float, nullable=False)
     type = Column(String, nullable=False)
+
+
+# RewardHistory.Type
+# REFER_USER
+# FUND_WALLET
+# WIN_AUCTION
+# LIST_PRODUCT
+# PLACE_BID

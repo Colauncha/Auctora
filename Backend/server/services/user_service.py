@@ -17,18 +17,30 @@ from server.utils import (
     decode_referral_code
 )
 from server.schemas import (
-    VerifyOtpSchema, LoginSchema,
-    GetUserSchema, UpdateUserSchema,
-    LoginToken, ResetPasswordSchema,
-    ChangePasswordSchema, PagedResponse,
-    PagedQuery, GetUsers, GetNotificationsSchema,
-    NotificationQuery, CreateNotificationSchema,
-    WalletTransactionSchema, WalletHistoryQuery,
-    InitializePaymentRes, AccountDetailsSchema,
-    UpdateUserAddressSchema, ReferralSlots,
-    GetUsersSchemaPublic, SearchQuery,
-    GetUsersNoAuction, GetAuctionSchema,
-    GetBidSchema, GetChatSchema
+    VerifyOtpSchema,
+    LoginSchema,
+    GetUserSchema,
+    UpdateUserSchema,
+    LoginToken,
+    ResetPasswordSchema,
+    ChangePasswordSchema,
+    PagedResponse,
+    PagedQuery,
+    GetUsers,
+    GetNotificationsSchema,
+    NotificationQuery,
+    CreateNotificationSchema,
+    WalletTransactionSchema,
+    WalletHistoryQuery,
+    InitializePaymentRes,
+    AccountDetailsSchema,
+    UpdateUserAddressSchema,
+    GetUsersSchemaPublic,
+    SearchQuery,
+    GetUsersNoAuction,
+    GetAuctionSchema,
+    GetBidSchema,
+    GetChatSchema,
 )
 from server.services.base_service import BaseService
 from server.middlewares.exception_handler import (
@@ -57,7 +69,9 @@ class UserNotificationServices(BaseService):
 
     async def list(self, db: Session, notice: NotificationQuery):
         try:
-            result = await self.repo.get_all(notice.model_dump(exclude_unset=True))
+            result: PagedResponse = await self.repo.get_all(
+                notice.model_dump(exclude_unset=True)
+            )
             if not result:
                 raise ExcRaiser404(message='No Notification found')
             valid_notices = [
@@ -89,7 +103,7 @@ class UserNotificationServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def create(self, db: Session, data: CreateNotificationSchema):
+    async def create(self, db: Session | None, data: CreateNotificationSchema):
         try:
             channel = self.user_notif_channel(data.user_id)
             result = await self.repo.add(data.model_dump())
@@ -152,10 +166,12 @@ class UserNotificationServices(BaseService):
 ###############################################################################
 
 class UserWalletTransactionServices(BaseService):
-    def __init__(self, wallet_repo, user_repo, notif_service):
+
+    def __init__(self, wallet_repo, user_repo, notif_service, reward_service):
         self.repo = wallet_repo
         self.user_repo = user_repo
         self.notification = notif_service
+        self.reward_service = reward_service
         self.debug = app_configs.DEBUG
 
     async def init_transaction(
@@ -236,6 +252,11 @@ class UserWalletTransactionServices(BaseService):
                     )
                 )
                 # await publish_fund_account(pub_data)
+                # Reward user for funding wallet
+                if transaction.status == TransactionStatus.COMPLETED:
+                    _ = await self.reward_service.save_reward_history(
+                        user.id, reward_type="FUND_WALLET"
+                    )
             return
         except ExcRaiser as e:
             raise
@@ -346,10 +367,12 @@ class UserWalletTransactionServices(BaseService):
 ##############################################################################
 
 class UserServices(BaseService):
-    def __init__(self, user_repo, notif_service):
+
+    def __init__(self, user_repo, notif_service, reward_service):
         self.repo = user_repo
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         self.notification = notif_service
+        self.reward_service = reward_service
         self.debug = app_configs.DEBUG
         self.inspect = ExtInspect(self.__class__.__name__).info
 
@@ -434,6 +457,20 @@ class UserServices(BaseService):
     #             print(f"Unexpected error in {method_name}: {e}")
     #         raise ExcRaiser500(detail=str(e))
 
+    async def referral_bonus(self, user_id: str):
+        try:
+            res = await self.reward_service.save_reward_history(
+                user_id, reward_type="REFER_USER"
+            )
+            return res
+        except ExcRaiser as e:
+            raise e
+        except Exception as e:
+            if self.config.DEBUG:
+                self.inspect()
+                raise ExcRaiser500(detail=str(e), exception=e)
+            raise ExcRaiser500(detail=str(e))
+
     async def create_user(self, db: Session, data: dict) -> dict[str, str]:
         try:
             NOTIF_TITLE = "Welcome to Biddius"
@@ -476,11 +513,11 @@ class UserServices(BaseService):
                 # referral
                 if referral_code:
                     ref_username = decode_referral_code(referral_code)
-                    ref_user = await self.repo.get_by_username(ref_username)
-                    _ = await self.repo.update(
-                        new_user, {"referred_by": str(ref_user.id)}
+                    ref_user = await self.repo.get_by_username(ref_username, True)
+                    # Reward referral bonus
+                    _ = await self.reward_service.save_reward_history(
+                        ref_user.id, "REFER_USER"
                     )
-                    # await self.update_referral_users(db, ref_user, new_user)
 
                 # OTP
                 otp = otp_generator()
@@ -495,11 +532,11 @@ class UserServices(BaseService):
                 return data
 
         except ExcRaiser as e:
-            raise
+            raise e
         except Exception as e:
-            if self.debug:
-                method_name = inspect.stack()[0].frame.f_code.co_name
-                print(f"Unexpected error in {method_name}: {e}")
+            if self.config.DEBUG:
+                self.inspect()
+                raise ExcRaiser500(detail=str(e), exception=e)
             raise ExcRaiser500(detail=str(e))
 
     async def create_admin(self, db: Session, data: dict):
@@ -791,15 +828,9 @@ class UserServices(BaseService):
             username = user.username
             if not username:
                 raise ExcRaiser400(
-                    message='Username not found',
-                    detail="Update profile to include username then proceed"
+                    message="Username not found",
+                    detail="Update profile to include username then proceed",
                 )
-            if user.referral_code:
-                return {
-                    'referral_code': user.referral_code,
-                    'referral_url': f"{app_configs.FRONTEND_URL}/sign-up?referral_code={user.referral_code}",
-                    'referred_users': user.referred_users
-                }
             ref_code = generate_referral_code(username)
             _ = await self.repo.update(user, {"referral_code": ref_code})
             return {

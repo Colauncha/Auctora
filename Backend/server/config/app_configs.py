@@ -65,6 +65,26 @@ class PayStack(BaseSettings):
     model_config = {}
 
 
+class RewardSettings(BaseSettings):
+    REFER_USER: int
+    FUND_WALLET: int
+    WIN_AUCTION: int
+    LIST_PRODUCT: int
+    PLACE_BID: int
+
+    REDEEM_POINTS_THRESHOLD: int
+    REDEEM_RATE: float
+
+    def get_structure(self) -> dict:
+        return {
+            "REFER_USER": {"name": "REFER_USER", "amount": self.REFER_USER},
+            "FUND_WALLET": {"name": "FUND_WALLET", "amount": self.FUND_WALLET},
+            "WIN_AUCTION": {"name": "WIN_AUCTION", "amount": self.WIN_AUCTION},
+            "LIST_PRODUCT": {"name": "LIST_PRODUCT", "amount": self.LIST_PRODUCT},
+            "PLACE_BID": {"name": "PLACE_BID", "amount": self.PLACE_BID},
+        }
+
+
 class AppConfig(BaseSettings):
     APP_NAME: str
     URI_PREFIX: str = '/api'
@@ -75,6 +95,7 @@ class AppConfig(BaseSettings):
     security: JWTSettings= JWTSettings()
     email_settings: EmailSettiings = EmailSettiings()
     cloudinary: CloudinaryConfig = CloudinaryConfig()
+    rewards: RewardSettings = RewardSettings()
     ENV: str
     paystack: PayStack = PayStack()
     DEBUG: bool = True if ENV in ["development", "test"] else False

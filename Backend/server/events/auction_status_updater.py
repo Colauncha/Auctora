@@ -13,7 +13,8 @@ from ..services import (
     AuctionServices,
     DBAdaptor,
     UserNotificationServices,
-    ChatServices
+    ChatServices,
+    RewardHistoryService,
 )
 
 # Configure logging
@@ -112,17 +113,13 @@ async def main():
 
     auction_service = AuctionServices(
         auction_p_repo=factory.auction_p_repo(),
-        auction_repo=factory.auction_repo(
-            factory.auction_p_repo()
-        ),
-        user_repo=factory.user_repo(
-            factory.wallet_repo()
-        ),
+        auction_repo=factory.auction_repo(factory.auction_p_repo()),
+        user_repo=factory.user_repo(factory.wallet_repo()),
         payment_repo=factory.payment_repo(),
         notif_service=notif_service,
         chat_service=chat_service,
+        reward_service=RewardHistoryService,
     )
-
 
     scheduler.add_job(
         update_status,

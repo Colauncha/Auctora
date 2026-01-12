@@ -20,26 +20,41 @@ from server.enums.user_enums import (
 from server.middlewares.exception_handler import ExcRaiser, ExcRaiser400
 from server.middlewares.auth import permissions
 from server.schemas import (
-    CreateUserSchema, PaystackWebhookSchema, VerifyOtpSchema,
-    APIResponse, UpdateUserSchema,
-    GetUserSchema, ResetPasswordSchema,
-    LoginSchema, ChangePasswordSchema,
-    PagedQuery, LoginOutput,
-    ErrorResponse, PagedResponse,
-    GetUserAuctions, GetNotificationsSchema,
-    NotificationQuery, UpdateNotificationSchema,
-    WalletTransactionSchema, VerifyTransactionData,
-    InitializePaymentRes, GetUsersSchemaPublic,
-    WalletHistoryQuery, TransferRecipientData,
-    AccountDetailsSchema, UpdateUserAddressSchema,
-    GetUsersNoAuction, GetUserBids, GetUserChats
+    CreateUserSchema,
+    PaystackWebhookSchema,
+    RewardHistorySchema,
+    VerifyOtpSchema,
+    APIResponse,
+    UpdateUserSchema,
+    GetUserSchema,
+    ResetPasswordSchema,
+    LoginSchema,
+    ChangePasswordSchema,
+    PagedQuery,
+    LoginOutput,
+    ErrorResponse,
+    PagedResponse,
+    GetNotificationsSchema,
+    NotificationQuery,
+    UpdateNotificationSchema,
+    WalletTransactionSchema,
+    VerifyTransactionData,
+    InitializePaymentRes,
+    GetUsersSchemaPublic,
+    WalletHistoryQuery,
+    TransferRecipientData,
+    AccountDetailsSchema,
+    UpdateUserAddressSchema,
+    GetUsersNoAuction,
+    RewardHistoryQuery,
 )
 from server.services import (
     current_user,
     AuthServices,
     get_user_service,
     get_wallet_service,
-    get_notification_service
+    get_notification_service,
+    get_rewardhistory_service,
 )
 from sqlalchemy.orm import Session
 import requests
@@ -395,6 +410,20 @@ async def get_user_count(
 ) -> APIResponse:
     count = await userServices.count(db, role)
     return APIResponse(data={"user_count": count})
+
+
+@route.get("/rewards/history")
+@permissions(permission_level=Permissions.CLIENT)
+async def get_reward_history(
+    user: current_user,
+    filter: RewardHistoryQuery = Depends(RewardHistoryQuery),
+    rewardhistoryServices: get_rewardhistory_service = Depends(
+        get_rewardhistory_service
+    ),
+) -> PagedResponse[list[RewardHistorySchema]]:
+    rewards = await rewardhistoryServices.get_user_reward_history(user.id, filter)
+    return rewards
+
 
 ###############################################################################
 ############################ Notification Endpoints ###########################
