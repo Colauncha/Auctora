@@ -199,7 +199,7 @@ class UserRepository(Repository):
 
     @no_db_error
     async def fund_withdraw_balance(
-        self, user_id: str, amount: float, reverse: bool = True
+        self, user_id: str, amount: float, reverse: bool = False
     ):
         """
         Move funds between bid_credit and withdrawable balance.\n
@@ -215,11 +215,22 @@ class UserRepository(Repository):
                 if not user:
                     raise ExcRaiser404(message="User not found")
                 if reverse:
+                    if user.withdrawable_amount < amount:
+                        raise ExcRaiser(
+                            status_code=400, message="Insufficient withdrawable balance"
+                        )
                     user.withdrawable_amount -= amount
                     user.available_balance += amount
+                    user.wallet += amount
                 else:
+                    if user.available_balance < amount:
+                        raise ExcRaiser(
+                            status_code=400, message="Insufficient available balance"
+                        )
                     user.available_balance -= amount
+                    user.wallet -= amount
                     user.withdrawable_amount += amount
+                return True
         except (Exception, SQLAlchemyError) as e:
             self.db.rollback()
             raise ExcRaiser(

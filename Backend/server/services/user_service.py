@@ -57,7 +57,7 @@ class UserNotificationServices(BaseService):
 
     async def list(self, db: Session, notice: NotificationQuery):
         try:
-            result = await self.repo.attachDB(db).get_all(notice.model_dump(exclude_unset=True))
+            result = await self.repo.get_all(notice.model_dump(exclude_unset=True))
             if not result:
                 raise ExcRaiser404(message='No Notification found')
             valid_notices = [
@@ -76,7 +76,7 @@ class UserNotificationServices(BaseService):
 
     async def retrieve(self, db: Session, id: str):
         try:
-            notice = await self.repo.attachDB(db).get_by_id(id)
+            notice = await self.repo.get_by_id(id)
             if notice:
                 valid_notice = GetNotificationsSchema.model_validate(notice)
                 return valid_notice
@@ -92,7 +92,7 @@ class UserNotificationServices(BaseService):
     async def create(self, db: Session, data: CreateNotificationSchema):
         try:
             channel = self.user_notif_channel(data.user_id)
-            result = await self.repo.attachDB(db).add(data.model_dump())
+            result = await self.repo.add(data.model_dump())
             if result:
                 valid_result = GetNotificationsSchema.model_validate(result)
                 if valid_result:
@@ -114,9 +114,9 @@ class UserNotificationServices(BaseService):
 
     async def update(self, db: Session, id: str, read: bool):
         try:
-            notice = await self.repo.attachDB(db).get_by_id(id)
+            notice = await self.repo.get_by_id(id)
             if notice:
-                result = await self.repo.attachDB(db).save(notice, {'read': read})
+                result = await self.repo.save(notice, {"read": read})
                 if result:
                     return True
             raise ExcRaiser404(message='Notification not found')
@@ -175,7 +175,7 @@ class UserWalletTransactionServices(BaseService):
                 "amount": amount,
                 "reference_id": data.data.reference
             })
-            _ = await self.repo.attachDB(db).add(wallet_data.model_dump())
+            _ = await self.repo.add(wallet_data.model_dump())
             return True
         except ExcRaiser as e:
             raise
@@ -188,7 +188,7 @@ class UserWalletTransactionServices(BaseService):
     async def create(self, db: Session, transaction, extra):
         try:
             transaction = WalletTransactionSchema(**transaction, **extra)
-            user = await self.user_repo.attachDB(db).get_by_id(transaction.user_id)
+            user = await self.user_repo.get_by_id(transaction.user_id)
             notify = False
 
             NOTIF_TITLE = f"Funding Account {transaction.status.value}"
@@ -197,31 +197,32 @@ class UserWalletTransactionServices(BaseService):
             f"has {transaction.status.value}"
             )
 
-            exist = await self.repo.attachDB(db).get_by_attr(
-                {'reference_id': transaction.reference_id}
+            exist = await self.repo.get_by_attr(
+                {"reference_id": transaction.reference_id}
             )
 
             if transaction.status == TransactionStatus.COMPLETED:
                 if exist and exist.status == transaction.status:
                     return
                 elif exist and exist.status != transaction.status:
-                    _ = await self.user_repo.attachDB(db).fund_wallet(
+                    _ = await self.user_repo.fund_wallet(
                         transaction, update=True, exist=exist
                     )
                     notify = True
                 elif not exist:
-                    _ = await self.user_repo.attachDB(db).fund_wallet(transaction)
+                    _ = await self.user_repo.fund_wallet(transaction)
                     notify = True
 
             else:
                 if exist and exist.status == transaction.status:
                     return
                 elif exist and exist.status != transaction.status:
-                    _ = await self.repo.attachDB(db).update(exist, transaction.model_dump(exclude_none=True))
+                    _ = await self.repo.update(
+                        exist, transaction.model_dump(exclude_none=True)
+                    )
                 else:
-                    _ = await self.repo.attachDB(db).add(transaction.model_dump(exclude_none=True))
+                    _ = await self.repo.add(transaction.model_dump(exclude_none=True))
                     notify = True
-            
 
             if notify:
                 pub_data = transaction.model_dump()
@@ -247,7 +248,7 @@ class UserWalletTransactionServices(BaseService):
     async def list(self, db: Session, filter: WalletHistoryQuery):
         try:
             filter = filter.model_dump(exclude_none=True)
-            history = await self.repo.attachDB(db).get_all(filter=filter)
+            history = await self.repo.get_all(filter=filter)
             if not history:
                 raise ExcRaiser404(message='No Transaction found')
             valid_history = [
@@ -265,11 +266,11 @@ class UserWalletTransactionServices(BaseService):
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
-        
+
     async def withdraw(self, db: Session, transaction, extra) -> bool:
         try:
             transaction = WalletTransactionSchema(**transaction, **extra)
-            user = await self.user_repo.attachDB(db).get_by_id(transaction.user_id)
+            user = await self.user_repo.get_by_id(transaction.user_id)
             notify = False
 
             print(transaction, user)
@@ -279,31 +280,30 @@ class UserWalletTransactionServices(BaseService):
             f"was {transaction.status.value}"
             )
 
-            exist = await self.repo.attachDB(db).get_by_attr(
-                {'reference_id': transaction.reference_id}
+            exist = await self.repo.get_by_attr(
+                {"reference_id": transaction.reference_id}
             )
 
             if transaction.status == TransactionStatus.COMPLETED:
                 if exist and exist.status == transaction.status:
                     return
                 elif exist and exist.status != transaction.status:
-                    _ = await self.user_repo.attachDB(db).withdraw(
+                    _ = await self.user_repo.withdraw(
                         transaction, update=True, exist=exist
                     )
                     notify = True
                 elif not exist:
-                    _ = await self.user_repo.attachDB(db).withdraw(transaction)
+                    _ = await self.user_repo.withdraw(transaction)
                     notify = True
 
             else:
                 if exist and exist.status == transaction.status:
                     return
                 elif exist and exist.status != transaction.status:
-                    _ = await self.repo.attachDB(db).save(exist, transaction.model_dump())
+                    _ = await self.repo.save(exist, transaction.model_dump())
                 else:
-                    _ = await self.repo.attachDB(db).add(transaction.model_dump())
+                    _ = await self.repo.add(transaction.model_dump())
                     notify = True
-            
 
             if notify:
                 pub_data = transaction.model_dump()
@@ -328,9 +328,7 @@ class UserWalletTransactionServices(BaseService):
 
     async def retrieve(self, db: Session, reference: str):
         try:
-            transaction = await self.repo.attachDB(db).get_by_attr(
-                {'reference_id': reference}
-            )
+            transaction = await self.repo.get_by_attr({"reference_id": reference})
             if transaction:
                 valid_transaction = WalletTransactionSchema.model_validate(transaction)
                 return valid_transaction
@@ -384,9 +382,9 @@ class UserServices(BaseService):
         try:
             user = None
             if is_valid_email(identity.identifier):
-                user = await self.repo.attachDB(db).get_by_email(identity.identifier)
+                user = await self.repo.get_by_email(identity.identifier)
             else:
-                user = await self.repo.attachDB(db).get_by_username(identity.identifier)
+                user = await self.repo.get_by_username(identity.identifier)
             if user and self.check_password(
 
                     identity.password, user.hash_password
@@ -425,7 +423,7 @@ class UserServices(BaseService):
     #             user_id=str(referree.id), email=referree.email
     #         )
     #         refered_slots[f'slot_{referree.email}'] = refered_user.model_dump()
-    #         _ = await self.repo.attachDB(db).update_jsonb(referrer.id, refered_slots)
+    #         _ = await self.repo.update_jsonb(referrer.id, refered_slots)
 
     #         return True
     #     except ExcRaiser as e:
@@ -445,15 +443,18 @@ class UserServices(BaseService):
             )
             # Check if email already exist
             referral_code = data.pop('referral_code') if data.get('referral_code') else None
-            ex_uname = await self.repo.attachDB(db).get_by_username(data.get('username'))\
-            if data.get('username') else None
-            ex_email = await self.repo.attachDB(db).get_by_email(data.get('email'))
+            ex_uname = (
+                await self.repo.get_by_username(data.get("username"))
+                if data.get("username")
+                else None
+            )
+            ex_email = await self.repo.get_by_email(data.get("email"))
             if ex_email or ex_uname:
                 raise ExcRaiser400(detail='Username or email already exist')
 
             # Create new user
             else:
-                new_user = await self.repo.attachDB(db).add(data)
+                new_user = await self.repo.add(data)
                 if not new_user:
                     raise ExcRaiser(
                         message="Unable to create User",
@@ -475,9 +476,9 @@ class UserServices(BaseService):
                 # referral
                 if referral_code:
                     ref_username = decode_referral_code(referral_code)
-                    ref_user = await self.repo.attachDB(db).get_by_username(ref_username)
-                    _ = await self.repo.attachDB(db).update(
-                        new_user, {'referred_by': str(ref_user.id)}
+                    ref_user = await self.repo.get_by_username(ref_username)
+                    _ = await self.repo.update(
+                        new_user, {"referred_by": str(ref_user.id)}
                     )
                     # await self.update_referral_users(db, ref_user, new_user)
 
@@ -503,12 +504,12 @@ class UserServices(BaseService):
 
     async def create_admin(self, db: Session, data: dict):
         try:
-            ex_uname = await self.repo.attachDB(db).get_by_username(data.get('username'))
-            ex_email = await self.repo.attachDB(db).get_by_email(data.get('email'))
+            ex_uname = await self.repo.get_by_username(data.get("username"))
+            ex_email = await self.repo.get_by_email(data.get("email"))
             if ex_email or ex_uname:
                 raise ExcRaiser400(message='User already exist')
             data['role'] = UserRoles.ADMIN
-            new_user = await self.repo.attachDB(db).add(data)
+            new_user = await self.repo.add(data)
             new_user = GetUserSchema.model_validate(new_user)
             # Create a notification for the new user
             _ = await self.notification.create(
@@ -544,7 +545,7 @@ class UserServices(BaseService):
     ) -> AccountDetailsSchema:
         try:
             data = data.model_dump(exclude={'id'})
-            res = await self.repo.attachDB(db).update(user, data)
+            res = await self.repo.update(user, data)
             return AccountDetailsSchema.model_validate(*res)
         except Exception as e:
             raise e
@@ -571,7 +572,7 @@ class UserServices(BaseService):
         filter: PagedQuery
     ) ->PagedResponse[list[GetUsersNoAuction]]:
         try:
-            result = await self.repo.attachDB(db).get_all(filter.model_dump(exclude_unset=True))
+            result = await self.repo.get_all(filter.model_dump(exclude_unset=True))
             if result:
                 valid_users = [
                     GetUsers.model_validate(user).model_dump(include={'__all__'})
@@ -594,9 +595,33 @@ class UserServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
+    async def bid_credit_to_Withdrawable(self, id, amount):
+        try:
+            res = await self.repo.fund_withdraw_balance(id, amount, reverse=False)
+            return res
+        except ExcRaiser as e:
+            raise e
+        except Exception as e:
+            if self.config.DEBUG:
+                self.inspect()
+                raise ExcRaiser500(detail=str(e), exception=e)
+            raise ExcRaiser500(detail=str(e))
+
+    async def withdrawable_to_bid_credit(self, id, amount):
+        try:
+            res = await self.repo.fund_withdraw_balance(id, amount, reverse=True)
+            return res
+        except ExcRaiser as e:
+            raise e
+        except Exception as e:
+            if self.config.DEBUG:
+                self.inspect()
+                raise ExcRaiser500(detail=str(e), exception=e)
+            raise ExcRaiser500(detail=str(e))
+
     async def count(self, db: Session, role: str) -> int:
         try:
-            count = await self.repo.attachDB(db).count({'role': role} if role else None)
+            count = await self.repo.count({"role": role} if role else None)
             return count
         except ExcRaiser as e:
             raise
@@ -612,7 +637,7 @@ class UserServices(BaseService):
             stored_otp = await async_redis.get(f'otp:{email}')
             if stored_otp:
                 _ = await async_redis.delete(f'otp:{email}')
-            user = await self.repo.attachDB(db).get_by_email(email)
+            user = await self.repo.get_by_email(email)
             if user.email_verified:
                 return {'detail': 'User email already verified'}
             otp = otp_generator()
@@ -634,9 +659,9 @@ class UserServices(BaseService):
             NOTIF_MESSAGE = "Your email has been verified successfully"
             async_redis = await redis_store.get_async_redis()
             stored_otp = await async_redis.get(f'otp:{data.email}')
-            user = await self.repo.attachDB(db).get_by_email(data.email)
+            user = await self.repo.get_by_email(data.email)
             if stored_otp == data.otp:
-                _ = await self.repo.attachDB(db).save(user, {'email_verified': True})
+                _ = await self.repo.save(user, {"email_verified": True})
                 _ = await async_redis.delete(f'otp:{data.email}')
                 _ = await self.notification.create(
                     db,
@@ -663,10 +688,10 @@ class UserServices(BaseService):
                     status_code=400, detail="Not authenticated"
                 )
             _data = data.model_dump(exclude_unset=True, exclude_none=True)
-            ex_uname = await self.repo.attachDB(db).get_by_username(_data.get('username'))
+            ex_uname = await self.repo.get_by_username(_data.get("username"))
             if ex_uname and ex_uname.id != user.id:
                 raise ExcRaiser400(detail='Username already exist')
-            result = await self.repo.attachDB(db).update(user, _data)
+            result = await self.repo.update(user, _data)
             if result:
                 return True
         except ExcRaiser as e:
@@ -689,7 +714,7 @@ class UserServices(BaseService):
                     status_code=400, detail="Not authenticated"
                 )
             _data = data.model_dump(exclude_unset=True, exclude_none=True)
-            result = await self.repo.attachDB(db).update(user, _data)
+            result = await self.repo.update(user, _data)
             if result:
                 return True
         except ExcRaiser as e:
@@ -702,7 +727,7 @@ class UserServices(BaseService):
 
     async def get_reset_token(self, db: Session, email: str):
         try:
-            user = await self.repo.attachDB(db).get_by_email(email)
+            user = await self.repo.get_by_email(email)
             if not user:
                 raise ExcRaiser404("User not found")
             token = uuid4().hex
@@ -725,9 +750,9 @@ class UserServices(BaseService):
             stored_token = await async_redis.get(f'reset_password:{data.email}')
             if stored_token == data.token: 
                 if data.password == data.confirm_password:
-                    user = await self.repo.attachDB(db).get_by_email(data.email)
-                    _ = await self.repo.attachDB(db).save(
-                        user, {'hash_password': self.pwd_context.hash(data.password)}
+                    user = await self.repo.get_by_email(data.email)
+                    _ = await self.repo.save(
+                        user, {"hash_password": self.pwd_context.hash(data.password)}
                     )
                     _ = await async_redis.delete(f'reset_password:{data.email}')
                     return {'detail': 'Password reset successful'}
@@ -743,13 +768,13 @@ class UserServices(BaseService):
 
     async def change_password(self, db: Session, user: GetUserSchema, data: ChangePasswordSchema):
         try:
-            user = await self.repo.attachDB(db).get_by_email(user.email)
+            user = await self.repo.get_by_email(user.email)
             if not self.check_password(data.old_password, user.hash_password):
 
                 raise ExcRaiser400(detail='Invalid old password')
             if data.new_password == data.confirm_password:
-                _ = await self.repo.attachDB(db).save(
-                    user, {'hash_password': self.pwd_context.hash(data.new_password)}
+                _ = await self.repo.save(
+                    user, {"hash_password": self.pwd_context.hash(data.new_password)}
                 )
                 return {'detail': 'Password change successful'}
             raise ExcRaiser400(detail='Passwords do not match')
@@ -776,9 +801,7 @@ class UserServices(BaseService):
                     'referred_users': user.referred_users
                 }
             ref_code = generate_referral_code(username)
-            _ = await self.repo.attachDB(db).update(
-                user, {'referral_code': ref_code}
-            )
+            _ = await self.repo.update(user, {"referral_code": ref_code})
             return {
                 'referral_code': ref_code,
                 'referral_url': f"{app_configs.FRONTEND_URL}/sign-up?referral_code={ref_code}"
@@ -793,8 +816,8 @@ class UserServices(BaseService):
 
     async def delete_user(self, db: Session, user: GetUserSchema):
         try:
-            user_ = await self.repo.attachDB(db).get_by_id(user.id)
-            result = await self.repo.attachDB(db).delete(user_)
+            user_ = await self.repo.get_by_id(user.id)
+            result = await self.repo.delete(user_)
             if result:
                 return True
         except ExcRaiser as e:
@@ -825,7 +848,7 @@ class UserServices(BaseService):
                     'role': UserRoles.CLIENT,
                     'google_id': data.get('sub'),
                 }
-                new_user = await self.repo.attachDB(db).add(new_user_dict)
+                new_user = await self.repo.add(new_user_dict)
                 if not new_user:
                     raise ExcRaiser400(detail='Unable to create user')
 
@@ -856,18 +879,14 @@ class UserServices(BaseService):
 
     async def rate_user(self, db: Session, user_id: str, rating: int):
         try:
-            user = await self.repo.attachDB(db).get_by_id(user_id)
+            user = await self.repo.get_by_id(user_id)
             if not user:
                 raise ExcRaiser404(message='User not found')
             rating_count = user.rating_count + 1
             rating_sum = user.rating + rating
             rating = round(rating_sum / rating_count, 2)
-            _ = await self.repo.attachDB(db).save(
-                user,
-                {
-                    'rating': rating,
-                    'rating_count': rating_count
-                }
+            _ = await self.repo.save(
+                user, {"rating": rating, "rating_count": rating_count}
             )
             return True
         except ExcRaiser as e:
@@ -948,7 +967,7 @@ class UserServices(BaseService):
         ) -> PagedResponse:
         try:
             filter = filter.model_dump()
-            result = await self.repo.attachDB(db).search(filter)
+            result = await self.repo.search(filter)
             result.data = [
                 GetUsersSchemaPublic.model_validate(r) for r in result.data
             ]

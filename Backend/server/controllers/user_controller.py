@@ -709,7 +709,31 @@ async def transfer_recipient(
     return APIResponse(data=acct_data)
 
 
-@transac_route.post('/withdraw')
+@transac_route.post("/fund_withdraw_balance")
+@permissions(permission_level=Permissions.CLIENT)
+async def fund_withdraw_balance(
+    user: current_user,
+    amount: float,
+    userServices: get_user_service = Depends(get_user_service),
+) -> APIResponse:
+    result = await userServices.bid_credit_to_Withdrawable(user.id, amount)
+    return APIResponse(data=result)
+
+
+@transac_route.post("/rev_withdraw_balance")
+@permissions(permission_level=Permissions.CLIENT)
+async def rev_withdraw_balance(
+    user: current_user,
+    amount: float,
+    userServices: get_user_service = Depends(get_user_service),
+) -> APIResponse:
+    result = await userServices.bid_credit_to_Withdrawable(
+        user.id, amount, reverse=True
+    )
+    return APIResponse(data=result)
+
+
+@transac_route.post("/withdraw")
 @permissions(permission_level=Permissions.CLIENT)
 async def withdraw(
     user: current_user,
