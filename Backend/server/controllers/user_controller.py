@@ -425,6 +425,19 @@ async def get_reward_history(
     return rewards
 
 
+@route.post("/rewards/redeem")
+@permissions(permission_level=Permissions.CLIENT)
+async def redeem_reward_points(
+    user: current_user,
+    points: int,
+    rewardhistoryServices: get_rewardhistory_service = Depends(
+        get_rewardhistory_service
+    ),
+) -> APIResponse:
+    result = await rewardhistoryServices.redeem_reward_points(user.id, points)
+    return APIResponse(data=result)
+
+
 ###############################################################################
 ############################ Notification Endpoints ###########################
 ###############################################################################

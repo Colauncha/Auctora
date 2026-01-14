@@ -101,6 +101,7 @@ class RewardHistoryQuery(PagedQuery):
 
 class RewardHistorySchema(BaseModel):
     model_config = {"from_attributes": True}
+    id: UUID = Field(description="Reward ID")
     user_id: UUID = Field(description="User ID")
     amount: int = Field(description="Reward amount")
     type: str = Field(description="Reward type")

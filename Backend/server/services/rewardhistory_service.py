@@ -60,7 +60,7 @@ class RewardHistoryService(BaseService):
 
     async def redeem_reward_points(self, user_id, points):
         try:
-            user = await self.user_repo.redeem_bid_points(user_id, points)
+            user = await self.user_repo.bid_points_to_wallet(user_id, points)
             return user
         except ExcRaiser as e:
             raise e
