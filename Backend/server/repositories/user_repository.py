@@ -2,12 +2,13 @@ import math
 from sqlalchemy import String
 from sqlalchemy.orm import Session
 
+from server.config import app_configs
 from server.utils.helpers import paginator
 from server.config.database import get_db
 from server.repositories.repository import Repository, no_db_error
 from server.models.users import Users, Notifications, WalletTransactions
 from server.schemas import GetUserSchema, PagedResponse, WalletTransactionSchema
-from server.middlewares.exception_handler import ExcRaiser, ExcRaiser404
+from server.middlewares.exception_handler import ExcRaiser, ExcRaiser400, ExcRaiser404
 from sqlalchemy.exc import SQLAlchemyError
 from server.enums.user_enums import TransactionStatus, TransactionTypes
 
@@ -26,14 +27,15 @@ class WalletTranscationRepository(Repository):
 class UserRepository(Repository):
     def __init__(self, wallet_transaction: WalletTranscationRepository, db: Session = None):
         super().__init__(Users)
+        self.rewards_config = app_configs.rewards
         if db:
             super().attachDB(db)
         self.wallet_transaction = wallet_transaction
 
     @no_db_error
     async def get_by_email(
-            self, email: str, schema_mode: bool = False
-        ) -> GetUserSchema | Users:
+        self, email: str, schema_mode: bool = False
+    ) -> GetUserSchema | Users:
         user = await self.get_by_attr({'email': email})
         if user and schema_mode:
             user = GetUserSchema.model_validate(user)
@@ -44,8 +46,8 @@ class UserRepository(Repository):
 
     @no_db_error
     async def get_by_username(
-            self, username: str, schema_mode: bool = False
-        ) -> GetUserSchema | Users:
+        self, username: str, schema_mode: bool = False
+    ) -> GetUserSchema | Users:
         user = await self.get_by_attr({'username': username})
         if user and schema_mode:
             user = GetUserSchema.model_validate(user)
@@ -199,7 +201,7 @@ class UserRepository(Repository):
 
     @no_db_error
     async def fund_withdraw_balance(
-        self, user_id: str, amount: float, reverse: bool = True
+        self, user_id: str, amount: float, reverse: bool = False
     ):
         """
         Move funds between bid_credit and withdrawable balance.\n
@@ -215,11 +217,22 @@ class UserRepository(Repository):
                 if not user:
                     raise ExcRaiser404(message="User not found")
                 if reverse:
+                    if user.withdrawable_amount < amount:
+                        raise ExcRaiser(
+                            status_code=400, message="Insufficient withdrawable balance"
+                        )
                     user.withdrawable_amount -= amount
                     user.available_balance += amount
+                    user.wallet += amount
                 else:
+                    if user.available_balance < amount:
+                        raise ExcRaiser(
+                            status_code=400, message="Insufficient available balance"
+                        )
                     user.available_balance -= amount
+                    user.wallet -= amount
                     user.withdrawable_amount += amount
+                return True
         except (Exception, SQLAlchemyError) as e:
             self.db.rollback()
             raise ExcRaiser(
@@ -235,7 +248,7 @@ class UserRepository(Repository):
     ):
         try:
             with self.db.begin(nested=True):
-                user = await self.get_by_id(transaction.user_id)
+                user: Users = await self.get_by_id(transaction.user_id)
                 if not user:
                     raise ExcRaiser404(message="User not found")
                 user.withdrawable_amount -= transaction.amount
@@ -255,6 +268,49 @@ class UserRepository(Repository):
                 message='Transaction failed',
                 detail=str(e)
             )
+
+    @no_db_error
+    async def set_bid_points(self, user_id: str, points: int):
+        try:
+            user: Users = await self.get_by_id(user_id)
+            if not user:
+                raise ExcRaiser404(message="User not found")
+            user.bid_point += points
+            self.db.commit()
+            self.db.refresh(user)
+            return user
+        except Exception as e:
+            self.db.rollback()
+            if self.configs.DEBUG:
+                self._inspect.info()
+                raise e
+            raise e
+
+    @no_db_error
+    async def bid_points_to_wallet(self, user_id: str, points: int):
+        try:
+            user: Users = await self.get_by_id(user_id)
+            if not user:
+                raise ExcRaiser404(detail="User not found.")
+            if user.bid_point < points:
+                raise ExcRaiser400(detail="Insufficient bid points to redeem.")
+            if points < self.rewards_config.REDEEM_POINTS_THRESHOLD:
+                raise ExcRaiser400(
+                    detail=f"Minimum {self.rewards_config.REDEEM_POINTS_THRESHOLD} points required to redeem."
+                )
+            user.bid_point -= points
+            redeem_amount = points * self.rewards_config.REDEEM_RATE
+            user.wallet += redeem_amount
+            user.available_balance += redeem_amount
+            self.db.commit()
+            self.db.refresh(user)
+            return user
+        except Exception as e:
+            self.db.rollback()
+            if self.configs.DEBUG:
+                self._inspect.info()
+                raise e
+            raise e
 
     @no_db_error
     async def search(self, filter_: dict | None = None):

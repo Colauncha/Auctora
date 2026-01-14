@@ -93,6 +93,21 @@ class NotificationQuery(PagedQuery):
     read: Optional[bool] = Query(default=False, description="Read status")
 
 
+# Reward related
+class RewardHistoryQuery(PagedQuery):
+    user_id: Optional[UUID] = Query(default=None, description="User ID")
+    type: Optional[str] = Query(default=None, description="Reward type")
+
+
+class RewardHistorySchema(BaseModel):
+    model_config = {"from_attributes": True}
+    id: UUID = Field(description="Reward ID")
+    user_id: UUID = Field(description="User ID")
+    amount: int = Field(description="Reward amount")
+    type: str = Field(description="Reward type")
+    created_at: Optional[datetime] = Field(description="Creation timestamp")
+
+
 # Wallet related
 class WalletHistoryQuery(PagedQuery):
     user_id: Optional[UUID] = Query(default=None, description="User ID")
@@ -134,7 +149,7 @@ class GetUserSchema(GetUsersSchemaPublic):
     recipient_code: Optional[str]
     auctions: Optional[list[GetAuctionSchema]] = Field(default=None)
     bids: Optional[list[GetBidSchemaExt]] = Field(default=[])
-    referred_by: Optional[str] = Field(default='')
+    # referred_by: Optional[str] = Field(default='')
     # referred_users: Optional[dict] = Field(default={})
     chats: Optional[list[GetChatSchema]] = Field(default=[])
 

@@ -20,26 +20,41 @@ from server.enums.user_enums import (
 from server.middlewares.exception_handler import ExcRaiser, ExcRaiser400
 from server.middlewares.auth import permissions
 from server.schemas import (
-    CreateUserSchema, PaystackWebhookSchema, VerifyOtpSchema,
-    APIResponse, UpdateUserSchema,
-    GetUserSchema, ResetPasswordSchema,
-    LoginSchema, ChangePasswordSchema,
-    PagedQuery, LoginOutput,
-    ErrorResponse, PagedResponse,
-    GetUserAuctions, GetNotificationsSchema,
-    NotificationQuery, UpdateNotificationSchema,
-    WalletTransactionSchema, VerifyTransactionData,
-    InitializePaymentRes, GetUsersSchemaPublic,
-    WalletHistoryQuery, TransferRecipientData,
-    AccountDetailsSchema, UpdateUserAddressSchema,
-    GetUsersNoAuction, GetUserBids, GetUserChats
+    CreateUserSchema,
+    PaystackWebhookSchema,
+    RewardHistorySchema,
+    VerifyOtpSchema,
+    APIResponse,
+    UpdateUserSchema,
+    GetUserSchema,
+    ResetPasswordSchema,
+    LoginSchema,
+    ChangePasswordSchema,
+    PagedQuery,
+    LoginOutput,
+    ErrorResponse,
+    PagedResponse,
+    GetNotificationsSchema,
+    NotificationQuery,
+    UpdateNotificationSchema,
+    WalletTransactionSchema,
+    VerifyTransactionData,
+    InitializePaymentRes,
+    GetUsersSchemaPublic,
+    WalletHistoryQuery,
+    TransferRecipientData,
+    AccountDetailsSchema,
+    UpdateUserAddressSchema,
+    GetUsersNoAuction,
+    RewardHistoryQuery,
 )
 from server.services import (
     current_user,
     AuthServices,
     get_user_service,
     get_wallet_service,
-    get_notification_service
+    get_notification_service,
+    get_rewardhistory_service,
 )
 from sqlalchemy.orm import Session
 import requests
@@ -396,6 +411,33 @@ async def get_user_count(
     count = await userServices.count(db, role)
     return APIResponse(data={"user_count": count})
 
+
+@route.get("/rewards/history")
+@permissions(permission_level=Permissions.CLIENT)
+async def get_reward_history(
+    user: current_user,
+    filter: RewardHistoryQuery = Depends(RewardHistoryQuery),
+    rewardhistoryServices: get_rewardhistory_service = Depends(
+        get_rewardhistory_service
+    ),
+) -> PagedResponse[list[RewardHistorySchema]]:
+    rewards = await rewardhistoryServices.get_user_reward_history(user.id, filter)
+    return rewards
+
+
+@route.post("/rewards/redeem")
+@permissions(permission_level=Permissions.CLIENT)
+async def redeem_reward_points(
+    user: current_user,
+    points: int,
+    rewardhistoryServices: get_rewardhistory_service = Depends(
+        get_rewardhistory_service
+    ),
+) -> APIResponse:
+    result = await rewardhistoryServices.redeem_reward_points(user.id, points)
+    return APIResponse(data=result)
+
+
 ###############################################################################
 ############################ Notification Endpoints ###########################
 ###############################################################################
@@ -709,7 +751,31 @@ async def transfer_recipient(
     return APIResponse(data=acct_data)
 
 
-@transac_route.post('/withdraw')
+@transac_route.post("/fund_withdraw_balance")
+@permissions(permission_level=Permissions.CLIENT)
+async def fund_withdraw_balance(
+    user: current_user,
+    amount: float,
+    userServices: get_user_service = Depends(get_user_service),
+) -> APIResponse:
+    result = await userServices.bid_credit_to_Withdrawable(user.id, amount)
+    return APIResponse(data=result)
+
+
+@transac_route.post("/rev_withdraw_balance")
+@permissions(permission_level=Permissions.CLIENT)
+async def rev_withdraw_balance(
+    user: current_user,
+    amount: float,
+    userServices: get_user_service = Depends(get_user_service),
+) -> APIResponse:
+    result = await userServices.bid_credit_to_Withdrawable(
+        user.id, amount, reverse=True
+    )
+    return APIResponse(data=result)
+
+
+@transac_route.post("/withdraw")
 @permissions(permission_level=Permissions.CLIENT)
 async def withdraw(
     user: current_user,

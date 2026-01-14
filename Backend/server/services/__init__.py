@@ -37,12 +37,6 @@ def get_contact_us_service():
     return ContactUsService()
 
 
-def get_rewardhistory_service(
-    rewardhistory_repo: RewardHistoryRepository = Depends(get_rewardhistory_repo),
-):
-    return RewardHistoryService(rewardhistory_repo)
-
-
 def get_notification_service(
     notification_repo: UserNotificationRepository = Depends(
         get_notification_repo
@@ -51,23 +45,31 @@ def get_notification_service(
     return UserNotificationServices(notification_repo)
 
 
+def get_rewardhistory_service(
+    rewardhistory_repo: RewardHistoryRepository = Depends(get_rewardhistory_repo),
+    user_repo: UserRepository = Depends(get_user_repo),
+    notification_service: UserNotificationServices = Depends(get_notification_service),
+):
+    return RewardHistoryService(rewardhistory_repo, user_repo, notification_service)
+
+
 def get_user_service(
     user_repo: UserRepository = Depends(get_user_repo),
-    notification_service: UserNotificationServices = Depends(
-        get_notification_service
-    )
+    notification_service: UserNotificationServices = Depends(get_notification_service),
+    reward_service: RewardHistoryService = Depends(get_rewardhistory_service),
 ):
-    return UserServices(user_repo, notification_service)
+    return UserServices(user_repo, notification_service, reward_service)
 
 
 def get_wallet_service(
     wallet: WalletTranscationRepository = Depends(get_wallet_repo),
     user_repo: UserRepository = Depends(get_user_repo),
-    notification_service: UserNotificationServices = Depends(
-        get_notification_service
-    )
+    notification_service: UserNotificationServices = Depends(get_notification_service),
+    reward_service: RewardHistoryService = Depends(get_rewardhistory_service),
 ):
-    return UserWalletTransactionServices(wallet, user_repo, notification_service)
+    return UserWalletTransactionServices(
+        wallet, user_repo, notification_service, reward_service
+    )
 
 
 def get_chat_service(
@@ -96,20 +98,21 @@ def get_category_service(
 
 def get_auction_service(
     auction_repo: AuctionRepository = Depends(get_auction_repo),
-    auction_p_repo: AuctionParticipantRepository = Depends(
-        get_auction_p_repo
-    ),
+    auction_p_repo: AuctionParticipantRepository = Depends(get_auction_p_repo),
     user_repo: UserRepository = Depends(get_user_repo),
     payment_repo: PaymentRepository = Depends(get_payment_repo),
-    notification_service: UserNotificationServices = Depends(
-        get_notification_service
-    ),
-    chat_service: ChatServices = Depends(get_chat_service)
+    notification_service: UserNotificationServices = Depends(get_notification_service),
+    reward_service: RewardHistoryService = Depends(get_rewardhistory_service),
+    chat_service: ChatServices = Depends(get_chat_service),
 ):
     return AuctionServices(
-        auction_repo, auction_p_repo,
-        user_repo, payment_repo, notification_service,
-        chat_service
+        auction_repo,
+        auction_p_repo,
+        user_repo,
+        payment_repo,
+        notification_service,
+        chat_service,
+        reward_service,
     )
 
 
@@ -117,14 +120,17 @@ def get_bid_service(
     bid_repo: BidRepository = Depends(get_bid_repo),
     user_repo: UserRepository = Depends(get_user_repo),
     auction_repo: AuctionRepository = Depends(get_auction_repo),
-    notification_service: UserNotificationServices = Depends(
-        get_notification_service
-    ),
-    auction_service: AuctionServices = Depends(get_auction_service)
+    notification_service: UserNotificationServices = Depends(get_notification_service),
+    auction_service: AuctionServices = Depends(get_auction_service),
+    reward_service: RewardHistoryService = Depends(get_rewardhistory_service),
 ):
     return BidServices(
-        bid_repo, user_repo, auction_repo,
-        notification_service, auction_service
+        bid_repo,
+        user_repo,
+        auction_repo,
+        notification_service,
+        auction_service,
+        reward_service,
     )
 
 

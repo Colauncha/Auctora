@@ -10,24 +10,38 @@ from server.enums.auction_enums import AuctionStatus
 from server.enums.payment_enums import PaymentStatus
 from server.events import publisher as publ
 from server.middlewares.exception_handler import (
-    ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
+    ExcRaiser,
+    ExcRaiser404,
+    ExcRaiser500,
+    ExcRaiser400,
 )
 from server.utils.ex_inspect import ExtInspect
 from server.schemas import (
     GetAuctionSchema,
-    CreateNotificationSchema, CreateAuctionParticipantsSchema,
-    PagedQuery, PagedResponse, CreatePaymentSchema,
-    SearchQuery, GetPaymentSchema, RestartAuctionSchema
+    CreateNotificationSchema,
+    CreateAuctionParticipantsSchema,
+    PagedQuery,
+    PagedResponse,
+    CreatePaymentSchema,
+    SearchQuery,
+    GetPaymentSchema,
+    RestartAuctionSchema,
 )
 
 from server.services.base_service import BaseService
 
 
 class AuctionServices(BaseService):
+
     def __init__(
-        self, auction_repo, auction_p_repo,
-        user_repo, payment_repo, notif_service,
-        chat_service
+        self,
+        auction_repo,
+        auction_p_repo,
+        user_repo,
+        payment_repo,
+        notif_service,
+        chat_service,
+        reward_service,
     ):
         self.repo = auction_repo
         self.participant_repo = auction_p_repo
@@ -36,6 +50,7 @@ class AuctionServices(BaseService):
 
         self.notification = notif_service
         self.chat_service = chat_service
+        self.reward_service = reward_service
 
         self.debug = app_configs.DEBUG
         self.inspect = ExtInspect(self.__class__.__name__).info
@@ -76,6 +91,10 @@ class AuctionServices(BaseService):
                     'item': item,
                     'item_image': item.get('image_link').get('link') if item.get('image_link') else None,
                 }
+            )
+            # Reward user for listing product
+            _ = await self.reward_service.save_reward_history(
+                user_id, reward_type="LIST_PRODUCT"
             )
             return GetAuctionSchema.model_validate(result)
         except ExcRaiser as e:
@@ -284,6 +303,10 @@ class AuctionServices(BaseService):
                         'seller_id': auction.users_id,
                         'conversation': []
                     }
+                )
+                # Reward winner for winning auction
+                _ = await self.reward_service.save_reward_history(
+                    winner.user_id, reward_type="WIN_AUCTION"
                 )
                 # TODO: Develop system to move amount to company's account
                 bids = sorted(bids, key=lambda x: x.amount)
