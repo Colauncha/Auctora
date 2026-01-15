@@ -769,9 +769,7 @@ async def rev_withdraw_balance(
     amount: float,
     userServices: get_user_service = Depends(get_user_service),
 ) -> APIResponse:
-    result = await userServices.bid_credit_to_Withdrawable(
-        user.id, amount, reverse=True
-    )
+    result = await userServices.withdrawable_to_bid_credit(user.id, amount)
     return APIResponse(data=result)
 
 
