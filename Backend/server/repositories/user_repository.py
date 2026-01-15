@@ -212,27 +212,33 @@ class UserRepository(Repository):
             False for bid_credit to withdraw
         """
         try:
-            with self.db.begin(nested=True):
-                user = await self.get_by_id(user_id)
-                if not user:
-                    raise ExcRaiser404(message="User not found")
-                if reverse:
-                    if user.withdrawable_amount < amount:
-                        raise ExcRaiser(
-                            status_code=400, message="Insufficient withdrawable balance"
-                        )
-                    user.withdrawable_amount -= amount
-                    user.available_balance += amount
-                    user.wallet += amount
-                else:
-                    if user.available_balance < amount:
-                        raise ExcRaiser(
-                            status_code=400, message="Insufficient available balance"
-                        )
-                    user.available_balance -= amount
-                    user.wallet -= amount
-                    user.withdrawable_amount += amount
-                return True
+            user: Users = await self.get_by_id(user_id)
+            # user = self.db.query(Users).filter(Users.id == user_id).first()
+            if not user:
+                raise ExcRaiser404(message="User not found")
+            if reverse == True:
+                if user.withdrawable_amount < amount:
+                    raise ExcRaiser(
+                        status_code=400, message="Insufficient withdrawable balance"
+                    )
+                user.withdrawable_amount -= amount
+                user.available_balance += amount
+                user.wallet += amount
+            elif reverse == False:
+                if user.available_balance < amount:
+                    raise ExcRaiser(
+                        status_code=400, message="Insufficient available balance"
+                    )
+                user.available_balance -= amount
+                user.wallet -= amount
+                user.withdrawable_amount += amount
+                print(f"User after transaction: {user.to_dict()}")
+
+            print(f"User before transaction {user.to_dict()}\n")
+            self.db.commit()
+            self.db.refresh(user)
+            print(f"User after transaction {user.to_dict()}")
+            return True
         except (Exception, SQLAlchemyError) as e:
             self.db.rollback()
             raise ExcRaiser(
