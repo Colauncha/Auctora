@@ -217,7 +217,13 @@ class UserRepository(Repository):
             if not user:
                 raise ExcRaiser404(message="User not found")
             if reverse == True:
-                if user.withdrawable_amount < amount:
+                if (
+                    user.withdrawable_amount is None
+                    or user.withdrawable_amount < amount
+                ):
+                    user.withdrawable_amount = 0.0
+                    self.db.commit()
+                    self.db.refresh(user)
                     raise ExcRaiser(
                         status_code=400, message="Insufficient withdrawable balance"
                     )
@@ -231,13 +237,12 @@ class UserRepository(Repository):
                     )
                 user.available_balance -= amount
                 user.wallet -= amount
+                if user.withdrawable_amount is None:
+                    user.withdrawable_amount = 0.0
                 user.withdrawable_amount += amount
-                print(f"User after transaction: {user.to_dict()}")
 
-            print(f"User before transaction {user.to_dict()}\n")
             self.db.commit()
             self.db.refresh(user)
-            print(f"User after transaction {user.to_dict()}")
             return True
         except (Exception, SQLAlchemyError) as e:
             self.db.rollback()
