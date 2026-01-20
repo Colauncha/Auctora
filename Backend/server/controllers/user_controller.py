@@ -458,20 +458,35 @@ async def subscribe_notifications(
         pubsub = async_redis.pubsub()
         await pubsub.subscribe(user_notif_channel(user.id))
         try:
+            active_user = await AuthServices.verify_token(request)
+            count = await notificationServices.count(user.id)
+            yield f"event: count\ndata: {json.dumps(count)}\n\n"
             while True:
-                active_user = await AuthServices.verify_token(request)
                 if not active_user:
                     break
+
                 if await request.is_disconnected():
                     break
-                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=30.0)
+
+                try:
+                    message = await pubsub.get_message(
+                        ignore_subscribe_messages=True, timeout=1.0
+                    )
+                except asyncio.TimeoutError:
+                    message = None
+
                 if message is None:
-                    count = await notificationServices.count(user.id)
-                    yield f"event: count\ndata: {json.dumps(count)}\n\n"
+                    # yield f"event: count\ndata: {json.dumps(count)}\n\n"
                     continue
                 else:
+                    count = await notificationServices.count(user.id)
+                    yield f"event: count\ndata: {json.dumps(count)}\n\n"
                     yield f"data: {message['data']}\n\n"
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(2)
+
+        except asyncio.CancelledError:
+            pass
+
         finally:
             await pubsub.unsubscribe(user_notif_channel(user.id))
             await pubsub.close()
