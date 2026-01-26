@@ -25,6 +25,7 @@ jobs:
           sudo systemctl stop biddiusUpdate
 
           cd ~ && ./backupDB.sh;
+          cd /var/www/biddius/Backend/Backend;
 
           git pull origin main
 
