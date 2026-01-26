@@ -286,6 +286,8 @@ class UserRepository(Repository):
             user: Users = await self.get_by_id(user_id)
             if not user:
                 raise ExcRaiser404(message="User not found")
+            if user.bid_point is None:
+                user.bid_point = 0
             user.bid_point += points
             self.db.commit()
             self.db.refresh(user)
