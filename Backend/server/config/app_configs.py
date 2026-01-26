@@ -18,6 +18,7 @@ class DataBaseSettings(BaseSettings):
     REDIS_DB: str
     REDIS_URL: str
     TEST_DATABASE: Optional[str]
+    LIVE_DATABASE: Optional[str]
 
     def all(self):
         return [self.DATABASE_URL, self.TEST_DATABASE]
