@@ -23,8 +23,8 @@ jobs:
           sudo systemctl stop biddiusApi
           sudo systemctl stop biddiusEvents
           sudo systemctl stop biddiusUpdate
-          
-          cd /var/www/biddius/Backend/Backend && ls -la;
+
+          cd ~ && ./backupDB.sh;
 
           git pull origin main
 
