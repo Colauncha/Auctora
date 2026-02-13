@@ -24,10 +24,10 @@ class ItemServices(BaseService):
         self.repo = item_repo
         self.subcat_repo = sub_cat_repo
 
-    async def create(self, db: Session, data: dict[str, any]) -> GetItemSchema:
+    async def create(self, data: dict[str, any]) -> GetItemSchema:
         try:
-            subcat = await self.subcat_repo.attachDB(db).get_by_attr(
-                {'id': data.get('sub_category_id')}
+            subcat = await self.subcat_repo.get_by_attr(
+                {"id": data.get("sub_category_id")}
             )
             if subcat.parent_id != data.get('category_id'):
                 raise ExcRaiser(
@@ -35,7 +35,7 @@ class ItemServices(BaseService):
                     message="Invalid category",
                     detail="Subcategory must be under Category"
                 ) 
-            item = await self.repo.attachDB(db).add(data)
+            item = await self.repo.add(data)
             if item:
                 result = GetItemSchema.model_validate(item)
                 return result
@@ -48,9 +48,9 @@ class ItemServices(BaseService):
                 detail=repr(e)
             )
 
-    async def retrieve(self, db: Session, id: str) -> GetItemSchema:
+    async def retrieve(self, id: str) -> GetItemSchema:
         try:
-            result = await self.repo.attachDB(db).get_by_attr({'id': id})
+            result = await self.repo.get_by_attr({"id": id})
             if result:                
                 return GetItemSchema.model_validate(result)
             raise ExcRaiser404(message='Item not found')
@@ -63,9 +63,7 @@ class ItemServices(BaseService):
                 detail=repr(e)
             )
 
-    async def upload_images(
-            self, db: Session, item, uploads: list[UploadFile]
-        ) -> GetItemSchema:
+    async def upload_images(self, item, uploads: list[UploadFile]) -> GetItemSchema:
         try:
             cloudn_resp = {}
             for idx, content in enumerate(uploads, 1):
@@ -78,17 +76,17 @@ class ItemServices(BaseService):
                 }
                 result = ImageLinkObj.model_validate(result).model_dump()
                 cloudn_resp['image_link' if idx == 1 else f'image_link_{idx}'] = result
-            updated_entity = await self.repo.attachDB(db).update(item, cloudn_resp)
+            updated_entity = await self.repo.update(item, cloudn_resp)
             return GetItemSchema.model_validate(*updated_entity)
         except Exception as e:
             if issubclass(type(e), ExcRaiser):
                 raise e
             raise e
 
-    async def update(self, db: Session, id: str, data: dict):
+    async def update(self, id: str, data: dict):
         try:
-            entity = await self.repo.attachDB(db).get_by_id(id)
-            updated = await self.repo.attachDB(db).update(entity, data)
+            entity = await self.repo.get_by_id(id)
+            updated = await self.repo.update(entity, data)
             return GetItemSchema.model_validate(updated[0])
         except ExcRaiser as e:
             raise
@@ -97,6 +95,7 @@ class ItemServices(BaseService):
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
+
 
 # try:
 #     ...

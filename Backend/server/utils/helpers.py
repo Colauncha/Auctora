@@ -49,6 +49,7 @@ def category_id_generator() -> str:
     if not prev_id:
         return f'{prefix}001'
     num = int(prev_id[3:]) + 1
+    db.close()
     return f'{prefix}{num:03}'
 
 
@@ -66,6 +67,7 @@ def sub_category_id_generator() -> str:
     if not prev_id:
         return f'{prefix}0001'
     num = int(prev_id[6:]) + 1
+    db.close()
     return f'{prefix}{num:04}'
 
 

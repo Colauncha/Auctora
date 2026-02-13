@@ -37,8 +37,10 @@ class BaseService:
             elif entity.id == user_id:
                 is_owner = True
 
+            db.close()
             return is_owner
         except Exception as e:
+            db.close()
             if cls.config.DEBUG:
                 cls.inspect()
                 ExcRaiser500(e)

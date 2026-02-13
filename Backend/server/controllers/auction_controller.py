@@ -22,32 +22,28 @@ route = APIRouter(prefix='/auctions', tags=['auction'])
 async def create(
     user: current_user,
     data: CreateAuctionSchema,
-    db: Session = Depends(get_db),
-    auctionServices: AuctionServices = Depends(get_auction_service)
+    auctionServices: AuctionServices = Depends(get_auction_service),
 ) -> APIResponse[GetAuctionSchema]:
     data = data.model_dump(exclude_unset=True)
     data["users_id"] = user.id
-    result = await auctionServices.create(db, data)
+    result = await auctionServices.create(data)
     return APIResponse(status_code=201, data=result)
 
 
 @route.get('/')
 async def list(
     filter: AuctionQueryScalar = Depends(),
-    db: Session = Depends(get_db),
-    auctionServices: AuctionServices = Depends(get_auction_service)
+    auctionServices: AuctionServices = Depends(get_auction_service),
 ) -> PagedResponse[list[GetAuctionSchema]]:
-    result = await auctionServices.list(db, filter)
+    result = await auctionServices.list(filter)
     return result
 
 
 @route.get('/{id}')
 async def retrieve(
-    id: str,
-    db: Session = Depends(get_db),
-    auctionServices: AuctionServices = Depends(get_auction_service)
+    id: str, auctionServices: AuctionServices = Depends(get_auction_service)
 ) -> APIResponse[GetAuctionSchema]:
-    result = await auctionServices.retrieve(db, id)
+    result = await auctionServices.retrieve(id)
     return APIResponse(data=result)
 
 
@@ -57,11 +53,10 @@ async def update(
     user: current_user,
     auction_id: str,
     data: UpdateAuctionSchema,
-    db: Session = Depends(get_db),
-    auctionServices: AuctionServices = Depends(get_auction_service)
+    auctionServices: AuctionServices = Depends(get_auction_service),
 ) -> APIResponse[GetAuctionSchema]:
     data = data.model_dump(exclude_unset=True)
-    result = await auctionServices.update(db, auction_id, data)
+    result = await auctionServices.update(auction_id, data)
     return APIResponse(data=result)
 
 
@@ -70,10 +65,9 @@ async def update(
 async def delete(
     user: current_user,
     auction_id: str,
-    db: Session = Depends(get_db),
-    auctionServices: AuctionServices = Depends(get_auction_service)
+    auctionServices: AuctionServices = Depends(get_auction_service),
 ) -> APIResponse:
-    result = await auctionServices.delete(db, auction_id)
+    result = await auctionServices.delete(auction_id)
     return APIResponse(data={}) if result else\
     APIResponse(message='Fail', success=False)
 
@@ -83,15 +77,14 @@ async def delete(
 async def finalize(
     user: current_user,
     auction_id: str,
-    db: Session = Depends(get_db),
-    auctionServices: AuctionServices = Depends(get_auction_service)
+    auctionServices: AuctionServices = Depends(get_auction_service),
 ) -> APIResponse[bool]:
-    auction = await auctionServices.retrieve(db, auction_id)
+    auction = await auctionServices.retrieve(auction_id)
     if auction.status != 'completed':
         return ExcRaiser400(
             detail='You can only finalize a completed auction'
         )
-    result = await auctionServices.finalize_payment(db, auction.id, user.id)
+    result = await auctionServices.finalize_payment(auction.id, user.id)
     return APIResponse(data=result)
 
 
@@ -100,15 +93,14 @@ async def finalize(
 async def set_inspecting(
     user: current_user,
     auction_id: str,
-    db: Session = Depends(get_db),
-    auctionServices: AuctionServices = Depends(get_auction_service)
+    auctionServices: AuctionServices = Depends(get_auction_service),
 ) -> APIResponse[bool]:
-    auction = await auctionServices.retrieve(db, auction_id)
+    auction = await auctionServices.retrieve(auction_id)
     if auction.status != 'completed':
         return ExcRaiser400(
             detail='You can only inspect a completed auction'
         )
-    result = await auctionServices.set_inspecting(db, auction_id, user.id)
+    result = await auctionServices.set_inspecting(auction_id, user.id)
     return APIResponse(data=result)
 
 
@@ -117,15 +109,14 @@ async def set_inspecting(
 async def refund(
     user: current_user,
     auction_id: str,
-    db: Session = Depends(get_db),
-    auctionServices: AuctionServices = Depends(get_auction_service)
+    auctionServices: AuctionServices = Depends(get_auction_service),
 ) -> APIResponse[bool]:
-    auction = await auctionServices.retrieve(db, auction_id)
+    auction = await auctionServices.retrieve(auction_id)
     if auction.status != 'completed':
         return ExcRaiser400(
             detail='You can only refund a completed auction'
         )
-    result = await auctionServices.refund(db, auction_id, user.id)
+    result = await auctionServices.refund(auction_id, user.id)
     return APIResponse(data=result)
 
 
@@ -134,10 +125,9 @@ async def refund(
 async def refund_completed(
     user: current_user,
     auction_id: str,
-    db: Session = Depends(get_db),
-    auctionServices: AuctionServices = Depends(get_auction_service)
+    auctionServices: AuctionServices = Depends(get_auction_service),
 ):
-    result = await auctionServices.complete_refund(db, auction_id, user.id)
+    result = await auctionServices.complete_refund(auction_id, user.id)
     return APIResponse(data=result)
 
 
@@ -147,21 +137,18 @@ async def restart(
     user: current_user,
     auction_id: str,
     data: RestartAuctionSchema,
-    db: Session = Depends(get_db),
-    auctionServices: AuctionServices = Depends(get_auction_service)
+    auctionServices: AuctionServices = Depends(get_auction_service),
 ) -> APIResponse[bool]:
-    result = await auctionServices.restart(db, auction_id, data)
+    result = await auctionServices.restart(auction_id, data)
     return APIResponse(data=result)
 
 
 @route.get('/stats/count')
 @permissions(permission_level=Permissions.ADMIN)
 async def count_auctions(
-    user: current_user,
-    db: Session = Depends(get_db),
-    auctionServices: AuctionServices = Depends(get_auction_service)
+    user: current_user, auctionServices: AuctionServices = Depends(get_auction_service)
 ) -> APIResponse[dict[str, int]]:
-    result = await auctionServices.count(db)
+    result = await auctionServices.count()
     return APIResponse(data=result)
 
 

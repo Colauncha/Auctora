@@ -40,7 +40,6 @@ class RewardHistoryService(BaseService):
             notif_links = ["/dashboard/"]
             notif_class_name = "RewardNotification"
             _ = await self.notification_service.create(
-                db=None,
                 data=CreateNotificationSchema(
                     title=notif_title,
                     message=notif_message,
