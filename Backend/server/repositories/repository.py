@@ -52,7 +52,8 @@ class Repository:
     def attachDB(self, db: Session):
         """Attach database session to the repository"""
         if not db:
-            raise ExcRaiser(message='DB not found or attached')
+            pass
+            # raise ExcRaiser(message='DB not found or attached')
         self.db = db
         return self
 
@@ -166,7 +167,6 @@ class Repository:
             else:
                 raise ExcRaiser404(message="Attribute doesn't exist")
 
-
             self.db.add(entity)
             self.db.commit()
             return entity
@@ -211,7 +211,7 @@ class Repository:
         relative: bool = False,
         sort: str = 'created_at',
     ) -> PagedResponse:
-    
+
         page = filter.pop('page') if (filter and filter.get('page')) else 1
         per_page = filter.pop('per_page') if (filter and filter.get('per_page')) else 10
         order = filter.pop('order') if (filter and filter.get('order')) else 'asc'

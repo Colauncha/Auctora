@@ -67,7 +67,7 @@ class UserNotificationServices(BaseService):
     def user_notif_channel(user_id: str) -> str:
         return f"user_notif_{user_id}"
 
-    async def list(self, db: Session, notice: NotificationQuery):
+    async def list(self, notice: NotificationQuery):
         try:
             result: PagedResponse = await self.repo.get_all(
                 notice.model_dump(exclude_unset=True)
@@ -88,7 +88,7 @@ class UserNotificationServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def retrieve(self, db: Session, id: str):
+    async def retrieve(self, id: str):
         try:
             notice = await self.repo.get_by_id(id)
             if notice:
@@ -103,7 +103,7 @@ class UserNotificationServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def create(self, db: Session | None, data: CreateNotificationSchema):
+    async def create(self, data: CreateNotificationSchema):
         try:
             channel = self.user_notif_channel(data.user_id)
             result = await self.repo.add(data.model_dump())
@@ -126,7 +126,7 @@ class UserNotificationServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def update(self, db: Session, id: str, read: bool):
+    async def update(self, id: str, read: bool):
         try:
             notice = await self.repo.get_by_id(id)
             if notice:
@@ -176,11 +176,10 @@ class UserWalletTransactionServices(BaseService):
 
     async def init_transaction(
         self,
-        db: Session,
-        data: InitializePaymentRes ,
+        data: InitializePaymentRes,
         user: GetUserSchema,
         amount: float,
-        t_type: TransactionTypes = TransactionTypes.FUNDING
+        t_type: TransactionTypes = TransactionTypes.FUNDING,
     ):
         try:
             wallet_data = WalletTransactionSchema.model_validate({
@@ -201,7 +200,7 @@ class UserWalletTransactionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def create(self, db: Session, transaction, extra):
+    async def create(self, transaction, extra):
         try:
             transaction = WalletTransactionSchema(**transaction, **extra)
             user = await self.user_repo.get_by_id(transaction.user_id)
@@ -244,11 +243,8 @@ class UserWalletTransactionServices(BaseService):
                 pub_data = transaction.model_dump()
                 pub_data['email'] = user.email
                 _ = await self.notification.create(
-                    db,
                     CreateNotificationSchema(
-                        title=NOTIF_TITLE,
-                        message=NOTIF_MESSAGE,
-                        user_id=user.id
+                        title=NOTIF_TITLE, message=NOTIF_MESSAGE, user_id=user.id
                     )
                 )
                 # await publish_fund_account(pub_data)
@@ -266,7 +262,7 @@ class UserWalletTransactionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def list(self, db: Session, filter: WalletHistoryQuery):
+    async def list(self, filter: WalletHistoryQuery):
         try:
             filter = filter.model_dump(exclude_none=True)
             history = await self.repo.get_all(filter=filter)
@@ -288,7 +284,7 @@ class UserWalletTransactionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def withdraw(self, db: Session, transaction, extra) -> bool:
+    async def withdraw(self, transaction, extra) -> bool:
         try:
             transaction = WalletTransactionSchema(**transaction, **extra)
             user = await self.user_repo.get_by_id(transaction.user_id)
@@ -330,11 +326,8 @@ class UserWalletTransactionServices(BaseService):
                 pub_data = transaction.model_dump()
                 pub_data['email'] = user.email
                 _ = await self.notification.create(
-                    db,
                     CreateNotificationSchema(
-                        title=NOTIF_TITLE,
-                        message=NOTIF_MESSAGE,
-                        user_id=user.id
+                        title=NOTIF_TITLE, message=NOTIF_MESSAGE, user_id=user.id
                     )
                 )
                 # await publish_fund_account(pub_data)
@@ -347,7 +340,7 @@ class UserWalletTransactionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def retrieve(self, db: Session, reference: str):
+    async def retrieve(self, reference: str):
         try:
             transaction = await self.repo.get_by_attr({"reference_id": reference})
             if transaction:
@@ -361,6 +354,7 @@ class UserWalletTransactionServices(BaseService):
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
+
 
 ##############################################################################
 ################################ User Services ###############################
@@ -401,7 +395,7 @@ class UserServices(BaseService):
             raise ValueError(err, "Unable to generate token")
         return LoginToken(**{"token": token, "token_type": token_type})
 
-    async def authenticate(self, db: Session, identity: LoginSchema) -> LoginToken:
+    async def authenticate(self, identity: LoginSchema) -> LoginToken:
         try:
             user = None
             if is_valid_email(identity.identifier):
@@ -471,7 +465,7 @@ class UserServices(BaseService):
                 raise ExcRaiser500(detail=str(e), exception=e)
             raise ExcRaiser500(detail=str(e))
 
-    async def create_user(self, db: Session, data: dict) -> dict[str, str]:
+    async def create_user(self, data: dict) -> dict[str, str]:
         try:
             NOTIF_TITLE = "Welcome to Biddius"
             NOTIF_MESSAGE = (
@@ -502,11 +496,8 @@ class UserServices(BaseService):
                 new_user = GetUserSchema.model_validate(new_user)
                 # Create a notification for the new user
                 _ = await self.notification.create(
-                    db,
                     CreateNotificationSchema(
-                        title=NOTIF_TITLE,
-                        message=NOTIF_MESSAGE,
-                        user_id=new_user.id
+                        title=NOTIF_TITLE, message=NOTIF_MESSAGE, user_id=new_user.id
                     )
                 )
 
@@ -539,7 +530,7 @@ class UserServices(BaseService):
                 raise ExcRaiser500(detail=str(e), exception=e)
             raise ExcRaiser500(detail=str(e))
 
-    async def create_admin(self, db: Session, data: dict):
+    async def create_admin(self, data: dict):
         try:
             ex_uname = await self.repo.get_by_username(data.get("username"))
             ex_email = await self.repo.get_by_email(data.get("email"))
@@ -550,11 +541,10 @@ class UserServices(BaseService):
             new_user = GetUserSchema.model_validate(new_user)
             # Create a notification for the new user
             _ = await self.notification.create(
-                db,
                 CreateNotificationSchema(
                     title="ADMIN Registration",
                     message="You have been registered as an Admin",
-                    user_id=new_user.id
+                    user_id=new_user.id,
                 )
             )
             otp = otp_generator()
@@ -587,7 +577,7 @@ class UserServices(BaseService):
         except Exception as e:
             raise e
 
-    async def retrieve(self, db: Session, id) -> GetUserSchema:
+    async def retrieve(self, id) -> GetUserSchema:
         try:
             user = await self.repo.get_by_attr({"id": id})
             if user:
@@ -603,11 +593,7 @@ class UserServices(BaseService):
             raise ExcRaiser500(detail=str(e))
 
     # Not optimal (The auction list should be trauncated)
-    async def list(
-        self,
-        db: Session,
-        filter: PagedQuery
-    ) ->PagedResponse[list[GetUsersNoAuction]]:
+    async def list(self, filter: PagedQuery) -> PagedResponse[list[GetUsersNoAuction]]:
         try:
             result = await self.repo.get_all(filter.model_dump(exclude_unset=True))
             if result:
@@ -656,7 +642,7 @@ class UserServices(BaseService):
                 raise ExcRaiser500(detail=str(e), exception=e)
             raise ExcRaiser500(detail=str(e))
 
-    async def count(self, db: Session, role: str) -> int:
+    async def count(self, role: str) -> int:
         try:
             count = await self.repo.count({"role": role} if role else None)
             return count
@@ -668,7 +654,7 @@ class UserServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def new_otp(self, db: Session, email: str):
+    async def new_otp(self, email: str):
         try:
             async_redis = await redis_store.get_async_redis()
             stored_otp = await async_redis.get(f'otp:{email}')
@@ -690,7 +676,7 @@ class UserServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def verify_otp(self, db: Session, data: VerifyOtpSchema):
+    async def verify_otp(self, data: VerifyOtpSchema):
         try:
             NOTIF_TITLE = "Email Verification"
             NOTIF_MESSAGE = "Your email has been verified successfully"
@@ -701,11 +687,8 @@ class UserServices(BaseService):
                 _ = await self.repo.save(user, {"email_verified": True})
                 _ = await async_redis.delete(f'otp:{data.email}')
                 _ = await self.notification.create(
-                    db,
                     CreateNotificationSchema(
-                        title=NOTIF_TITLE,
-                        message=NOTIF_MESSAGE,
-                        user_id=user.id
+                        title=NOTIF_TITLE, message=NOTIF_MESSAGE, user_id=user.id
                     )
                 )
                 return {'message': 'email verified'}
@@ -718,7 +701,7 @@ class UserServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def update_user(self, db: Session, user: GetUserSchema, data: UpdateUserSchema):
+    async def update_user(self, user: GetUserSchema, data: UpdateUserSchema):
         try:
             if not user:
                 raise HTTPException(
@@ -739,12 +722,7 @@ class UserServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def update_address(
-        self,
-        db: Session,
-        user: GetUserSchema,
-        data: UpdateUserAddressSchema
-    ):
+    async def update_address(self, user: GetUserSchema, data: UpdateUserAddressSchema):
         try:
             if not user:
                 raise HTTPException(
@@ -762,7 +740,7 @@ class UserServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def get_reset_token(self, db: Session, email: str):
+    async def get_reset_token(self, email: str):
         try:
             user = await self.repo.get_by_email(email)
             if not user:
@@ -781,7 +759,7 @@ class UserServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def reset_password(self, db: Session, data: ResetPasswordSchema):
+    async def reset_password(self, data: ResetPasswordSchema):
         try:
             async_redis = await redis_store.get_async_redis()
             stored_token = await async_redis.get(f'reset_password:{data.email}')
@@ -803,7 +781,7 @@ class UserServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def change_password(self, db: Session, user: GetUserSchema, data: ChangePasswordSchema):
+    async def change_password(self, user: GetUserSchema, data: ChangePasswordSchema):
         try:
             user = await self.repo.get_by_email(user.email)
             if not self.check_password(data.old_password, user.hash_password):
@@ -823,7 +801,7 @@ class UserServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def get_referral_code(self, db: Session, user: GetUserSchema):
+    async def get_referral_code(self, user: GetUserSchema):
         try:
             username = user.username
             if not username:
@@ -845,7 +823,7 @@ class UserServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def delete_user(self, db: Session, user: GetUserSchema):
+    async def delete_user(self, user: GetUserSchema):
         try:
             user_ = await self.repo.get_by_id(user.id)
             result = await self.repo.delete(user_)
@@ -859,7 +837,7 @@ class UserServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def google_auth(self, db: Session, data: dict):
+    async def google_auth(self, data: dict):
         try:
             user = await self.repo.get_by_email(data.get('email'))
             if not user:
@@ -888,11 +866,8 @@ class UserServices(BaseService):
                 new_user = GetUserSchema.model_validate(new_user)
                 # Create a notification for the new user
                 _ = await self.notification.create(
-                    db,
                     CreateNotificationSchema(
-                        title=NOTIF_TITLE,
-                        message=NOTIF_MESSAGE,
-                        user_id=new_user.id
+                        title=NOTIF_TITLE, message=NOTIF_MESSAGE, user_id=new_user.id
                     )
                 )
                 return token, url
@@ -908,7 +883,7 @@ class UserServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def rate_user(self, db: Session, user_id: str, rating: int):
+    async def rate_user(self, user_id: str, rating: int):
         try:
             user = await self.repo.get_by_id(user_id)
             if not user:
@@ -992,10 +967,9 @@ class UserServices(BaseService):
             raise ExcRaiser500(detail=str(e))
 
     async def search(
-            self,
-            db:Session,
-            filter: SearchQuery,
-        ) -> PagedResponse:
+        self,
+        filter: SearchQuery,
+    ) -> PagedResponse:
         try:
             filter = filter.model_dump()
             result = await self.repo.search(filter)

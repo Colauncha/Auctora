@@ -21,12 +21,11 @@ route = APIRouter(prefix='/items', tags=['Items'])
 async def create(
     user: current_user,
     data: CreateItemSchema,
-    db: Session = Depends(get_db),
-    itemServices: ItemServices = Depends(get_item_service)
+    itemServices: ItemServices = Depends(get_item_service),
 ) -> APIResponse[GetItemSchema]:
     _data = CreateItemSchema.model_dump(data, exclude_unset=True)
     _data["users_id"] = user.id
-    result = await itemServices.create(db, _data)
+    result = await itemServices.create(_data)
     return APIResponse(data=result)
 
 
@@ -42,12 +41,9 @@ async def get_items(
 @route.get('/')
 @permissions(permission_level=Permissions.AUTHENTICATED)
 async def get_items(
-    user: current_user,
-    id: str,
-    db: Session = Depends(get_db),
-    itemServices: ItemServices = Depends(get_item_service)
+    user: current_user, id: str, itemServices: ItemServices = Depends(get_item_service)
 ) -> APIResponse[GetItemSchema]:
-    result = await itemServices.retrieve(db, id)
+    result = await itemServices.retrieve(id)
     return APIResponse(data=result)
 
 
@@ -61,11 +57,10 @@ async def upload_images(
     image3: Optional[UploadFile] = File(None),
     image4: Optional[UploadFile] = File(None),
     image5: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db),
-    itemServices: ItemServices = Depends(get_item_service)
+    itemServices: ItemServices = Depends(get_item_service),
 ) -> APIResponse[GetItemSchema]:
-    
-    item = await itemServices.repo.attachDB(db).get_by_attr({'id': item_id})
+
+    item = await itemServices.repo.get_by_attr({"id": item_id})
 
     images = [image1, image2, image3, image4, image5]
     content_type = [
@@ -79,7 +74,7 @@ async def upload_images(
         for image in images
     ]
 
-    result = await itemServices.upload_images(db, item, uploads)
+    result = await itemServices.upload_images(item, uploads)
     return APIResponse(data=result)
 
 
@@ -89,12 +84,12 @@ async def update(
     user: current_user,
     item_id: str,
     data: UpdateItemSchema,
-    db: Session = Depends(get_db),
-    itemServices: ItemServices = Depends(get_item_service)
+    itemServices: ItemServices = Depends(get_item_service),
 ) -> APIResponse[GetItemSchema]:
     data = data.model_dump(exclude_unset=True, exclude_none=True)
-    result = await itemServices.update(db, item_id, data)
+    result = await itemServices.update(item_id, data)
     return APIResponse(data=result)
+
 
 # @route.get('/get_items')
 # @permissions(permission_level=Permissions.ALL)

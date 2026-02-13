@@ -23,8 +23,7 @@ router = APIRouter(prefix='/landing', tags=['Landing Page'])
 
 @router.get('/trending_auctions')
 async def get_trending_auctions(
-    db: Session = Depends(get_db),
-    auctionServices: AuctionServices = Depends(get_auction_service)
+    auctionServices: AuctionServices = Depends(get_auction_service),
 ):
     redis = await redis_store.get_async_redis()
     trending_auctions = await redis.get('trending_auctions')
@@ -33,11 +32,7 @@ async def get_trending_auctions(
 
     else:
         filter = PagedQuery(page=1, per_page=20)
-        auctions = await auctionServices.list(
-            db,
-            filter,
-            {'status': 'ACTIVE'}
-        )
+        auctions = await auctionServices.list(filter, {"status": "ACTIVE"})
         await redis.set(
             'trending_auctions',
             auctions.model_dump_json(),
@@ -45,17 +40,17 @@ async def get_trending_auctions(
         )
         return auctions
 
+
 @router.get('/search')
 async def search(
     query: SearchQuery = Depends(),
-    model: str = 'Auction',
-    db: Session = Depends(get_db),
+    model: str = "Auction",
     userServices: UserServices = Depends(get_user_service),
-    auctionServices: AuctionServices = Depends(get_auction_service)
+    auctionServices: AuctionServices = Depends(get_auction_service),
 ) -> PagedResponse[list[Union[GetAuctionSchema, GetUsersSchemaPublic]]]:
     result = None
     if model == 'User':
-        result = await userServices.search(db, query)
+        result = await userServices.search(query)
     elif model == 'Auction':
-        result = await auctionServices.search(db, query)
+        result = await auctionServices.search(query)
     return result

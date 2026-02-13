@@ -56,7 +56,7 @@ class AuctionServices(BaseService):
         self.inspect = ExtInspect(self.__class__.__name__).info
 
     # Auction services
-    async def create(self, db: Session, data: dict):
+    async def create(self, data: dict):
         try:
             NOTIF_TITLE = "New Auction"
             NOTIF_BODY = "Your new auction has been created"
@@ -70,18 +70,19 @@ class AuctionServices(BaseService):
             item['users_id'] = user_id
             data['item'] = [Items(**item)]
             data['status'] = AuctionStatus(data.get('status'))
-            result = await self.repo.attachDB(db).add(data)
+            result = await self.repo.add(data)
             if result.private == True:
                 for p in participants:
                     await self.create_participants(
-                        db, {'auction_id': result.id, 'participant_email': p},
-                        auction=GetAuctionSchema.model_validate(result)
+                        {"auction_id": result.id, "participant_email": p},
+                        auction=GetAuctionSchema.model_validate(result),
                     )
             await self.notify(
-                db, user_id, NOTIF_TITLE,
+                user_id,
+                NOTIF_TITLE,
                 NOTIF_BODY_PRIV if result.private else NOTIF_BODY,
-                links=[f'{app_configs.FRONTEND_URL}/product-details/{result.id}'],
-                class_name=NotificationClasses.AUCTION.value
+                links=[f"{app_configs.FRONTEND_URL}/product-details/{result.id}"],
+                class_name=NotificationClasses.AUCTION.value,
             )
             await publ.publish_create_auction(
                 {
@@ -105,9 +106,9 @@ class AuctionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def retrieve(self, db: Session, id: str):
+    async def retrieve(self, id: str):
         try:
-            result = await self.repo.attachDB(db).get_by_id(id)
+            result = await self.repo.get_by_id(id)
             # print(result.chat)
             if not result:
                 raise ExcRaiser404("Auction not found")
@@ -121,18 +122,15 @@ class AuctionServices(BaseService):
             raise ExcRaiser500(detail=str(e))
 
     async def list(
-            self,
-            db: Session,
-            filter: PagedQuery,
-            extra: dict = None
-        ) -> PagedResponse[list[GetAuctionSchema]]:
+        self, filter: PagedQuery, extra: dict = None
+    ) -> PagedResponse[list[GetAuctionSchema]]:
         try:
             filter = filter.model_dump(exclude_unset=True, exclude_none=True)
             filter['private'] = False
             if extra:
                 filter.update(extra)
             print(filter)
-            result = await self.repo.attachDB(db).get_all(filter)
+            result = await self.repo.get_all(filter)
             result.data = [GetAuctionSchema.model_validate(r) for r in result.data]
             return result
         except ExcRaiser as e:
@@ -143,9 +141,9 @@ class AuctionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def count(self, db: Session) -> int:
+    async def count(self) -> int:
         try:
-            count = await self.repo.attachDB(db).count()
+            count = await self.repo.count()
             return count
         except ExcRaiser as e:
             raise
@@ -155,10 +153,10 @@ class AuctionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def update(self, db: Session, id: str, data: dict):
+    async def update(self, id: str, data: dict):
         try:
-            entity = await self.repo.attachDB(db).get_by_id(id)
-            updated = await self.repo.attachDB(db).update(entity, data)
+            entity = await self.repo.get_by_id(id)
+            updated = await self.repo.update(entity, data)
             return GetAuctionSchema.model_validate(updated[0])
         except ExcRaiser as e:
             raise
@@ -170,10 +168,7 @@ class AuctionServices(BaseService):
 
     # Auction participants
     async def create_participants(
-            self,
-            db: Session,
-            data: CreateAuctionParticipantsSchema,
-            auction: dict = None
+        self, data: CreateAuctionParticipantsSchema, auction: dict = None
     ):
         try:
             NOTIF_TITLE = 'Auction Invitation'
@@ -181,16 +176,17 @@ class AuctionServices(BaseService):
                 "You have been invited to participate in an auction. "
                 f"Auction ID: {data.get('auction_id')}"
             )
-            user =  await self.user_repo.attachDB(db).get_by_email(data.get('participant_email'))
-            _ = await self.participant_repo.attachDB(db).add(data)
+            user = await self.user_repo.get_by_email(data.get("participant_email"))
+            _ = await self.participant_repo.add(data)
             if user:
                 await self.notify(
-                    db,
                     str(user.id),
                     NOTIF_TITLE,
                     NOTIF_BODY,
-                    links=[f'{app_configs.FRONTEND_URL}/product-details/{data.get("auction_id")}'],
-                    class_name=NotificationClasses.AUCTION.value
+                    links=[
+                        f'{app_configs.FRONTEND_URL}/product-details/{data.get("auction_id")}'
+                    ],
+                    class_name=NotificationClasses.AUCTION.value,
                 )
             auct = auction.model_dump() if auction else None
             item = auction.item[0].model_dump() if auction and auction.item else None
@@ -228,10 +224,10 @@ class AuctionServices(BaseService):
 
     async def close(
         self,
-        db: Session,
         id: str,
-        caller: str = 'create',
-        existing_amount: float = 0.0
+        db: Session = None,
+        caller: str = "create",
+        existing_amount: float = 0.0,
     ):
         try:
             # Get the auction, bids and winner's details
@@ -246,46 +242,46 @@ class AuctionServices(BaseService):
                 # check if price >= reserve price else cancel auction
                 if auction.use_reserve_price and\
                     auction.reserve_price >= winner.amount:
-                    await self.repo.attachDB(db).update(
-                        auction, {'status': AuctionStatus.CANCLED}
-                    )
+                    await self.repo.update(auction, {"status": AuctionStatus.CANCLED})
                     await self.notify(
-                        db, auction.users_id, 'Auction Closed',
-                        'Your auction has been closed'
+                        auction.users_id,
+                        "Auction Closed",
+                        "Your auction has been closed",
                     )
                     for bid in bids:
                         _ = await self.user_repo.attachDB(db).abtw(bid.user_id, bid.amount)
                         await self.notify(
-                            db, bid.user_id, 'Auction Lost',
-                            'You have lost the auction, Amount has been returned',
-                            class_name=NotificationClasses.AUCTION.value
+                            bid.user_id,
+                            "Auction Lost",
+                            "You have lost the auction, Amount has been returned",
+                            class_name=NotificationClasses.AUCTION.value,
                         )
                         return
 
                 # Update auction status to completed
-                await self.repo.attachDB(db).update(
-                    auction, {'status': AuctionStatus.COMPLETED}
-                )
+                await self.repo.update(auction, {"status": AuctionStatus.COMPLETED})
                 await self.notify(
-                    db, auction.users_id, 'Auction Closed',
-                    'Your auction has been closed'
+                    auction.users_id, "Auction Closed", "Your auction has been closed"
                 )
                 await self.payment_repo.attachDB(db).add(
                     CreatePaymentSchema(
-                        from_id=winner.user_id, to_id=auction.users_id,
-                        auction_id=auction.id, amount=winner.amount,
-                        due_data=datetime.now().astimezone()\
-                            + timedelta(minutes=app_configs.PAYMENT_DUE_DAYS),
+                        from_id=winner.user_id,
+                        to_id=auction.users_id,
+                        auction_id=auction.id,
+                        amount=winner.amount,
+                        due_data=datetime.now().astimezone()
+                        + timedelta(minutes=app_configs.PAYMENT_DUE_DAYS),
                     ),
                     caller=caller,
-                    existing_amount=existing_amount
+                    existing_amount=existing_amount,
                 )
                 await self.notify(
-                    db, winner.user_id, 'Auction Won',
-                    'Congratulations, you have won the auction',
-                    links=[f'{app_configs.FRONTEND_URL}/product/finalize/{id}'],
-                    class_name=NotificationClasses.AUCTION.value
-                ) 
+                    winner.user_id,
+                    "Auction Won",
+                    "Congratulations, you have won the auction",
+                    links=[f"{app_configs.FRONTEND_URL}/product/finalize/{id}"],
+                    class_name=NotificationClasses.AUCTION.value,
+                )
                 await publ.publish_win_auction(
                     {
                         'auction_id': id,
@@ -312,12 +308,15 @@ class AuctionServices(BaseService):
                 bids = sorted(bids, key=lambda x: x.amount)
                 bids = bids[:-1]
                 for bid in bids:
-                    _ = await self.user_repo.attachDB(db).abtw(bid.user_id, bid.amount)
+                    _ = await self.user_repo.abtw(bid.user_id, bid.amount)
                     await self.notify(
-                        db, bid.user_id, 'Auction Lost',
-                        'You have lost the auction, Amount has been returned',
+                        bid.user_id,
+                        "Auction Lost",
+                        "You have lost the auction, Amount has been returned",
                         class_name=NotificationClasses.AUCTION.value,
-                        links=[f'{app_configs.FRONTEND_URL}/product-details/{auction.id}']
+                        links=[
+                            f"{app_configs.FRONTEND_URL}/product-details/{auction.id}"
+                        ],
                     )
         except ExcRaiser as e:
             raise
@@ -327,10 +326,10 @@ class AuctionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def restart(self, db: Session, id: str, data: RestartAuctionSchema):
+    async def restart(self, id: str, data: RestartAuctionSchema):
         try:
-            auction = await self.repo.attachDB(db).get_by_id(id)
-            payment = await self.payment_repo.attachDB(db).get_by_attr({'auction_id': id})
+            auction = await self.repo.get_by_id(id)
+            payment = await self.payment_repo.get_by_attr({"auction_id": id})
             restart_status = [
                 AuctionStatus.COMPLETED,
                 AuctionStatus.CANCLED
@@ -351,15 +350,16 @@ class AuctionServices(BaseService):
 
                 if payment:
                     # If payment exists, delete it
-                    await self.payment_repo.attachDB(db).delete(payment)
+                    await self.payment_repo.delete(payment)
                 # Notify the seller and participants
                 await self.notify(
-                    db, auction.users_id, 'Auction Restarted',
+                    auction.users_id,
+                    "Auction Restarted",
                     notification_messages.AUCTION_RESTARTED.message,
                     links=[
-                        f'{notification_messages.AUCTION_RESTARTED.link[0]}{id}',
+                        f"{notification_messages.AUCTION_RESTARTED.link[0]}{id}",
                     ],
-                    class_name=NotificationClasses.AUCTION.value
+                    class_name=NotificationClasses.AUCTION.value,
                 )
             else:
                 raise ExcRaiser400(
@@ -374,9 +374,9 @@ class AuctionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def set_inspecting(self, db: Session, id: str, buyer_id: str):
+    async def set_inspecting(self, id: str, buyer_id: str):
         try:
-            payment = await self.payment_repo.attachDB(db).get_by_attr({'auction_id': id})
+            payment = await self.payment_repo.get_by_attr({"auction_id": id})
             payment = GetPaymentSchema.model_validate(payment)
             if payment:
                 if payment.status != 'pending':
@@ -388,11 +388,12 @@ class AuctionServices(BaseService):
                         detail='You are not the buyer of this auction'
                     )
 
-                await self.payment_repo.attachDB(db).update(
-                    payment, {
-                        'status': PaymentStatus.INSPECTING,
-                        'due_data': datetime.now().astimezone() + timedelta(days=5)
-                    }
+                await self.payment_repo.update(
+                    payment,
+                    {
+                        "status": PaymentStatus.INSPECTING,
+                        "due_data": datetime.now().astimezone() + timedelta(days=5),
+                    },
                 )
                 return True
         except ExcRaiser as e:
@@ -403,9 +404,12 @@ class AuctionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def finalize_payment(self, db: Session, auction_id, buyer_id: str):
+    async def finalize_payment(self, auction_id, buyer_id: str, db: Session = None):
         try:
-            payment = await self.payment_repo.attachDB(db).get_by_attr({'auction_id': auction_id})
+            payment = await self.payment_repo.attachDB(db).get_by_attr(
+                {"auction_id": auction_id}
+            )
+
             if not payment:
                 raise ExcRaiser400(
                     detail='Entity not found'
@@ -415,7 +419,7 @@ class AuctionServices(BaseService):
                 raise ExcRaiser400(
                     detail='You are not the buyer of this auction'
                 )
-            res = await self.payment_repo.attachDB(db).disburse(payment)
+            res = await self.payment_repo.disburse(payment)
             if res:
                 return True
         except ExcRaiser as e:
@@ -426,9 +430,9 @@ class AuctionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def refund(self, db:Session, id: str, buyer_id: str):
+    async def refund(self, id: str, buyer_id: str):
         try:
-            payment = await self.payment_repo.attachDB(db).get_by_attr({'auction_id': id})
+            payment = await self.payment_repo.get_by_attr({"auction_id": id})
             payment_ = GetPaymentSchema.model_validate(payment)
             if payment_.from_id != buyer_id:
                 raise ExcRaiser400(
@@ -454,21 +458,23 @@ class AuctionServices(BaseService):
             )
 
             # Update the payment status to REFUNDING
-            res = await self.payment_repo.attachDB(db).update(payment, payment_)
+            res = await self.payment_repo.update(payment, payment_)
 
             # Notify the seller and buyer
             await self.notify(
-                db, payment.to_id, 'Refund Requested',
+                payment.to_id,
+                "Refund Requested",
                 notification_messages.REFUND_REQUEST_SELLER.message,
                 links=[
-                    f'{notification_messages.REFUND_REQUEST_SELLER.link}{id}',
+                    f"{notification_messages.REFUND_REQUEST_SELLER.link}{id}",
                 ],
-                class_name=NotificationClasses.PAYMENT.value
+                class_name=NotificationClasses.PAYMENT.value,
             )
 
             # Notify the buyer that the refund is being processed
             await self.notify(
-                db, payment.from_id, 'Refund Processing',
+                payment.from_id,
+                "Refund Processing",
                 notification_messages.REFUND_REQUEST_BUYER.message,
                 class_name=NotificationClasses.PAYMENT.value,
             )
@@ -483,9 +489,9 @@ class AuctionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def complete_refund(self, db:Session, id: str, seller_id: str):
+    async def complete_refund(self, id: str, seller_id: str):
         try:
-            payment = await self.payment_repo.attachDB(db).get_by_attr({'auction_id': id})
+            payment = await self.payment_repo.get_by_attr({"auction_id": id})
             payment_ = GetPaymentSchema.model_validate(payment)
             if payment_.to_id != seller_id:
                 raise ExcRaiser400(
@@ -503,24 +509,26 @@ class AuctionServices(BaseService):
                 )
 
             # Update the payment status to REFUNDING
-            res = await self.payment_repo.attachDB(db).refund(payment_)
+            res = await self.payment_repo.refund(payment_)
 
             # Notify the seller and buyer
             await self.notify(
-                db, payment.to_id, 'Refund Requested',
+                payment.to_id,
+                "Refund Requested",
                 notification_messages.REFUND_COMPLETED,
                 links=[
-                    f'{notification_messages.REFUND_COMPLETED.link[0]}{id}',
+                    f"{notification_messages.REFUND_COMPLETED.link[0]}{id}",
                 ],
-                class_name=NotificationClasses.PAYMENT.value
+                class_name=NotificationClasses.PAYMENT.value,
             )
 
             # Notify the buyer that the refund is being processed
             await self.notify(
-                db, payment.from_id, 'Refund Processing',
+                payment.from_id,
+                "Refund Processing",
                 notification_messages.REFUND_COMPLETED,
                 links=[
-                    f'{notification_messages.REFUND_COMPLETED.link[1]}{id}',
+                    f"{notification_messages.REFUND_COMPLETED.link[1]}{id}",
                 ],
                 class_name=NotificationClasses.PAYMENT.value,
             )
@@ -535,17 +543,18 @@ class AuctionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def delete(self, db:Session, id: str):
+    async def delete(self, id: str):
         try:
-            auction = await self.repo.attachDB(db).get_by_id(id)
+            auction = await self.repo.get_by_id(id)
             bids = auction.bids
             for bid in bids:
-                _ = await self.user_repo.attachDB(db).abtw(bid.user_id, bid.amount)
+                _ = await self.user_repo.abtw(bid.user_id, bid.amount)
                 await self.notify(
-                    db, bid.user_id, 'Auction Closed',
-                    'The auction has been canceled, The amount placed on the bid has been returned'
+                    bid.user_id,
+                    "Auction Closed",
+                    "The auction has been canceled, The amount placed on the bid has been returned",
                 )
-            result = await self.repo.attachDB(db).delete(auction)
+            result = await self.repo.delete(auction)
             if result:
                 return True
         except ExcRaiser as e:
@@ -559,12 +568,11 @@ class AuctionServices(BaseService):
     # Notifications
     async def notify(
         self,
-        db:Session,
         user_id: str,
         title: str,
         message: str,
         links: list = None,
-        class_name: str = None
+        class_name: str = None,
     ):
         try:
             notice = CreateNotificationSchema(
@@ -572,7 +580,7 @@ class AuctionServices(BaseService):
                 user_id=user_id, links=links or [],
                 class_name=class_name
             )
-            await self.notification.create(db, notice)
+            await self.notification.create(notice)
         except ExcRaiser as e:
             raise
         except Exception as e:
@@ -582,13 +590,12 @@ class AuctionServices(BaseService):
             raise ExcRaiser500(detail=str(e))
 
     async def search(
-            self,
-            db:Session,
-            filter: SearchQuery,
-        ) -> PagedResponse:
+        self,
+        filter: SearchQuery,
+    ) -> PagedResponse:
         try:
             filter = filter.model_dump()
-            result = await self.repo.attachDB(db).search(filter)
+            result = await self.repo.search(filter)
             result.data = [GetAuctionSchema.model_validate(r) for r in result.data]
             return result
         except ExcRaiser as e:

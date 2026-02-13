@@ -7,7 +7,7 @@ Ensures schema creation before table creation, and safe Base import order.
 import os
 from contextlib import contextmanager
 from typing import Generator, AsyncGenerator
-from sqlalchemy import create_engine, schema, text
+from sqlalchemy import create_engine, schema, text, event
 from sqlalchemy.orm import (
     declarative_base,
     sessionmaker,
@@ -53,11 +53,23 @@ engine = (
     else create_engine(
         app_configs.DB.DATABASE_URL,
         pool_size=10,
-        max_overflow=5,
-        pool_recycle=3600,
+        max_overflow=6,
+        pool_recycle=600,
+        pool_pre_ping=True,
         isolation_level="READ COMMITTED",
-        )
     )
+)
+
+
+@event.listens_for(engine, "checkout")
+def receive_checkout(dbapi_connection, connection_record, connection_proxy):
+    print(f"Connection checked out! Current status: {engine.pool.status()}")
+
+
+@event.listens_for(engine, "checkin")
+def receive_checkin(dbapi_connection, connection_record):
+    print(f"Connection returned! Current status: {engine.pool.status()}")
+
 
 # -----------------------------------------------------------------------------
 # Declarative Base
@@ -111,7 +123,6 @@ def init_db():
     print("✅ Registered models:", list(Base.metadata.tables.keys()))
 
 
-
 # -----------------------------------------------------------------------------
 # Dependency for FastAPI
 # -----------------------------------------------------------------------------
@@ -123,7 +134,6 @@ def get_db() -> Generator[Session, None, None]:
     finally:
         db.expire_on_commit
         db.close()
-
 
 
 # def get_db() -> Iterator[Session]:

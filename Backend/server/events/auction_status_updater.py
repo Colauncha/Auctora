@@ -2,7 +2,9 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from sqlalchemy.orm import Session
+from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
+from sqlalchemy.orm import Session, sessionmaker
 
 from ..models.auction import Auctions
 from ..models.payment import Payments
@@ -16,6 +18,15 @@ from ..services import (
     ChatServices,
     RewardHistoryService,
 )
+
+
+# TODO: Create local DB engine and session for this script to avoid conflicts with main app
+engine = create_engine(
+    app_configs.DB.DATABASE_URL,
+    poolclass=NullPool,
+    pool_pre_ping=True,
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Configure logging
 LOG_FILE_PATH = '/var/log/biddius-logs/auction_updater.log'\
@@ -32,7 +43,7 @@ logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
 
 async def update_status(auctionServices: AuctionServices):
-    session: Session = next(get_db())
+    session: Session = SessionLocal()  # next(get_db())
     count = 1
     try:
         update = False
@@ -52,7 +63,7 @@ async def update_status(auctionServices: AuctionServices):
             elif event.status == AuctionStatus.ACTIVE and current_time >= event.end_date:
                 logger.info(f"♻ Updating status for event {event.id} to {AuctionStatus.COMPLETED}")
                 event.status = AuctionStatus.COMPLETED
-                await auctionServices.close(session, event.id)
+                await auctionServices.close(event.id, db=session)
                 logger.info('✅ Event status updated')
                 update = True
 
@@ -71,7 +82,7 @@ async def update_status(auctionServices: AuctionServices):
 
 
 async def process_intra_payment(auctionServices: AuctionServices):
-    session: Session = next(get_db())
+    session: Session = SessionLocal()  # next(get_db())
     update = False
 
     try:
@@ -87,11 +98,13 @@ async def process_intra_payment(auctionServices: AuctionServices):
                 logger.info(
                     f"♻ Updating status for payment {event.id} from {event.from_id} to {event.to_id}"
                 )
-                await auctionServices.finalize_payment(session, event.auction_id, event.from_id)
+                await auctionServices.finalize_payment(
+                    event.auction_id, event.from_id, db=session
+                )
                 # event.status = 'COMPLETED'
                 logger.info('✅ Payment status updated')
                 update = True
-        
+
         if update:
             session.commit()
             logger.info("🔄 Payment status updated successfully")

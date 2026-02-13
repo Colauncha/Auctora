@@ -5,7 +5,8 @@ Copyright (c) 12/2024 - iyanuajimobi12@gmail.com
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from server.config import app_configs, init_db, get_db
+from sqlalchemy.orm import close_all_sessions
+from server.config import app_configs, init_db, get_db, engine
 from server.controllers import routes
 from server.middlewares.multipart_large_file import LargeFileMiddleware
 from server.middlewares.exception_handler import (
@@ -64,6 +65,17 @@ def create_app(app_name: str = "temporary") -> FastAPI:
     }
     app.include_router(routes)
     init_db()
+
+    @app.get("/sqlpool", include_in_schema=False)
+    def sql_pool():
+        return {"status": "running", "pool_status": engine.pool.status()}
+
+    @app.get("/clear_pool", include_in_schema=False)
+    def clear_pool():
+        close_all_sessions()
+        engine.dispose()
+        return {"status": "running", "pool_status": engine.pool.status()}
+
     return app
 
 
@@ -112,6 +124,7 @@ def create_admin():
         db.add(admin)
         db.commit()
         db.refresh(admin)
+        db.close()
         return admin
     except Exception as e:
         raise e
