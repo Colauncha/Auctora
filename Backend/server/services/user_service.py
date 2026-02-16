@@ -162,7 +162,7 @@ class UserNotificationServices(BaseService):
             raise ExcRaiser500(detail=str(e))
 
 ###############################################################################
-############################ Notification Services ############################
+############################ Transaction Services ############################
 ###############################################################################
 
 class UserWalletTransactionServices(BaseService):
@@ -565,10 +565,7 @@ class UserServices(BaseService):
             raise ExcRaiser500(detail=str(e))
 
     async def add_recipient_code(
-        self,
-        db: Session,
-        data: AccountDetailsSchema,
-        user: GetUserSchema
+        self, data: AccountDetailsSchema, user: GetUserSchema
     ) -> AccountDetailsSchema:
         try:
             data = data.model_dump(exclude={'id'})
