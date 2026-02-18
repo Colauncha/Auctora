@@ -33,6 +33,15 @@ async def create_category(
     categoryServices: CategoryServices = Depends(get_category_service),
 ) -> APIResponse[GetCategorySchema]:
     new_cat = await categoryServices.create_category(category)
+    if new_cat:
+        redis = await redis_store.get_async_redis()
+        categories = await categoryServices.list_categories()
+        formated_categories = cache_obj_format(categories)
+        await redis.set(
+            "category_cache",
+            formated_categories,
+            ex=app_configs.REDIS_CACHE_EXPIRATION_CAT,
+        )
     return APIResponse(data=new_cat)
 
 
@@ -101,6 +110,15 @@ async def create_sub_category(
     categoryServices: CategoryServices = Depends(get_category_service),
 ) -> APIResponse[GetSubCategorySchema]:
     new_sub_cat = await categoryServices.create_sub_category(sub_cat)
+    if new_sub_cat:
+        redis = await redis_store.get_async_redis()
+        categories = await categoryServices.list_categories()
+        formated_categories = cache_obj_format(categories)
+        await redis.set(
+            "category_cache",
+            formated_categories,
+            ex=app_configs.REDIS_CACHE_EXPIRATION_CAT,
+        )
     return APIResponse(data=new_sub_cat)
 
 

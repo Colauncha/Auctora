@@ -45,9 +45,11 @@ class CategoryRepository(Repository):
             print(f"Error in count: {e}")
             raise e
 
+    @no_db_error
     def get_last_id(self) -> str:
         last_cat = self.all()
         if last_cat:
+            print(last_cat[-1].id)
             return last_cat[-1].id
 
 
@@ -57,6 +59,7 @@ class SubCategoryRepository(Repository):
         if db:
             super().attachDB(db)
 
+    @no_db_error
     def get_last_id(self) -> str:
         last_sub_cat = self.all()
         if last_sub_cat:

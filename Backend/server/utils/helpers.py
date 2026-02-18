@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from server.config import app_configs
 from server.middlewares.exception_handler import ExcRaiser, ExcRaiser500
 
+# from server.repositories import get_category_repo, get_sub_category_repo
 
 def is_valid_email(email: str) -> bool:
     """
@@ -40,17 +41,22 @@ def category_id_generator() -> str:
     Generates a 6-digit numeric category ID.
     """
     get_db = importlib.import_module('server.config').get_db
-    DBAdaptor = importlib.import_module('server.repositories').DBAdaptor
-    prefix = 'CAT'
+    DBAdaptor = importlib.import_module("server.repositories").DBAdaptor
     db = get_db()
     db = next(db)
-    cat_repo = DBAdaptor(db).category_repo
-    prev_id = cat_repo.get_last_id()
-    if not prev_id:
-        return f'{prefix}001'
-    num = int(prev_id[3:]) + 1
-    db.close()
-    return f'{prefix}{num:03}'
+    try:
+        prefix = "CAT"
+        cat_repo = DBAdaptor().Factory().category_repo(db=db)
+        prev_id = cat_repo.get_last_id()
+        if not prev_id:
+            return f"{prefix}001"
+        num = int(prev_id[3:]) + 1
+        db.close()
+        return f"{prefix}{num:03}"
+    except Exception:
+        raise ExcRaiser(status_code=400, message="Unable to create cat id")
+    finally:
+        db.close()
 
 
 def sub_category_id_generator() -> str:
@@ -58,18 +64,22 @@ def sub_category_id_generator() -> str:
     Generates a 6-digit numeric sub-category ID.
     """
     get_db = importlib.import_module('server.config').get_db
-    DBAdaptor = importlib.import_module('server.repositories').DBAdaptor
-    prefix = 'SUBCAT'
+    DBAdaptor = importlib.import_module("server.repositories").DBAdaptor
     db = get_db()
     db = next(db)
-    sub_cat_repo = DBAdaptor(db).sub_category_repo
-    prev_id = sub_cat_repo.get_last_id()
-    if not prev_id:
-        return f'{prefix}0001'
-    num = int(prev_id[6:]) + 1
-    db.close()
-    return f'{prefix}{num:04}'
-
+    try:
+        prefix = "SUBCAT"
+        sub_cat_repo = DBAdaptor().Factory().sub_category_repo(db=db)
+        prev_id = sub_cat_repo.get_last_id()
+        if not prev_id:
+            return f"{prefix}0001"
+        num = int(prev_id[6:]) + 1
+        db.close()
+        return f"{prefix}{num:04}"
+    except Exception:
+        raise ExcRaiser(status_code=400, message="Unable to create cat id")
+    finally:
+        db.close()
 
 def paginator(page: int, item_per_page: int) -> int:
     """

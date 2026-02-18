@@ -62,6 +62,7 @@ class Repository:
         """Creates a new entity and persists it in the database"""
         try:
             new_entity = self._Model(**entity)
+
             self.db.add(new_entity)
             self.db.commit()
             self.db.refresh(new_entity)
@@ -70,6 +71,7 @@ class Repository:
             self.db.rollback()
             if self.configs.DEBUG:
                 self._inspect.info()
+                print(e)
                 raise e
             raise e
 
