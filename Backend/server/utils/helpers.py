@@ -40,10 +40,9 @@ def category_id_generator() -> str:
     """
     Generates a 6-digit numeric category ID.
     """
-    get_db = importlib.import_module('server.config').get_db
+    SessionLocal = importlib.import_module('server.config.database').SessionLocal
     DBAdaptor = importlib.import_module("server.repositories").DBAdaptor
-    db = get_db()
-    db = next(db)
+    db = SessionLocal()
     try:
         prefix = "CAT"
         cat_repo = DBAdaptor().Factory().category_repo(db=db)
@@ -51,7 +50,6 @@ def category_id_generator() -> str:
         if not prev_id:
             return f"{prefix}001"
         num = int(prev_id[3:]) + 1
-        db.close()
         return f"{prefix}{num:03}"
     except Exception:
         raise ExcRaiser(status_code=400, message="Unable to create cat id")
@@ -63,10 +61,9 @@ def sub_category_id_generator() -> str:
     """
     Generates a 6-digit numeric sub-category ID.
     """
-    get_db = importlib.import_module('server.config').get_db
+    SessionLocal = importlib.import_module('server.config.database').SessionLocal
     DBAdaptor = importlib.import_module("server.repositories").DBAdaptor
-    db = get_db()
-    db = next(db)
+    db = SessionLocal()
     try:
         prefix = "SUBCAT"
         sub_cat_repo = DBAdaptor().Factory().sub_category_repo(db=db)
@@ -74,7 +71,6 @@ def sub_category_id_generator() -> str:
         if not prev_id:
             return f"{prefix}0001"
         num = int(prev_id[6:]) + 1
-        db.close()
         return f"{prefix}{num:04}"
     except Exception:
         raise ExcRaiser(status_code=400, message="Unable to create cat id")

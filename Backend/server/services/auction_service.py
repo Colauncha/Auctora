@@ -239,9 +239,19 @@ class AuctionServices(BaseService):
 
             # If auction exists
             if auction:
-                # check if price >= reserve price else cancel auction
-                if auction.use_reserve_price and\
-                    auction.reserve_price >= winner.amount:
+                # Cancel if no bids were placed
+                if not winner:
+                    await self.repo.update(auction, {"status": AuctionStatus.CANCLED})
+                    await self.notify(
+                        auction.users_id,
+                        "Auction Closed",
+                        "Your auction has been closed with no bids",
+                    )
+                    return
+
+                # Cancel if winning bid is below the reserve price
+                if auction.use_reserve_price and \
+                        winner.amount < auction.reserve_price:
                     await self.repo.update(auction, {"status": AuctionStatus.CANCLED})
                     await self.notify(
                         auction.users_id,
@@ -256,7 +266,7 @@ class AuctionServices(BaseService):
                             "You have lost the auction, Amount has been returned",
                             class_name=NotificationClasses.AUCTION.value,
                         )
-                        return
+                    return
 
                 # Update auction status to completed
                 await self.repo.update(auction, {"status": AuctionStatus.COMPLETED})
@@ -378,24 +388,23 @@ class AuctionServices(BaseService):
         try:
             payment = await self.payment_repo.get_by_attr({"auction_id": id})
             payment = GetPaymentSchema.model_validate(payment)
-            if payment:
-                if payment.status != 'pending':
-                    raise ExcRaiser400(
-                        detail='Payment has already been processed'
-                    )
-                if payment.from_id != buyer_id:
-                    raise ExcRaiser400(
-                        detail='You are not the buyer of this auction'
-                    )
-
-                await self.payment_repo.update(
-                    payment,
-                    {
-                        "status": PaymentStatus.INSPECTING,
-                        "due_data": datetime.now().astimezone() + timedelta(days=5),
-                    },
+            if payment.status != PaymentStatus.PENDING.value:
+                raise ExcRaiser400(
+                    detail='Payment has already been processed'
                 )
-                return True
+            if payment.from_id != buyer_id:
+                raise ExcRaiser400(
+                    detail='You are not the buyer of this auction'
+                )
+
+            await self.payment_repo.update(
+                payment,
+                {
+                    "status": PaymentStatus.INSPECTING,
+                    "due_data": datetime.now().astimezone() + timedelta(days=5),
+                },
+            )
+            return True
         except ExcRaiser as e:
             raise
         except Exception as e:
@@ -419,8 +428,27 @@ class AuctionServices(BaseService):
                 raise ExcRaiser400(
                     detail='You are not the buyer of this auction'
                 )
+            allowed_statuses = [PaymentStatus.PENDING.value, PaymentStatus.INSPECTING.value]
+            if payment.status not in allowed_statuses:
+                raise ExcRaiser400(
+                    detail='Payment cannot be finalized in its current state'
+                )
             res = await self.payment_repo.disburse(payment)
             if res:
+                await self.notify(
+                    payment.to_id,
+                    "Payment Received",
+                    notification_messages.PAYMENT_SUCCESSFUL.message,
+                    links=notification_messages.PAYMENT_SUCCESSFUL.link,
+                    class_name=NotificationClasses.PAYMENT.value,
+                )
+                await self.notify(
+                    payment.from_id,
+                    "Payment Finalized",
+                    notification_messages.PAYMENT_SUCCESSFUL.message,
+                    links=notification_messages.PAYMENT_SUCCESSFUL.link,
+                    class_name=NotificationClasses.PAYMENT.value,
+                )
                 return True
         except ExcRaiser as e:
             raise
@@ -448,7 +476,7 @@ class AuctionServices(BaseService):
                     detail='Payment is already in process or completed'
                 )
             payment_.status = PaymentStatus.REFUNDING
-            payment_.due_data = datetime.now().astimezone() + timedelta(minutes=0.0)
+            payment_.due_data = datetime.now().astimezone() + timedelta(days=3)
             payment_.refund_requested = True
             payment_.seller_refund_confirmed = False
             payment_ = payment_.model_dump(
@@ -535,6 +563,38 @@ class AuctionServices(BaseService):
 
             if res:
                 return True
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
+    async def auto_complete_refund(self, auction_id: str, db: Session = None):
+        """Called by the scheduler when a seller has not confirmed a refund within the deadline."""
+        try:
+            payment = await self.payment_repo.attachDB(db).get_by_attr(
+                {"auction_id": auction_id}
+            )
+            if not payment or payment.status != PaymentStatus.REFUNDING.value:
+                return
+            payment_ = GetPaymentSchema.model_validate(payment)
+            res = await self.payment_repo.refund(payment_)
+            if res:
+                await self.notify(
+                    payment.from_id,
+                    "Refund Approved",
+                    notification_messages.REFUND_COMPLETED.message,
+                    links=notification_messages.REFUND_COMPLETED.link,
+                    class_name=NotificationClasses.PAYMENT.value,
+                )
+                await self.notify(
+                    payment.to_id,
+                    "Refund Auto-Confirmed",
+                    "The refund deadline passed and has been automatically processed.",
+                    class_name=NotificationClasses.PAYMENT.value,
+                )
         except ExcRaiser as e:
             raise
         except Exception as e:

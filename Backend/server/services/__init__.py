@@ -2,7 +2,7 @@ from typing import Annotated
 from fastapi import Depends, Request, WebSocket, WebSocketException, status
 from jose import ExpiredSignatureError
 from jose.exceptions import JWTError, JWTClaimsError
-from server.config.database import get_db
+from server.config.database import get_db, SessionLocal
 from server.services.auction_service import AuctionServices
 from server.services.bid_services import BidServices
 from server.services.misc_service import ContactUsService
@@ -182,6 +182,7 @@ class AuthServices:
 
     @staticmethod
     async def get_ws_user(ws: WebSocket):
+        db = SessionLocal()
         try:
             token = None
             protocols = ws.headers.get('sec-websocket-protocol').split(",")
@@ -201,12 +202,8 @@ class AuthServices:
                 algorithms=[app_configs.security.ALGORITHM]
             )
 
-            db = next(get_db())
             user_repo = get_user_repo()
-
             user = await user_repo.attachDB(db).get_by_attr({'id': claims["id"]})
-
-            # db.close()
 
             if not user:
                 raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
@@ -214,8 +211,10 @@ class AuthServices:
             return GetUserSchema.model_validate(user), db
 
         except WebSocketException:
+            db.close()
             raise
         except Exception as e:
+            db.close()
             print(e)
             raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 

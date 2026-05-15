@@ -87,7 +87,7 @@ async def retrieve(
     user: current_user, id: str, bidServices: BidServices = Depends(get_bid_service)
 ) -> APIResponse[GetBidSchema]:
     result = await bidServices.retrieve(id)
-    return result
+    return APIResponse(data=result)
 
 
 @route.websocket('/ws/{id}/{token}')

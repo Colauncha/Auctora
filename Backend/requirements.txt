@@ -51,6 +51,8 @@ pydantic_core==2.27.1
 pylint==3.3.4
 pyparsing==3.2.3
 pytest==8.3.4
+pytest-asyncio==0.24.0
+pytest-mock==3.14.0
 python-dotenv==1.0.1
 python-jose==3.4.0
 python-multipart==0.0.20

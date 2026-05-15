@@ -83,13 +83,12 @@ def create_admin():
     from server.enums.user_enums import UserRoles
     from server.schemas import CreateUserSchema
     from server.models.users import Users
-    from sqlalchemy.orm import Session
+    from server.config.database import SessionLocal
     from getpass import getpass
 
+    init_db()
+    db = SessionLocal()
     try:
-        init_db()
-        db = get_db()
-        db = next(db)
         username = str(input("Enter username -> "))
         email = str(input("Enter email -> "))
         first_name = str(input("Enter first name -> "))
@@ -124,7 +123,9 @@ def create_admin():
         db.add(admin)
         db.commit()
         db.refresh(admin)
-        db.close()
         return admin
     except Exception as e:
+        db.rollback()
         raise e
+    finally:
+        db.close()
