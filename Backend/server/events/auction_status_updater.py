@@ -62,7 +62,6 @@ async def update_status(auctionServices: AuctionServices):
                 update = True
             elif event.status == AuctionStatus.ACTIVE and current_time >= event.end_date:
                 logger.info(f"♻ Updating status for event {event.id} to {AuctionStatus.COMPLETED}")
-                event.status = AuctionStatus.COMPLETED
                 await auctionServices.close(event.id, db=session)
                 logger.info('✅ Event status updated')
                 update = True
@@ -82,36 +81,46 @@ async def update_status(auctionServices: AuctionServices):
 
 
 async def process_intra_payment(auctionServices: AuctionServices):
-    session: Session = SessionLocal()  # next(get_db())
+    session: Session = SessionLocal()
     update = False
 
     try:
-        events = session.query(Payments).filter(
-            ((Payments.status == 'INSPECTING' or Payments.status == 'PENDING') and Payments.due_data <= datetime.now()) 
+        current_time = datetime.now().astimezone()
+
+        # Auto-finalize PENDING and INSPECTING payments that have passed their due date
+        finalize_events = session.query(Payments).filter(
+            Payments.status.in_([PaymentStatus.PENDING.value, PaymentStatus.INSPECTING.value]),
+            Payments.due_data <= current_time
         ).with_for_update().all()
-        print(datetime.now().astimezone())
-        for event in events:
-            current_time = datetime.now().astimezone()
-            print(current_time >= event.due_data)
-            if (event.status != PaymentStatus.PENDING or event.status != PaymentStatus.INSPECTING) and current_time >= event.due_data:
-                print(f'running event {event.id}...')
-                logger.info(
-                    f"♻ Updating status for payment {event.id} from {event.from_id} to {event.to_id}"
-                )
-                await auctionServices.finalize_payment(
-                    event.auction_id, event.from_id, db=session
-                )
-                # event.status = 'COMPLETED'
-                logger.info('✅ Payment status updated')
-                update = True
+
+        for event in finalize_events:
+            logger.info(
+                f"♻ Auto-finalizing payment {event.id} from {event.from_id} to {event.to_id}"
+            )
+            await auctionServices.finalize_payment(
+                event.auction_id, event.from_id, db=session
+            )
+            logger.info('✅ Payment finalized')
+            update = True
+
+        # Auto-confirm REFUNDING payments the seller has not responded to within the deadline
+        refund_events = session.query(Payments).filter(
+            Payments.status == PaymentStatus.REFUNDING.value,
+            Payments.due_data <= current_time
+        ).with_for_update().all()
+
+        for event in refund_events:
+            logger.info(
+                f"♻ Auto-confirming overdue refund {event.id} for buyer {event.from_id}"
+            )
+            await auctionServices.auto_complete_refund(event.auction_id, db=session)
+            logger.info('✅ Refund auto-confirmed')
+            update = True
 
         if update:
             session.commit()
             logger.info("🔄 Payment status updated successfully")
-        else:
-            pass
     except Exception as e:
-        print(e.with_traceback())
         logger.error(f"Error processing intra payment: {e}")
     finally:
         session.close()

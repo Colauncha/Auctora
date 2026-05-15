@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 
-from server.config.database import get_db
+from server.config.database import get_db, SessionLocal
 from server.config.app_configs import app_configs
 from server.repositories import get_db_repo, Repository
 from server.utils.ex_inspect import ExtInspect
@@ -15,11 +15,11 @@ class BaseService:
 
     @classmethod
     async def get_ownership(cls, model, id, user_id) -> bool:
+        db = SessionLocal()
         try:
             repo: Repository = get_db_repo()
             repo = repo(model)
-            db = get_db()
-            entity = await repo.attachDB(next(db)).get_by_id(id)
+            entity = await repo.attachDB(db).get_by_id(id)
 
             if not entity:
                 raise HTTPException(status_code=404, detail="Item not found")
@@ -37,11 +37,11 @@ class BaseService:
             elif entity.id == user_id:
                 is_owner = True
 
-            db.close()
             return is_owner
         except Exception as e:
-            db.close()
             if cls.config.DEBUG:
                 cls.inspect()
                 ExcRaiser500(e)
             ExcRaiser500(e)
+        finally:
+            db.close()
