@@ -486,23 +486,28 @@ async def subscribe_notifications(
     notificationServices: get_notification_service = Depends(get_notification_service)
 ):
     async def event_generator():
-        async_redis = await redis_store.get_async_redis()
-        pubsub = async_redis.pubsub()
+        # Dedicated connection — pubsub must not share the general async connection
+        pubsub_redis = await redis_store.get_pubsub_redis()
+        pubsub = pubsub_redis.pubsub()
         await pubsub.subscribe(user_notif_channel(user.id))
         try:
-            active_user = await AuthServices.verify_token(request)
+            if not await AuthServices.verify_token(request):
+                return
             count = await notificationServices.count(user.id)
             yield f"event: count\ndata: {json.dumps(count)}\n\n"
-            if not app_configs.ENV != "production":
-                yield f"event: count\ndata: {json.dumps(count)}\n\n"
+            if app_configs.ENV != "production":
                 return
+            last_auth_check = asyncio.get_event_loop().time()
             while True:
-
-                if not active_user:
-                    break
-
                 if await request.is_disconnected():
                     break
+
+                # Re-verify token every 60 seconds to catch expiry mid-stream
+                now = asyncio.get_event_loop().time()
+                if now - last_auth_check >= 60:
+                    if not await AuthServices.verify_token(request):
+                        break
+                    last_auth_check = now
 
                 try:
                     message = await pubsub.get_message(
@@ -512,7 +517,6 @@ async def subscribe_notifications(
                     message = None
 
                 if message is None:
-                    # yield f"event: count\ndata: {json.dumps(count)}\n\n"
                     continue
                 else:
                     count = await notificationServices.count(user.id)
@@ -521,11 +525,12 @@ async def subscribe_notifications(
                 await asyncio.sleep(2)
 
         except asyncio.CancelledError:
-            pass
+            raise  # propagate so uvicorn can shut down cleanly
 
         finally:
             await pubsub.unsubscribe(user_notif_channel(user.id))
             await pubsub.close()
+            await pubsub_redis.aclose()
     return StreamingResponse(event_generator(), media_type='text/event-stream')
 
 

@@ -61,14 +61,14 @@ engine = (
 )
 
 
-@event.listens_for(engine, "checkout")
-def receive_checkout(dbapi_connection, connection_record, connection_proxy):
-    print(f"Connection checked out! Current status: {engine.pool.status()}")
+# @event.listens_for(engine, "checkout")
+# def receive_checkout(dbapi_connection, connection_record, connection_proxy):
+#     print(f"Connection checked out! Current status: {engine.pool.status()}")
 
 
-@event.listens_for(engine, "checkin")
-def receive_checkin(dbapi_connection, connection_record):
-    print(f"Connection returned! Current status: {engine.pool.status()}")
+# @event.listens_for(engine, "checkin")
+# def receive_checkin(dbapi_connection, connection_record):
+#     print(f"Connection returned! Current status: {engine.pool.status()}")
 
 
 # -----------------------------------------------------------------------------
@@ -167,3 +167,9 @@ class RedisStorage:
                 url=self.REDIS_URL, decode_responses=True
             )
         return self.async_redis
+
+    async def get_pubsub_redis(self) -> AsyncRedis:
+        """Get a dedicated async Redis connection for pubsub use.
+        Pubsub changes the connection state, so it must not share the
+        general-purpose async connection."""
+        return await AsyncRedis.from_url(url=self.REDIS_URL, decode_responses=True)
