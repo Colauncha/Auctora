@@ -882,9 +882,7 @@ class UserServices(BaseService):
                 folder="biddius/pp"
             )
 
-            update_data = {
-                'image_link': _result.get('secure_url')
-            }
+            update_data = {"image_link": {"link": _result.get("secure_url")}}
 
             user_ = await self.repo.get_by_id(user.id)
             updated = await self.repo.update(user_, update_data)
