@@ -132,8 +132,13 @@ class LoginSchema(BaseModel):
 
 class LoginToken(BaseModel):
     model_config = {"from_attributes": True}
-    token: str
+    access_token: str
+    refresh_token: str
     token_type: str = Field(default='Bearer')
+
+
+class RefreshTokenSchema(BaseModel):
+    refresh_token: str
 
 
 class VerifyOtpSchema(BaseModel):

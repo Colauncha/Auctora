@@ -250,6 +250,12 @@ class AuthServices:
             )
 
             if claims and claims.get('email') and claims.get('id'):
+                if claims.get('type') != 'access':
+                    raise ExcRaiser(
+                        status_code=401,
+                        message='Unauthenticated',
+                        detail='Invalid token type'
+                    )
                 user = await repo.attachDB(db).get_by_attr({'id': claims.get('id')})
                 if user:
                     return GetUserSchema.model_validate(user)

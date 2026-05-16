@@ -26,6 +26,7 @@ class DataBaseSettings(BaseSettings):
 
 class JWTSettings(BaseSettings):
     ACCESS_TOKEN_EXPIRES: int
+    REFRESH_TOKEN_EXPIRES: int
     ALGORITHM: str
     JWT_SECRET_KEY: str = ""
 

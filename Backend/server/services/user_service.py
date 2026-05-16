@@ -1,15 +1,19 @@
 from uuid import uuid4
 from jose import jwt
+from jose.exceptions import JWTError, JWTClaimsError, ExpiredSignatureError
 from datetime import datetime, timezone, timedelta
 import inspect
+import cloudinary
+import cloudinary.uploader
 
 from sqlalchemy.orm import Session
+from fastapi import UploadFile
+from starlette.concurrency import run_in_threadpool
 from server.utils.ex_inspect import ExtInspect
 from server.models.users import Users
 from server.enums.user_enums import TransactionStatus, TransactionTypes, UserRoles
 from passlib.context import CryptContext
 from server.config import app_configs, redis_store
-from jose.exceptions import JWTError
 from server.utils import (
     is_valid_email,
     otp_generator,
@@ -374,26 +378,55 @@ class UserServices(BaseService):
         return self.pwd_context.verify(password, hashed_password)
 
     async def __generate_token(self, user: Users) -> LoginToken:
-        expires_at = datetime.now(tz=timezone.utc) + timedelta(
+        access_expires_at = datetime.now(tz=timezone.utc) + timedelta(
             minutes=app_configs.security.ACCESS_TOKEN_EXPIRES
         )
-        claims = {
+        refresh_expires_at = datetime.now(tz=timezone.utc) + timedelta(
+            days=app_configs.security.REFRESH_TOKEN_EXPIRES
+        )
+
+        access_claims = {
             "id": str(user.id),
             "email": user.email,
             "role": user.role.value,
-            "exp": expires_at,
+            "type": "access",
+            "exp": access_expires_at,
+        }
+
+        refresh_claims = {
+            "id": str(user.id),
+            "email": user.email,
+            "type": "refresh",
+            "exp": refresh_expires_at,
         }
 
         token_type = "bearer"
         try:
-            token = jwt.encode(
-                claims,
+            access_token = jwt.encode(
+                access_claims,
                 app_configs.security.JWT_SECRET_KEY,
                 app_configs.security.ALGORITHM,
             )
+            refresh_token = jwt.encode(
+                refresh_claims,
+                app_configs.security.JWT_SECRET_KEY,
+                app_configs.security.ALGORITHM,
+            )
+
+            async_redis = await redis_store.get_async_redis()
+            await async_redis.setex(
+                f"refresh_token:{user.id}",
+                app_configs.security.REFRESH_TOKEN_EXPIRES * 24 * 3600,
+                refresh_token
+            )
+
         except JWTError as err:
             raise ValueError(err, "Unable to generate token")
-        return LoginToken(**{"token": token, "token_type": token_type})
+        return LoginToken(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type=token_type
+        )
 
     async def authenticate(self, identity: LoginSchema) -> LoginToken:
         try:
@@ -826,6 +859,102 @@ class UserServices(BaseService):
             result = await self.repo.delete(user_)
             if result:
                 return True
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
+    async def upload_profile_picture(self, user: GetUserSchema, image: UploadFile) -> GetUserSchema:
+        try:
+            if not image:
+                raise ExcRaiser400(detail="No image provided")
+
+            content_types = ["image/jpeg", "image/png", "image/webp", "image/bmp", "image/avif"]
+            if image.content_type not in content_types:
+                raise ExcRaiser400(detail="Invalid image format")
+
+            _result = await run_in_threadpool(
+                cloudinary.uploader.upload,
+                image.file,
+                folder="biddius/pp"
+            )
+
+            update_data = {
+                'image_link': _result.get('secure_url')
+            }
+
+            user_ = await self.repo.get_by_id(user.id)
+            updated = await self.repo.update(user_, update_data)
+            return GetUserSchema.model_validate(updated[0])
+        except ExcRaiser as e:
+            raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
+    async def refresh_access_token(self, refresh_token: str) -> LoginToken:
+        try:
+            claims = jwt.decode(
+                refresh_token,
+                app_configs.security.JWT_SECRET_KEY,
+                algorithms=[app_configs.security.ALGORITHM]
+            )
+
+            if claims.get("type") != "refresh":
+                raise ExcRaiser400(detail="Invalid token type")
+
+            user_id = claims.get("id")
+            async_redis = await redis_store.get_async_redis()
+            stored_token = await async_redis.get(f"refresh_token:{user_id}")
+
+            if not stored_token or stored_token != refresh_token:
+                raise ExcRaiser400(detail="Invalid or expired refresh token")
+
+            user = await self.repo.get_by_id(user_id)
+            if not user:
+                raise ExcRaiser404(message="User not found")
+
+            access_expires_at = datetime.now(tz=timezone.utc) + timedelta(
+                minutes=app_configs.security.ACCESS_TOKEN_EXPIRES
+            )
+
+            access_claims = {
+                "id": str(user.id),
+                "email": user.email,
+                "role": user.role.value,
+                "type": "access",
+                "exp": access_expires_at,
+            }
+
+            access_token = jwt.encode(
+                access_claims,
+                app_configs.security.JWT_SECRET_KEY,
+                app_configs.security.ALGORITHM,
+            )
+
+            return LoginToken(
+                access_token=access_token,
+                refresh_token=refresh_token,
+                token_type="bearer"
+            )
+
+        except ExpiredSignatureError:
+            raise ExcRaiser(
+                status_code=401,
+                message='Unauthorized',
+                detail='Refresh token expired'
+            )
+        except (JWTError, JWTClaimsError) as e:
+            raise ExcRaiser(
+                status_code=401,
+                message='Unauthorized',
+                detail='Invalid refresh token'
+            )
         except ExcRaiser as e:
             raise
         except Exception as e:

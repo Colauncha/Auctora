@@ -3,7 +3,7 @@ import hashlib
 import hmac
 import asyncio
 from typing import Union
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Request, Response, File, UploadFile
 from fastapi.responses import RedirectResponse, StreamingResponse
 import httpx
 from google.oauth2 import id_token
@@ -47,6 +47,7 @@ from server.schemas import (
     UpdateUserAddressSchema,
     GetUsersNoAuction,
     RewardHistoryQuery,
+    RefreshTokenSchema,
 )
 from server.services import (
     current_user,
@@ -203,10 +204,19 @@ async def login(
     token, user = await userServices.authenticate(credentials)
     response.set_cookie(
         key='access_token',
-        value=token.token,
+        value=token.access_token,
         httponly=True,
         max_age=app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
-        expires= app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
+        expires=app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
+        secure=True if app_configs.ENV == 'production' else False,
+        samesite="None" if app_configs.ENV == 'production' else "lax",
+    )
+    response.set_cookie(
+        key='refresh_token',
+        value=token.refresh_token,
+        httponly=True,
+        max_age=app_configs.security.REFRESH_TOKEN_EXPIRES * 24 * 3600,
+        expires=app_configs.security.REFRESH_TOKEN_EXPIRES * 24 * 3600,
         secure=True if app_configs.ENV == 'production' else False,
         samesite="None" if app_configs.ENV == 'production' else "lax",
     )
@@ -214,6 +224,25 @@ async def login(
         'token': token,
         'user': user
     })
+
+
+@route.post('/refresh')
+async def refresh_token(
+    data: RefreshTokenSchema,
+    response: Response,
+    userServices: get_user_service = Depends(get_user_service),
+) -> APIResponse:
+    token = await userServices.refresh_access_token(data.refresh_token)
+    response.set_cookie(
+        key='access_token',
+        value=token.access_token,
+        httponly=True,
+        max_age=app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
+        expires=app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
+        secure=True if app_configs.ENV == 'production' else False,
+        samesite="None" if app_configs.ENV == 'production' else "lax",
+    )
+    return APIResponse(data={'token': token})
 
 
 @route.get("/google/auth")
@@ -262,9 +291,17 @@ async def callback(
     redirect_response = RedirectResponse(url=url)
     redirect_response.set_cookie(
         key='access_token',
-        value=token.token,
+        value=token.access_token,
         httponly=True,
-        max_age=5400,
+        max_age=app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
+        secure=True if app_configs.ENV == 'production' else False,
+        samesite="None" if app_configs.ENV == 'production' else "lax",
+    )
+    redirect_response.set_cookie(
+        key='refresh_token',
+        value=token.refresh_token,
+        httponly=True,
+        max_age=app_configs.security.REFRESH_TOKEN_EXPIRES * 24 * 3600,
         secure=True if app_configs.ENV == 'production' else False,
         samesite="None" if app_configs.ENV == 'production' else "lax",
     )
@@ -272,17 +309,23 @@ async def callback(
 
 
 @route.post('/logout')
-async def logout(request: Request, response: Response) -> APIResponse[str]:
+async def logout(request: Request, response: Response, user: current_user = None) -> APIResponse[str]:
     token = request.cookies.get('access_token')
     async_redis = await redis_store.get_async_redis()
     if not token:
         return APIResponse(data='No active session found')
+
     await async_redis.setex(
         f"blacklist_{token}",
         app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
         cache_obj_format({"token": token})
     )
+
+    if user:
+        await async_redis.delete(f"refresh_token:{user.id}")
+
     response.delete_cookie(key='access_token')
+    response.delete_cookie(key='refresh_token')
     return APIResponse(data='Logout successful')
 
 
@@ -313,6 +356,17 @@ async def update_address(
     user_ = await userServices.retrieve(id)
     valid_user = GetUserSchema.model_validate(user_)
     result = await userServices.update_address(valid_user, data)
+    return APIResponse(data=result)
+
+
+@route.put('/upload_profile_picture')
+@permissions(permission_level=Permissions.CLIENT)
+async def upload_profile_picture(
+    user: current_user,
+    image: UploadFile = File(...),
+    userServices: get_user_service = Depends(get_user_service),
+) -> APIResponse[GetUserSchema]:
+    result = await userServices.upload_profile_picture(user, image)
     return APIResponse(data=result)
 
 
