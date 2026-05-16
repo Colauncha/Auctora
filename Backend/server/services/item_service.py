@@ -26,15 +26,18 @@ class ItemServices(BaseService):
 
     async def create(self, data: dict[str, any]) -> GetItemSchema:
         try:
-            subcat = await self.subcat_repo.get_by_attr(
-                {"id": data.get("sub_category_id")}
-            )
-            if subcat.parent_id != data.get('category_id'):
-                raise ExcRaiser(
-                    status_code=400,
-                    message="Invalid category",
-                    detail="Subcategory must be under Category"
-                ) 
+            category_ids = data.get("category_ids", [])
+            sub_category_ids = data.get("sub_category_ids", [])
+
+            for subcat_id in sub_category_ids:
+                subcat = await self.subcat_repo.get_by_attr({"id": subcat_id})
+                if not subcat or subcat.parent_id not in category_ids:
+                    raise ExcRaiser(
+                        status_code=400,
+                        message="Invalid category",
+                        detail=f"Subcategory '{subcat_id}' does not belong to any of the provided categories",
+                    )
+
             item = await self.repo.add(data)
             if item:
                 result = GetItemSchema.model_validate(item)

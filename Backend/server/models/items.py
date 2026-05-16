@@ -1,13 +1,29 @@
 from uuid import uuid4
 from sqlalchemy import (
-    JSON, UUID, Column,
+    JSON, UUID, Column, Table,
     Float, ForeignKey, Integer,
     String
 )
 from sqlalchemy.orm import relationship
+from server.config import Base
 from server.models.base import BaseModel
 from server.utils.helpers import (
     category_id_generator, sub_category_id_generator
+)
+
+# Many-to-many association tables (ondelete="CASCADE" handles DB-level cleanup)
+item_categories = Table(
+    "item_categories",
+    Base.metadata,
+    Column("item_id", UUID(as_uuid=True), ForeignKey("items.id", ondelete="CASCADE"), primary_key=True),
+    Column("category_id", String, ForeignKey("categories.id", ondelete="CASCADE"), primary_key=True),
+)
+
+item_subcategories = Table(
+    "item_subcategories",
+    Base.metadata,
+    Column("item_id", UUID(as_uuid=True), ForeignKey("items.id", ondelete="CASCADE"), primary_key=True),
+    Column("sub_category_id", String, ForeignKey("subcategories.id", ondelete="CASCADE"), primary_key=True),
 )
 
 
@@ -37,45 +53,36 @@ class Items(BaseModel):
     height = Column(Float, nullable=True)
     width = Column(Float, nullable=True)
     length = Column(Float, nullable=True)
-    # IDEA: make this a JSON column with list of categories
-    category_id = Column(
-        String,
-        ForeignKey('categories.id'),
-        nullable=False
-    )
-    # IDEA: make this a JSON column with list of sub_categories
-    sub_category_id = Column(
-        String,
-        ForeignKey('subcategories.id'),
-        nullable=False
-    )
 
-    category = relationship("Categories", back_populates="items")
-    sub_categories = relationship("Subcategory", back_populates="items")
+    categories = relationship("Categories", secondary=item_categories, back_populates="items")
+    sub_categories = relationship("Subcategory", secondary=item_subcategories, back_populates="items")
     auction = relationship("Auctions", back_populates="item")
 
+    @property
+    def category_ids(self) -> list[str]:
+        return [c.id for c in self.categories]
+
+    @property
+    def sub_category_ids(self) -> list[str]:
+        return [sc.id for sc in self.sub_categories]
 
     def __init__(
             self,
             users_id: UUID,
             name: str,
             description: str,
-            category_id: str,
-            sub_category_id: str,
         ):
         self.id = uuid4()
         self.users_id = users_id
         self.name = name
         self.description = description
-        self.category_id = category_id
-        self.sub_category_id = sub_category_id
 
     def __str__(self):
         return f'\
         Name: {self.name}\n\
         Seller: {self.users_id}\n\
         '
-    
+
     def to_dict(self):
         return super().to_dict()
 
@@ -93,10 +100,7 @@ class Categories(BaseModel):
         back_populates="parent",
         cascade='delete'
     )
-    items = relationship(
-        "Items", back_populates="category",
-        cascade='delete'
-    )
+    items = relationship("Items", secondary=item_categories, back_populates="categories")
 
     def __str__(self):
         return f'Name: {self.name} - id: {self.id}'
@@ -111,10 +115,7 @@ class Subcategory(BaseModel):
     parent_id = Column(String, ForeignKey('categories.id'), nullable=False)
 
     parent = relationship("Categories", back_populates="sub_categories")
-    items = relationship(
-        "Items", back_populates="sub_categories",
-        cascade='delete'
-    )
+    items = relationship("Items", secondary=item_subcategories, back_populates="sub_categories")
 
     def __str__(self):
         return f'Name: {self.name} - P_id: {self.parent_id} - id: {self.id}'
