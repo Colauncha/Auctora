@@ -3,7 +3,7 @@ import math
 from sqlalchemy.orm import Session
 
 from server.models.auction import Auctions, AuctionParticipants
-from server.models.items import Items
+from server.models.items import Items, Categories, Subcategory
 from server.repositories.repository import Repository, no_db_error
 from server.enums.auction_enums import AuctionStatus
 from server.schemas import PagedResponse
@@ -77,9 +77,13 @@ class AuctionRepository(Repository):
                 query = query.order_by(getattr(QueryModel, sort).desc())
 
             if cat_id:
-                query = query.filter(QueryModel.item.any(category_id=cat_id))
+                query = query.filter(
+                    QueryModel.item.any(Items.categories.any(Categories.id == cat_id))
+                )
             if subcat_id:
-                query = query.filter(QueryModel.item.any(subcat_id=subcat_id))
+                query = query.filter(
+                    QueryModel.item.any(Items.sub_categories.any(Subcategory.id == subcat_id))
+                )
 
             if start_price:
                 query = query.filter(

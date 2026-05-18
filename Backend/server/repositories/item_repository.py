@@ -4,12 +4,76 @@ from sqlalchemy.orm import Session
 from server.repositories.repository import Repository, no_db_error
 from server.models.items import Items, Categories, Subcategory
 from server.schemas import GetItemSchema
+from server.middlewares.exception_handler import ExcRaiser404
 
 class ItemRepository(Repository):
     def __init__(self, db: Session = None):
         super().__init__(Items)
         if db:
             super().attachDB(db)
+
+    @no_db_error
+    async def add(self, entity: dict):
+        category_ids = entity.pop('category_ids', [])
+        sub_category_ids = entity.pop('sub_category_ids', [])
+        try:
+            new_item = Items(**entity)
+            self.db.add(new_item)
+            self.db.flush()
+
+            if category_ids:
+                new_item.categories = (
+                    self.db.query(Categories)
+                    .filter(Categories.id.in_(category_ids))
+                    .all()
+                )
+            if sub_category_ids:
+                new_item.sub_categories = (
+                    self.db.query(Subcategory)
+                    .filter(Subcategory.id.in_(sub_category_ids))
+                    .all()
+                )
+
+            self.db.commit()
+            self.db.refresh(new_item)
+            return new_item
+        except Exception as e:
+            self.db.rollback()
+            raise e
+
+    @no_db_error
+    async def update(self, entity, data: dict = None):
+        category_ids = data.pop('category_ids', None) if data else None
+        sub_category_ids = data.pop('sub_category_ids', None) if data else None
+        try:
+            item = self.db.query(Items).filter_by(id=entity.id or str(entity.id)).first()
+            if item is None:
+                raise ExcRaiser404(message='Item not found')
+
+            if data:
+                for k, v in data.items():
+                    if v is not None:
+                        setattr(item, k, v)
+
+            if category_ids is not None:
+                item.categories = (
+                    self.db.query(Categories)
+                    .filter(Categories.id.in_(category_ids))
+                    .all()
+                )
+            if sub_category_ids is not None:
+                item.sub_categories = (
+                    self.db.query(Subcategory)
+                    .filter(Subcategory.id.in_(sub_category_ids))
+                    .all()
+                )
+
+            self.db.commit()
+            self.db.refresh(item)
+            return [item]
+        except Exception as e:
+            self.db.rollback()
+            raise e
 
     @no_db_error
     async def get_by_seller_id(

@@ -24,13 +24,13 @@ class CreateItemSchema(BaseModel):
         description="Description of the Item",
         examples=["This is a test item."]
     )
-    category_id: str = Field(
-        description="ID of the Category",
-        examples=["CAT001"]
+    category_ids: list[str] = Field(
+        description="IDs of the Categories",
+        examples=[["CAT001", "CAT002"]]
     )
-    sub_category_id: str = Field(
-        description="ID of the Subcategory",
-        examples=["SUBCAT001"]
+    sub_category_ids: list[str] = Field(
+        description="IDs of the Subcategories",
+        examples=[["SUBCAT001"]]
     )
 
     model_config = {"from_attributes": True, 'extra': 'ignore'}
@@ -39,7 +39,9 @@ class CreateItemSchema(BaseModel):
 class UpdateItemSchema(BaseModel):
     model_config = {"from_attributes": True, 'extra': 'ignore'}
     name: Optional[str] = Field(default=None)
-    description: Optional[str] = Field(default=None)    
+    description: Optional[str] = Field(default=None)
+    category_ids: Optional[list[str]] = Field(default=None)
+    sub_category_ids: Optional[list[str]] = Field(default=None)
     image_link: Optional[ImageLinkObj] = Field(default=None) # Watch for errors
     image_link_2: Optional[ImageLinkObj] = Field(default=None)
     image_link_3: Optional[ImageLinkObj] = Field(default=None)
@@ -69,6 +71,8 @@ class UpdateItemSchema(BaseModel):
 class GetItemSchema(UpdateItemSchema):
     id: UUID
     users_id: UUID
+    category_ids: list[str] = Field(default_factory=list)
+    sub_category_ids: list[str] = Field(default_factory=list)
 
 
 class CreateCategorySchema(BaseModel):
