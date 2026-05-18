@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from fastapi import WebSocket
 
 from server.config import redis_store, app_configs, notification_messages
-from server.models.items import Items
+from server.models.items import Items, Categories, Subcategory
 from server.enums.notification_enums import NotificationClasses
 from server.enums.auction_enums import AuctionStatus
 from server.enums.payment_enums import PaymentStatus
@@ -68,9 +68,28 @@ class AuctionServices(BaseService):
             item: dict = data.pop('item')
             user_id = data.get('users_id')
             item['users_id'] = user_id
+            category_ids = item.pop('category_ids', [])
+            sub_category_ids = item.pop('sub_category_ids', [])
             data['item'] = [Items(**item)]
             data['status'] = AuctionStatus(data.get('status'))
             result = await self.repo.add(data)
+
+            # Assign M2M categories to the item after the auction row is committed
+            new_item = result.item[0]
+            if category_ids:
+                new_item.categories = (
+                    self.repo.db.query(Categories)
+                    .filter(Categories.id.in_(category_ids))
+                    .all()
+                )
+            if sub_category_ids:
+                new_item.sub_categories = (
+                    self.repo.db.query(Subcategory)
+                    .filter(Subcategory.id.in_(sub_category_ids))
+                    .all()
+                )
+            self.repo.db.commit()
+            self.repo.db.refresh(new_item)
             if result.private == True:
                 for p in participants:
                     await self.create_participants(

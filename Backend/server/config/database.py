@@ -123,7 +123,18 @@ def init_db():
     print("✅ Registered models:", list(Base.metadata.tables.keys()))
 
 
-# -----------------------------------------------------------------------------
+def recreate_db():
+    """Drops and recreates the entire database schema. Use with caution."""
+    if environment != "production":
+        with engine.begin() as conn:
+            print(f"⚠️  Dropping database schema '{default_schema}'...")
+            Base.metadata.drop_all(bind=conn)
+            print(f"✅ Creating database schema '{default_schema}'...")
+            Base.metadata.create_all(bind=conn)
+    else:
+        print("⛔ Cannot recreate database in production environment!")
+
+
 # Dependency for FastAPI
 # -----------------------------------------------------------------------------
 def get_db() -> Generator[Session, None, None]:

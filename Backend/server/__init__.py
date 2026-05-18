@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import close_all_sessions
-from server.config import app_configs, init_db, get_db, engine
+from server.config import app_configs, init_db, recreate_db, engine
 from server.controllers import routes
 from server.middlewares.multipart_large_file import LargeFileMiddleware
 from server.middlewares.exception_handler import (
@@ -51,8 +51,10 @@ def create_app(app_name: str = "temporary") -> FastAPI:
     def redirect():
         return RedirectResponse(url=app_configs.SWAGGER_DOCS_URL, status_code=302)
 
-    @app.get("/status", include_in_schema=False)
+    @app.get("/status")
     def status():
+        """ "Get running status of server"""
+
         return {"status": "running ✅"}
 
     app.exception_handlers = {
@@ -66,15 +68,31 @@ def create_app(app_name: str = "temporary") -> FastAPI:
     app.include_router(routes)
     init_db()
 
-    @app.get("/sqlpool", include_in_schema=False)
+    @app.get("/sqlpool")
     def sql_pool():
+        """ "Get current status of SQL connection pool"""
         return {"status": "running", "pool_status": engine.pool.status()}
 
-    @app.get("/clear_pool", include_in_schema=False)
+    @app.get("/clear_pool")
     def clear_pool():
+        """ "Clear all connections in the SQL connection pool"""
         close_all_sessions()
         engine.dispose()
         return {"status": "running", "pool_status": engine.pool.status()}
+
+    @app.get("/recreate_db")
+    def recreate_database():
+        """recreates the entire database schema. Use with caution! (Dev mode only)"""
+        if app_configs.ENV == "production":
+            return {
+                "status": "running",
+                "message": "⛔ Cannot recreate database in production environment!",
+            }
+        recreate_db()
+        return {
+            "status": "running",
+            "message": "Database schema recreated successfully!",
+        }
 
     return app
 
