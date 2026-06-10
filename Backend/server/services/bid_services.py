@@ -1,4 +1,5 @@
 from datetime import datetime
+from server.utils.datetime_utils import now_utc
 import json
 from fastapi import WebSocket
 from sqlalchemy.orm import Session
@@ -61,7 +62,7 @@ class BidServices(BaseService):
         try:
             user = await self.user_repo.get_by_id(data.user_id)
             auction = await self.auction_repo.get_by_id(data.auction_id)
-            date = datetime.now().astimezone()
+            date = now_utc()
             data.amount = auction.buy_now_price
 
             if auction.status != AuctionStatus.ACTIVE:
@@ -128,7 +129,7 @@ class BidServices(BaseService):
             )
             user = await self.user_repo.get_by_id(data.user_id)
             auction = await self.auction_repo.get_by_id(data.auction_id)
-            date = datetime.now().astimezone()
+            date = now_utc()
 
             if auction.status != AuctionStatus.ACTIVE:
                 raise ExcRaiser400('Auction is not active')

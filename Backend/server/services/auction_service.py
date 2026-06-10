@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from server.utils.datetime_utils import now_utc
 import inspect
 from sqlalchemy.orm import Session
 from fastapi import WebSocket
@@ -298,7 +299,7 @@ class AuctionServices(BaseService):
                         to_id=auction.users_id,
                         auction_id=auction.id,
                         amount=winner.amount,
-                        due_data=datetime.now().astimezone()
+                        due_data=now_utc()
                         + timedelta(minutes=app_configs.PAYMENT_DUE_DAYS),
                     ),
                     caller=caller,
@@ -420,7 +421,7 @@ class AuctionServices(BaseService):
                 payment,
                 {
                     "status": PaymentStatus.INSPECTING,
-                    "due_data": datetime.now().astimezone() + timedelta(days=5),
+                    "due_data": now_utc() + timedelta(days=5),
                 },
             )
             return True
@@ -495,7 +496,7 @@ class AuctionServices(BaseService):
                     detail='Payment is already in process or completed'
                 )
             payment_.status = PaymentStatus.REFUNDING
-            payment_.due_data = datetime.now().astimezone() + timedelta(days=3)
+            payment_.due_data = now_utc() + timedelta(days=3)
             payment_.refund_requested = True
             payment_.seller_refund_confirmed = False
             payment_ = payment_.model_dump(

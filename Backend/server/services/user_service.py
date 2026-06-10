@@ -53,7 +53,8 @@ from server.middlewares.exception_handler import (
 from server.events import (
     publish_reset_token,
     publish_otp,
-    publish_fund_account
+    publish_fund_account,
+    publish_withdrawal,
 )
 from fastapi import HTTPException
 
@@ -251,7 +252,7 @@ class UserWalletTransactionServices(BaseService):
                         title=NOTIF_TITLE, message=NOTIF_MESSAGE, user_id=user.id
                     )
                 )
-                # await publish_fund_account(pub_data)
+                await publish_fund_account(pub_data)
                 # Reward user for funding wallet
                 if transaction.status == TransactionStatus.COMPLETED:
                     _ = await self.reward_service.save_reward_history(
@@ -334,7 +335,7 @@ class UserWalletTransactionServices(BaseService):
                         title=NOTIF_TITLE, message=NOTIF_MESSAGE, user_id=user.id
                     )
                 )
-                # await publish_fund_account(pub_data)
+                await publish_withdrawal(pub_data)
             return
         except ExcRaiser as e:
             raise

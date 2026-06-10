@@ -19,7 +19,7 @@ class CreatePaymentSchema(BaseModel):
     auction_id: Union[UUID, str]
     amount: float
     due_data: datetime = Field(
-        default=(datetime.now().astimezone() + timedelta(days=5))
+        default_factory=lambda: datetime.now(timezone.utc) + timedelta(days=5)
     )
     refund_requested: bool = Field(default=False)
     seller_refund_confirmed: bool = Field(default=False)

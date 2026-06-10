@@ -182,7 +182,7 @@ class WalletTransactions(BaseModel):
     )
     amount = Column(Float, nullable=False, default=0.00)
     description = Column(String, nullable=True)
-    reference_id = Column(String, index=True)
+    reference_id = Column(String, index=True, unique=True)
     transaction_type = Column(
         ENUM(
             TransactionTypes, name='transaction_types',

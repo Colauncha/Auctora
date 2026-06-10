@@ -36,11 +36,12 @@ async def send_bid_placed_mail(data):
         logging.error('❌ No email provided in data for bid placed')
         return
     async with Emailer(
-        subject='Bid Placed Successfully',
+        subject="Bid Placed Successfully",
         template_name="bid_placed_template.html",
-        to=data.get('email'),
-        user=data.get('user'),
-        link=data.get('link'),
+        to=data.get("email"),
+        user=data.get("user"),
+        link=data.get("link"),
+        reply_to="support@biddius.com",
     ) as emailer:
         await emailer.send_message()
     await sleep(0.5)
@@ -54,10 +55,10 @@ async def send_reset_token_mail(data):
         logging.error('❌ No email or token provided in data for reset token')
         return
     async with Emailer(
-        subject='Reset Password',
+        subject="Reset Password",
         template_name="reset_token_template.html",
-        to=data.get('email'),
-        token=data.get('token')
+        to=data.get("email"),
+        token=data.get("token"),
     ) as emailer:
         await emailer.send_message()
 
@@ -71,10 +72,11 @@ async def send_outbid_mail(data):
         logging.error('❌ No email provided in data for outbid')
         return
     async with Emailer(
-        subject='You Have been Outbid!',
+        subject="You Have been Outbid!",
         template_name="outbid_template.html",
-        to=data.get('email'),
-        link=data.get('link'),
+        to=data.get("email"),
+        link=data.get("link"),
+        reply_to="support@biddius.com",
     ) as emailer:
         await emailer.send_message()
     await sleep(0.5)
@@ -88,18 +90,23 @@ async def send_auction_created_mail(data):
         logging.error('❌ No email provided in data for auction creation')
         return
     async with Emailer(
-        subject='You Are Invited to Participate in an Auction!',
+        subject="You Are Invited to Participate in an Auction!",
         template_name="participant_invite_template.html",
-        to=data.get('email'),
-        link=data.get('link'),
-               name=data.get('item')['name'] if data.get('item') else 'N/A',
-        description=data.get('item')['description'] if data.get('item') else 'N/A',
-        start_price=data.get('auction')['start_price'] if data.get('auction') else 'N/A',
-        current_price=data.get('auction')['current_price'] if data.get('auction') else 'N/A',
-        start_date=data.get('auction')['start_date'] if data.get('auction') else 'N/A',
-        end_date=data.get('auction')['end_date'] if data.get('auction') else 'N/A',
-        item_image=data.get('item_image') if data.get('item_image') else None,
-        auction=data.get('auction'),
+        to=data.get("email"),
+        link=data.get("link"),
+        name=data.get("item")["name"] if data.get("item") else "N/A",
+        description=data.get("item")["description"] if data.get("item") else "N/A",
+        start_price=(
+            data.get("auction")["start_price"] if data.get("auction") else "N/A"
+        ),
+        current_price=(
+            data.get("auction")["current_price"] if data.get("auction") else "N/A"
+        ),
+        start_date=data.get("auction")["start_date"] if data.get("auction") else "N/A",
+        end_date=data.get("auction")["end_date"] if data.get("auction") else "N/A",
+        item_image=data.get("item_image") if data.get("item_image") else None,
+        auction=data.get("auction"),
+        reply_to="support@biddius.com",
     ) as emailer:
         await emailer.send_message()
     await sleep(0.5)
@@ -113,11 +120,12 @@ async def send_win_auction_mail(data):
         logging.error('❌ No email provided in data for winning auction')
         return
     async with Emailer(
-        subject='Auction Won',
+        subject="Auction Won",
         template_name="win_auction_template.html",
-        to=data.get('email'),
-        user=data.get('user'),
-        link=data.get('link'),
+        to=data.get("email"),
+        user=data.get("user"),
+        link=data.get("link"),
+        reply_to="support@biddius.com",
     ) as emailer:
         await emailer.send_message()
     await sleep(0.5)
@@ -132,19 +140,24 @@ async def send_part_invite_mail(data):
         return
     print(f'From subscriber.send_part_invite_mail:\n{data}')
     async with Emailer(
-        subject='You Are Invited to Participate in an Auction!',
+        subject="You Are Invited to Participate in an Auction!",
         template_name="participant_invite_template.html",
-        to=data.get('email'),
-        link=data.get('link'),
-        signup_link=data.get('sign_up_link'),
-        name=data.get('item')['name'] if data.get('item') else 'N/A',
-        description=data.get('item')['description'] if data.get('item') else 'N/A',
-        start_price=data.get('auction')['start_price'] if data.get('auction') else 'N/A',
-        current_price=data.get('auction')['current_price'] if data.get('auction') else 'N/A',
-        start_date=data.get('auction')['start_date'] if data.get('auction') else 'N/A',
-        end_date=data.get('auction')['end_date'] if data.get('auction') else 'N/A',
-        item_image=data.get('item_image') if data.get('item_image') else None,
-        auction=data.get('auction'),
+        to=data.get("email"),
+        link=data.get("link"),
+        signup_link=data.get("sign_up_link"),
+        name=data.get("item")["name"] if data.get("item") else "N/A",
+        description=data.get("item")["description"] if data.get("item") else "N/A",
+        start_price=(
+            data.get("auction")["start_price"] if data.get("auction") else "N/A"
+        ),
+        current_price=(
+            data.get("auction")["current_price"] if data.get("auction") else "N/A"
+        ),
+        start_date=data.get("auction")["start_date"] if data.get("auction") else "N/A",
+        end_date=data.get("auction")["end_date"] if data.get("auction") else "N/A",
+        item_image=data.get("item_image") if data.get("item_image") else None,
+        auction=data.get("auction"),
+        reply_to="support@biddius.com",
     ) as emailer:
         await emailer.send_message()
     await sleep(0.5)
@@ -158,13 +171,35 @@ async def send_fund_account_mail(data):
         logging.error('❌ No email provided in data for funding account')
         return
     async with Emailer(
-        subject='Transaction Receipt',
+        subject="Transaction Receipt",
         template_name="funding_account_template.html",
+        to=data.get("email"),
+        amount=data.get("amount"),
+        reference=data.get("reference_id"),
+        type=data.get("transaction_type"),
+        status=data.get("status"),
+        reply_to="support@biddius.com",
+    ) as emailer:
+        await emailer.send_message()
+    await sleep(0.5)
+    logging.info(f'♻ Type: {type(data)} -- {data}')
+    logging.info('➡ sent ✅')
+
+
+async def send_withdrawal_mail(data):
+    logging.info('📨 Sending Withdrawal Receipt mail 📫')
+    if data.get('email') is None:
+        logging.error('❌ No email provided in data for withdrawal receipt')
+        return
+    async with Emailer(
+        subject='Withdrawal Receipt',
+        template_name="wallet_withdrawal_template.html",
         to=data.get('email'),
         amount=data.get('amount'),
         reference=data.get('reference_id'),
         type=data.get('transaction_type'),
         status=data.get('status'),
+        reply_to="support@biddius.com",
     ) as emailer:
         await emailer.send_message()
     await sleep(0.5)
@@ -179,6 +214,30 @@ async def send_contact_us_mail(data):
     logging.info('➡ sent ✅')
 
 
+MAX_ATTEMPTS = 3
+BASE_BACKOFF = 2  # seconds, doubles each retry (2, 4, 8...)
+
+
+async def execute_with_retry(task, data, channel):
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            await task(data)
+            return
+        except Exception as e:
+            if attempt >= MAX_ATTEMPTS:
+                logging.error(
+                    f"💀 Dead letter: channel={channel} failed after "
+                    f"{MAX_ATTEMPTS} attempts. Last error: {e}"
+                )
+                return
+            backoff = BASE_BACKOFF**attempt
+            logging.warning(
+                f"⚠ Attempt {attempt}/{MAX_ATTEMPTS} failed for channel={channel}, "
+                f"retrying in {backoff}s. Error: {e}"
+            )
+            await sleep(backoff)
+
+
 channels = {
     'OTP-sender': send_otp_mail,
     'Bid-placed': send_bid_placed_mail,
@@ -187,7 +246,7 @@ channels = {
     'Create-Auction': send_auction_created_mail,
     'Win-Auction': send_win_auction_mail,
     'Fund-Account': send_fund_account_mail,
-    # 'Withdrawal': send_withdrawal_mail,
+    'Withdrawal': send_withdrawal_mail,
     'Contact-us': send_contact_us_mail,
     'Refund-Req-Buyer': send_contact_us_mail,
     'Refund-Req-Seller': send_contact_us_mail,
@@ -201,14 +260,18 @@ async def listner():
     await sub.subscribe(*channels.keys())
 
     while True:
-        message = await sub.get_message(ignore_subscribe_messages=True)
-        if message:
-            logging.info(f'➡ INFO: {message}')
-            channel = message.get('channel')
-            data = json.loads(message.get('data'))
-            task = channels.get(channel, 'OTP-sender')
-            await task(data)
-        await sleep(0.2)
+        try:
+            message = await sub.get_message(ignore_subscribe_messages=True)
+            if message:
+                logging.info(f"➡ INFO: {message}")
+                channel = message.get("channel")
+                data = json.loads(message.get("data"))
+                task = channels.get(channel, "OTP-sender")
+                await execute_with_retry(task, data, channel)
+            await sleep(0.2)
+        except Exception as e:
+            logging.error(f"❌ Error processing message: {e}")
+            await sleep(1)
 
 
 if __name__ == '__main__':

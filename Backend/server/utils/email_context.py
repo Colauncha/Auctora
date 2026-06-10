@@ -45,7 +45,11 @@ class Emailer:
         self.server: SMTP_SSL = smtplib.SMTP_SSL(self.SERVER, self.PORT)
         self.server.login(self.email, self.password)
         self.message["Subject"] = self.SUBJECT
-        self.message["From"] = self.FROM
+        self.message["From"] = (
+            f"Biddius <{self.FROM}>"
+            if self.REPLY_TO
+            else f"Biddius no_reply<{self.FROM}>"
+        )
         self.message["To"] = self.TO
 
         if self.REPLY_TO:
@@ -75,7 +79,7 @@ class Emailer:
         # TODO: check user settings if `to` allows emails
         self.server.send_message(self.message)
         await self.close()
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         try:
             if self.server:

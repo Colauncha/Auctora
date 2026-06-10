@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime, timezone
+from server.utils.datetime_utils import now_utc
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
@@ -48,9 +49,10 @@ async def update_status(auctionServices: AuctionServices):
     try:
         update = False
         # Query events where the status needs updating
+        _now = now_utc()
         events = session.query(Auctions).filter(
-            (Auctions.status == AuctionStatus.PENDING and Auctions.start_date <= datetime.now()) |
-            (Auctions.status == AuctionStatus.ACTIVE and Auctions.end_date <= datetime.now())
+            (Auctions.status == AuctionStatus.PENDING) & (Auctions.start_date <= _now) |
+            (Auctions.status == AuctionStatus.ACTIVE) & (Auctions.end_date <= _now)
         ).with_for_update().all()
 
         for event in events:
@@ -85,7 +87,7 @@ async def process_intra_payment(auctionServices: AuctionServices):
     update = False
 
     try:
-        current_time = datetime.now().astimezone()
+        current_time = now_utc()
 
         # Auto-finalize PENDING and INSPECTING payments that have passed their due date
         finalize_events = session.query(Payments).filter(
