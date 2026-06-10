@@ -2,11 +2,13 @@
 Copyright (c) 12/2024 - iyanuajimobi12@gmail.com
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import close_all_sessions
-from server.config import app_configs, init_db, recreate_db, engine
+from server.config import app_configs, init_db, init_db_async, recreate_db, engine, async_engine
 from server.controllers import routes
 from server.middlewares.multipart_large_file import LargeFileMiddleware
 from server.middlewares.exception_handler import (
@@ -24,18 +26,29 @@ from server.middlewares.exception_handler import (
 )
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if async_engine is not None:
+        await init_db_async()
+    else:
+        init_db()
+    yield
+    if async_engine is not None:
+        await async_engine.dispose()
+
+
 def create_app(app_name: str = "temporary") -> FastAPI:
     """
     The create_app function is the entry point for our application.
     """
 
-    # inject global dependencies
     app = FastAPI(
         title=app_configs.APP_NAME.capitalize(),
         description=f"{app_configs.APP_NAME.capitalize()}'s Api Documentation",
         docs_url=app_configs.SWAGGER_DOCS_URL,
         redoc_url=app_configs.SWAGGER_DOCS_URL + "2",
         version="1.1.0",
+        lifespan=lifespan,
     )
 
     app.add_middleware(
@@ -53,8 +66,6 @@ def create_app(app_name: str = "temporary") -> FastAPI:
 
     @app.get("/status")
     def status():
-        """ "Get running status of server"""
-
         return {"status": "running ✅"}
 
     app.exception_handlers = {
@@ -66,23 +77,23 @@ def create_app(app_name: str = "temporary") -> FastAPI:
         OperationalError: db_exception_handler,
     }
     app.include_router(routes)
-    init_db()
 
     @app.get("/sqlpool")
     def sql_pool():
-        """ "Get current status of SQL connection pool"""
-        return {"status": "running", "pool_status": engine.pool.status()}
+        pool_info = {"sync": engine.pool.status()}
+        if async_engine is not None:
+            pool_info["async"] = async_engine.pool.status()
+        return {"status": "running", "pool_status": pool_info}
 
     @app.get("/clear_pool")
     def clear_pool():
-        """ "Clear all connections in the SQL connection pool"""
         close_all_sessions()
         engine.dispose()
         return {"status": "running", "pool_status": engine.pool.status()}
 
     @app.get("/recreate_db")
     def recreate_database():
-        """recreates the entire database schema. Use with caution! (Dev mode only)"""
+        """Drops and recreates the entire database schema. Dev mode only."""
         if app_configs.ENV == "production":
             return {
                 "status": "running",

@@ -5,14 +5,13 @@ Ensures schema creation before table creation, and safe Base import order.
 """
 
 import os
-from contextlib import contextmanager
 from typing import Generator, AsyncGenerator
-from sqlalchemy import create_engine, schema, text, event
-from sqlalchemy.orm import (
-    declarative_base,
-    sessionmaker,
-    scoped_session,
-    Session,
+from sqlalchemy import create_engine, schema, text
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from sqlalchemy.ext.asyncio import (
+    create_async_engine,
+    AsyncSession,
+    async_sessionmaker,
 )
 from redis import StrictRedis as SyncRedis
 from redis.asyncio import StrictRedis as AsyncRedis
@@ -30,23 +29,8 @@ environment = os.getenv("ENV", "test")
 print(f"🔧 Environment: {environment}")
 
 # -----------------------------------------------------------------------------
-# Database Engine
+# Database Engine (sync — kept for auction_status_updater and legacy repos)
 # -----------------------------------------------------------------------------
-if environment == "test":
-    DATABASE_URL = app_configs.DB.TEST_DATABASE
-    print("🧪 Using TEST database")
-else:
-    DATABASE_URL = app_configs.DB.DATABASE_URL
-    print(f"🏗️ Using DATABASE: {DATABASE_URL}")
-
-# engine = create_engine(
-#     DATABASE_URL,
-#     pool_size=10 if environment != "test" else None,
-#     max_overflow=5 if environment != "test" else None,
-#     pool_recycle=3600 if environment != "test" else None,
-#     isolation_level="READ COMMITTED",
-# )
-
 engine = (
     create_engine(app_configs.DB.TEST_DATABASE)
     if environment == "test"
@@ -55,21 +39,33 @@ engine = (
         pool_size=10,
         max_overflow=6,
         pool_recycle=600,
+        pool_timeout=5,
         pool_pre_ping=True,
         isolation_level="READ COMMITTED",
     )
 )
 
+# -----------------------------------------------------------------------------
+# Async Engine (target for all FastAPI request handling)
+# -----------------------------------------------------------------------------
+def _async_url(url: str) -> str:
+    return (
+        url.replace("postgresql+psycopg2://", "postgresql+asyncpg://")
+           .replace("postgresql://", "postgresql+asyncpg://")
+    )
 
-# @event.listens_for(engine, "checkout")
-# def receive_checkout(dbapi_connection, connection_record, connection_proxy):
-#     print(f"Connection checked out! Current status: {engine.pool.status()}")
-
-
-# @event.listens_for(engine, "checkin")
-# def receive_checkin(dbapi_connection, connection_record):
-#     print(f"Connection returned! Current status: {engine.pool.status()}")
-
+async_engine = (
+    None  # aiosqlite not wired up for test env; use sync engine in tests
+    if environment == "test"
+    else create_async_engine(
+        _async_url(app_configs.DB.DATABASE_URL),
+        pool_size=10,
+        max_overflow=6,
+        pool_recycle=600,
+        pool_timeout=5,
+        pool_pre_ping=True,
+    )
+)
 
 # -----------------------------------------------------------------------------
 # Declarative Base
@@ -82,17 +78,28 @@ else:
 Base = declarative_base(metadata=schema.MetaData(schema=default_schema))
 
 # -----------------------------------------------------------------------------
-# Session
+# Session factories
 # -----------------------------------------------------------------------------
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
-Base.query = scoped_session(SessionLocal).query_property()
+
+# expire_on_commit=False keeps ORM objects usable after commit without
+# re-querying — essential for async where implicit lazy IO is not allowed.
+AsyncSessionLocal = (
+    None
+    if async_engine is None
+    else async_sessionmaker(
+        async_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+)
 
 # -----------------------------------------------------------------------------
 # Schema + Table Initialization
 # -----------------------------------------------------------------------------
 def import_all_models():
     """Dynamically imports all model modules under `server.models`."""
-    import server.models  # ensure models package is imported
+    import server.models
 
     package = server.models
     for _, module_name, _ in pkgutil.iter_modules(package.__path__):
@@ -102,24 +109,28 @@ def import_all_models():
 
 def init_db():
     """
-    Initializes the database schema and creates all tables.
-    Ensures:
-    1. Schema exists
-    2. All models are imported and registered
-    3. Tables and ENUMs are created in the correct schema, in the same transaction
+    Initializes the database schema and creates all tables (sync).
+    Used by the auction_status_updater process and test setup.
     """
-    # Import models AFTER Base is defined, BEFORE schema creation
     import_all_models()
-
     with engine.begin() as conn:
         print(f"🗄️  Initializing database schema '{default_schema}'...")
-        # 1️⃣ Create schema (inside same transaction)
-        res = conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {default_schema}"))
-        print(f"✅ Ensured schema '{res}' exists.")
-
-        # 2️⃣ Bind Base to this same connection so ENUMs are created correctly
+        conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {default_schema}"))
         Base.metadata.create_all(bind=conn)
+    print("✅ Registered models:", list(Base.metadata.tables.keys()))
 
+
+async def init_db_async():
+    """
+    Initializes the database schema and creates all tables (async).
+    Called from the FastAPI lifespan on startup.
+    """
+    import_all_models()
+    assert async_engine is not None, "async_engine is not configured (test env?)"
+    async with async_engine.begin() as conn:
+        print(f"🗄️  Initializing database schema '{default_schema}'...")
+        await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {default_schema}"))
+        await conn.run_sync(Base.metadata.create_all)
     print("✅ Registered models:", list(Base.metadata.tables.keys()))
 
 
@@ -135,44 +146,40 @@ def recreate_db():
         print("⛔ Cannot recreate database in production environment!")
 
 
-# Dependency for FastAPI
+# -----------------------------------------------------------------------------
+# FastAPI dependency — sync (legacy; migrate repos to get_async_db in Phase 3)
 # -----------------------------------------------------------------------------
 def get_db() -> Generator[Session, None, None]:
-    """Yields a database session for dependency injection."""
     db: Session = SessionLocal()
     try:
         yield db
     finally:
-        db.expire_on_commit
         db.close()
 
 
-# def get_db() -> Iterator[Session]:
-#     try:
-#         db: Session = SessionLocal()
-#         yield db
-#     except Exception as e:
-#         raise e
-#     finally:
-#         db.expire_on_commit
-#         db.close()
+# -----------------------------------------------------------------------------
+# FastAPI dependency — async (target for all new and migrated repos)
+# -----------------------------------------------------------------------------
+async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
+    assert AsyncSessionLocal is not None, "AsyncSessionLocal not configured"
+    async with AsyncSessionLocal() as session:
+        yield session
 
 
+# -----------------------------------------------------------------------------
+# Redis
+# -----------------------------------------------------------------------------
 class RedisStorage:
     REDIS_URL = app_configs.DB.REDIS_URL
+
     def __init__(self) -> None:
         self.redis = self.get_redis()
         self.async_redis = None
 
     def get_redis(self) -> SyncRedis:
-        """Get a synchronous Redis connection."""
-        redis = SyncRedis.from_url(
-            url=self.REDIS_URL, decode_responses=True
-        )
-        return redis
+        return SyncRedis.from_url(url=self.REDIS_URL, decode_responses=True)
 
     async def get_async_redis(self) -> AsyncRedis:
-        """Get an asynchronous Redis connection."""
         if self.async_redis is None:
             self.async_redis = await AsyncRedis.from_url(
                 url=self.REDIS_URL, decode_responses=True
@@ -180,7 +187,5 @@ class RedisStorage:
         return self.async_redis
 
     async def get_pubsub_redis(self) -> AsyncRedis:
-        """Get a dedicated async Redis connection for pubsub use.
-        Pubsub changes the connection state, so it must not share the
-        general-purpose async connection."""
+        """Dedicated async connection for pubsub — must not share general-purpose connection."""
         return await AsyncRedis.from_url(url=self.REDIS_URL, decode_responses=True)

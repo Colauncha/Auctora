@@ -104,20 +104,22 @@ class AuctionServices(BaseService):
                 links=[f"{app_configs.FRONTEND_URL}/product-details/{result.id}"],
                 class_name=NotificationClasses.AUCTION.value,
             )
+            _ = await self.reward_service.save_reward_history(
+                user_id, reward_type="LIST_PRODUCT"
+            )
+            # Serialize before releasing the connection so Redis publish has no DB dependency
+            validated_result = GetAuctionSchema.model_validate(result)
+            self.repo.db.close()
             await publ.publish_create_auction(
                 {
                     'email': data.get('users_email'),
-                    'link': f'{app_configs.FRONTEND_URL}/product-details/{result.id}',
-                    'auction': result,
+                    'link': f'{app_configs.FRONTEND_URL}/product-details/{validated_result.id}',
+                    'auction': validated_result,
                     'item': item,
                     'item_image': item.get('image_link').get('link') if item.get('image_link') else None,
                 }
             )
-            # Reward user for listing product
-            _ = await self.reward_service.save_reward_history(
-                user_id, reward_type="LIST_PRODUCT"
-            )
-            return GetAuctionSchema.model_validate(result)
+            return validated_result
         except ExcRaiser as e:
             raise
         except Exception as e:
