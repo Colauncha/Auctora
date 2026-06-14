@@ -2,7 +2,8 @@ import math
 from typing import Any, Union
 from functools import wraps
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select, update as sa_update, func
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.config.app_configs import app_configs
 from server.models.base import BaseModel
@@ -42,18 +43,15 @@ def no_db_error(func):
 
 
 class Repository:
-    """Store Access"""
-    db: Session = None
+    """Store Access (async)"""
+    db: AsyncSession = None
     def __init__(self, model: BaseModel):
         self._Model = model
         self._inspect = ExtInspect(self.__class__.__name__)
         self.configs = app_configs
 
-    def attachDB(self, db: Session):
+    def attachDB(self, db: AsyncSession):
         """Attach database session to the repository"""
-        if not db:
-            pass
-            # raise ExcRaiser(message='DB not found or attached')
         self.db = db
         return self
 
@@ -64,11 +62,11 @@ class Repository:
             new_entity = self._Model(**entity)
 
             self.db.add(new_entity)
-            self.db.commit()
-            self.db.refresh(new_entity)
+            await self.db.commit()
+            await self.db.refresh(new_entity)
             return new_entity
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             if self.configs.DEBUG:
                 self._inspect.info()
                 print(e)
@@ -83,11 +81,11 @@ class Repository:
                     setattr(entity, k, v)
             if not entity.id:
                 self.db.add(entity)
-            self.db.commit()
-            self.db.refresh(entity)
+            await self.db.commit()
+            await self.db.refresh(entity)
             return entity
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             if self.configs.DEBUG:
                 self._inspect.info()
                 raise e
@@ -96,10 +94,12 @@ class Repository:
     @no_db_error
     async def get_by_id(self, id: str):
         try:
-            entity = self.db.query(self._Model).filter(self._Model.id == id).order_by(self._Model.id)
-            if entity:
-                return entity.first()
-            raise ExcRaiser404(message='Entity not found')
+            result = await self.db.execute(
+                select(self._Model)
+                .filter(self._Model.id == id)
+                .order_by(self._Model.id)
+            )
+            return result.scalars().first()
         except Exception as e:
             if self.configs.DEBUG:
                 self._inspect.info()
@@ -109,12 +109,12 @@ class Repository:
     @no_db_error
     async def get_by_attr(self, attr: dict[str, str | Any], many: bool = False):
         try:
-            entity = self.db.query(self._Model).filter_by(**attr)
-            if entity and not many:
-                return entity.first()
-            elif entity and many:
-                return entity.all()
-            return None
+            result = await self.db.execute(
+                select(self._Model).filter_by(**attr)
+            )
+            if many:
+                return result.scalars().all()
+            return result.scalars().first()
         except Exception as e:
             if self.configs.DEBUG:
                 self._inspect.info()
@@ -129,14 +129,25 @@ class Repository:
         ) -> T:
         """Updates entity"""
         try:
-            entity_to_update = self.db.query(self._Model).filter_by(id=entity.id or str(entity.id))
-            if entity_to_update is None:
+            _id = entity.id or str(entity.id)
+            exists = (await self.db.execute(
+                select(self._Model).filter_by(id=_id)
+            )).scalars().first()
+            if exists is None:
                 raise ExcRaiser404(message='Entity not found')
-            entity_to_update.update(data, synchronize_session="evaluate")
-            self.db.commit()
-            return entity_to_update.all()
+            await self.db.execute(
+                sa_update(self._Model)
+                .where(self._Model.id == _id)
+                .values(**data)
+                .execution_options(synchronize_session="fetch")
+            )
+            await self.db.commit()
+            refreshed = await self.db.execute(
+                select(self._Model).filter_by(id=_id)
+            )
+            return refreshed.scalars().all()
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             if self.configs.DEBUG:
                 self._inspect.info()
                 raise e
@@ -154,7 +165,9 @@ class Repository:
         try:
             if not data:
                 raise ValueError("Data cannot be None or empty")
-            entity = self.db.query(model).filter_by(id=id).first()
+            entity = (await self.db.execute(
+                select(model).filter_by(id=id)
+            )).scalars().first()
             if entity is None:
                 raise ExcRaiser404(message='Entity not found')
 
@@ -170,10 +183,10 @@ class Repository:
                 raise ExcRaiser404(message="Attribute doesn't exist")
 
             self.db.add(entity)
-            self.db.commit()
+            await self.db.commit()
             return entity
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             if self.configs.DEBUG:
                 self._inspect.info()
                 raise e
@@ -182,8 +195,8 @@ class Repository:
     @no_db_error
     async def delete(self, entity: BaseModel) -> bool:
         try:
-            self.db.delete(entity)
-            self.db.commit()
+            await self.db.delete(entity)
+            await self.db.commit()
             return True
         except Exception as e:
             if self.configs.DEBUG:
@@ -193,13 +206,18 @@ class Repository:
 
     @no_db_error
     async def exists(self, filter: dict) -> bool:
-        entity = self.db.query(self._Model).filter_by(**filter).first()
-        return True if entity else False
+        result = await self.db.execute(
+            select(self._Model).filter_by(**filter)
+        )
+        return result.scalars().first() is not None
 
     @no_db_error
-    def all(self):
+    async def all(self):
         try:
-            return self.db.query(self._Model).order_by(self._Model.created_at).all()
+            result = await self.db.execute(
+                select(self._Model).order_by(self._Model.created_at)
+            )
+            return result.scalars().all()
         except Exception as e:
             if self.configs.DEBUG:
                 self._inspect.info()
@@ -222,19 +240,20 @@ class Repository:
         QueryModel = self._Model
 
         try:
+            stmt = select(QueryModel)
             if filter:
-                query = self.db.query(QueryModel).filter_by(**filter)
-                total = query.count()
-            else:
-                query = self.db.query(QueryModel)
-                total = query.count()
+                stmt = stmt.filter_by(**filter)
+            total = (await self.db.execute(
+                select(func.count()).select_from(stmt.subquery())
+            )).scalar() or 0
+
             order_by_clause = getattr(QueryModel, sort)
-            if order == "asc":
-                order_by_clause = order_by_clause.asc()
-            else:
-                order_by_clause = order_by_clause.desc()
-            query = query.order_by(order_by_clause)
-            results = query.limit(limit).offset(offset).all()
+            order_by_clause = (
+                order_by_clause.asc() if order == "asc"
+                else order_by_clause.desc()
+            )
+            stmt = stmt.order_by(order_by_clause).limit(limit).offset(offset)
+            results = (await self.db.execute(stmt)).scalars().all()
         except Exception as e:
             if self.configs.DEBUG:
                 self._inspect.info()
@@ -254,10 +273,12 @@ class Repository:
     @no_db_error
     async def count(self, filter: dict = None) -> int:
         try:
+            stmt = select(func.count()).select_from(self._Model)
             if filter:
-                total = self.db.query(self._Model).filter_by(**filter).count()
-            else:
-                total = self.db.query(self._Model).count()
+                stmt = select(func.count()).select_from(
+                    select(self._Model).filter_by(**filter).subquery()
+                )
+            total = (await self.db.execute(stmt)).scalar() or 0
             return total
         except Exception as e:
             if self.configs.DEBUG:

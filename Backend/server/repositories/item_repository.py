@@ -1,5 +1,5 @@
-from sqlalchemy import UUID
-from sqlalchemy.orm import Session
+from sqlalchemy import UUID, select, func
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.repositories.repository import Repository, no_db_error
 from server.models.items import Items, Categories, Subcategory
@@ -7,7 +7,7 @@ from server.schemas import GetItemSchema
 from server.middlewares.exception_handler import ExcRaiser404
 
 class ItemRepository(Repository):
-    def __init__(self, db: Session = None):
+    def __init__(self, db: AsyncSession = None):
         super().__init__(Items)
         if db:
             super().attachDB(db)
@@ -19,26 +19,22 @@ class ItemRepository(Repository):
         try:
             new_item = Items(**entity)
             self.db.add(new_item)
-            self.db.flush()
+            await self.db.flush()
 
             if category_ids:
-                new_item.categories = (
-                    self.db.query(Categories)
-                    .filter(Categories.id.in_(category_ids))
-                    .all()
-                )
+                new_item.categories = (await self.db.execute(
+                    select(Categories).filter(Categories.id.in_(category_ids))
+                )).scalars().all()
             if sub_category_ids:
-                new_item.sub_categories = (
-                    self.db.query(Subcategory)
-                    .filter(Subcategory.id.in_(sub_category_ids))
-                    .all()
-                )
+                new_item.sub_categories = (await self.db.execute(
+                    select(Subcategory).filter(Subcategory.id.in_(sub_category_ids))
+                )).scalars().all()
 
-            self.db.commit()
-            self.db.refresh(new_item)
+            await self.db.commit()
+            await self.db.refresh(new_item)
             return new_item
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             raise e
 
     @no_db_error
@@ -46,7 +42,9 @@ class ItemRepository(Repository):
         category_ids = data.pop('category_ids', None) if data else None
         sub_category_ids = data.pop('sub_category_ids', None) if data else None
         try:
-            item = self.db.query(Items).filter_by(id=entity.id or str(entity.id)).first()
+            item = (await self.db.execute(
+                select(Items).filter_by(id=entity.id or str(entity.id))
+            )).scalars().first()
             if item is None:
                 raise ExcRaiser404(message='Item not found')
 
@@ -56,23 +54,19 @@ class ItemRepository(Repository):
                         setattr(item, k, v)
 
             if category_ids is not None:
-                item.categories = (
-                    self.db.query(Categories)
-                    .filter(Categories.id.in_(category_ids))
-                    .all()
-                )
+                item.categories = (await self.db.execute(
+                    select(Categories).filter(Categories.id.in_(category_ids))
+                )).scalars().all()
             if sub_category_ids is not None:
-                item.sub_categories = (
-                    self.db.query(Subcategory)
-                    .filter(Subcategory.id.in_(sub_category_ids))
-                    .all()
-                )
+                item.sub_categories = (await self.db.execute(
+                    select(Subcategory).filter(Subcategory.id.in_(sub_category_ids))
+                )).scalars().all()
 
-            self.db.commit()
-            self.db.refresh(item)
+            await self.db.commit()
+            await self.db.refresh(item)
             return [item]
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             raise e
 
     @no_db_error
@@ -89,7 +83,7 @@ class ItemRepository(Repository):
 
 
 class CategoryRepository(Repository):
-    def __init__(self, db: Session = None):
+    def __init__(self, db: AsyncSession = None):
         super().__init__(Categories)
         if db:
             super().attachDB(db)
@@ -97,8 +91,12 @@ class CategoryRepository(Repository):
     @no_db_error
     async def count(self) -> dict[str, int]:
         try:
-            categories = self.db.query(Categories).count()
-            sub_category = self.db.query(Subcategory).count()
+            categories = (await self.db.execute(
+                select(func.count()).select_from(Categories)
+            )).scalar() or 0
+            sub_category = (await self.db.execute(
+                select(func.count()).select_from(Subcategory)
+            )).scalar() or 0
 
             return {
                 'categories': categories,
@@ -111,20 +109,30 @@ class CategoryRepository(Repository):
 
     @no_db_error
     def get_last_id(self) -> str:
-        last_cat = self.all()
+        # SYNC: invoked from the sync column-default path (helpers.py id
+        # generators) with a sync Session — must not touch the async API.
+        last_cat = (
+            self.db.query(self._Model)
+            .order_by(self._Model.created_at)
+            .all()
+        )
         if last_cat:
-            print(last_cat[-1].id)
             return last_cat[-1].id
 
 
 class SubCategoryRepository(Repository):
-    def __init__(self, db: Session = None):
+    def __init__(self, db: AsyncSession = None):
         super().__init__(Subcategory)
         if db:
             super().attachDB(db)
 
     @no_db_error
     def get_last_id(self) -> str:
-        last_sub_cat = self.all()
+        # SYNC: see CategoryRepository.get_last_id.
+        last_sub_cat = (
+            self.db.query(self._Model)
+            .order_by(self._Model.created_at)
+            .all()
+        )
         if last_sub_cat:
             return last_sub_cat[-1].id

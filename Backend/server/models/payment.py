@@ -47,9 +47,10 @@ class Payments(BaseModel):
     auction = relationship(
         'Auctions', back_populates='payment'
     )
+    # lazy="selectin": GetPaymentSchema serializes buyer and seller.
     buyer = relationship(
-        'Users', foreign_keys=[from_id]
+        'Users', foreign_keys=[from_id], lazy='selectin'
     )
     seller = relationship(
-        'Users', foreign_keys=[to_id]
+        'Users', foreign_keys=[to_id], lazy='selectin'
     )

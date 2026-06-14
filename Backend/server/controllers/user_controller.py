@@ -10,6 +10,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from server.utils.helpers import cache_obj_format
 from server.config import get_db, app_configs, redis_store
+from server.config.database import AsyncSessionLocal
 from server.enums import ServiceKeys
 from server.enums.user_enums import (
     Permissions,
@@ -485,6 +486,18 @@ async def subscribe_notifications(
     request: Request,
     notificationServices: get_notification_service = Depends(get_notification_service)
 ):
+    async def _notif_count():
+        # Own a short-lived session per query. A StreamingResponse body runs
+        # outside the request's dependency scope, so the injected (request-
+        # scoped) session is already torn down — reusing it checks out a pooled
+        # connection that nothing returns, which the GC later reclaims (the
+        # "non-checked-in connection" warning). The `async with` guarantees the
+        # connection goes back to the pool after each query, so a long-lived SSE
+        # stream never pins one.
+        async with AsyncSessionLocal() as db:
+            notificationServices.repo.attachDB(db)
+            return await notificationServices.count(user.id)
+
     async def event_generator():
         # Dedicated connection — pubsub must not share the general async connection
         pubsub_redis = await redis_store.get_pubsub_redis()
@@ -493,7 +506,7 @@ async def subscribe_notifications(
         try:
             if not await AuthServices.verify_token(request):
                 return
-            count = await notificationServices.count(user.id)
+            count = await _notif_count()
             yield f"event: count\ndata: {json.dumps(count)}\n\n"
             if app_configs.ENV != "production":
                 return
@@ -519,7 +532,7 @@ async def subscribe_notifications(
                 if message is None:
                     continue
                 else:
-                    count = await notificationServices.count(user.id)
+                    count = await _notif_count()
                     yield f"event: count\ndata: {json.dumps(count)}\n\n"
                     yield f"data: {message['data']}\n\n"
                 await asyncio.sleep(2)

@@ -54,8 +54,16 @@ class Items(BaseModel):
     width = Column(Float, nullable=True)
     length = Column(Float, nullable=True)
 
-    categories = relationship("Categories", secondary=item_categories, back_populates="items")
-    sub_categories = relationship("Subcategory", secondary=item_subcategories, back_populates="items")
+    # lazy="selectin": category_ids/sub_category_ids properties and GetItemSchema
+    # read these, so they must be eager-loaded for async serialization.
+    categories = relationship(
+        "Categories", secondary=item_categories,
+        back_populates="items", lazy="selectin"
+    )
+    sub_categories = relationship(
+        "Subcategory", secondary=item_subcategories,
+        back_populates="items", lazy="selectin"
+    )
     auction = relationship("Auctions", back_populates="item")
 
     @property

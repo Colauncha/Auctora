@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 from server.utils.datetime_utils import now_utc
 import inspect
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import WebSocket
 
 from server.config import redis_store, app_configs, notification_messages
@@ -78,19 +79,15 @@ class AuctionServices(BaseService):
             # Assign M2M categories to the item after the auction row is committed
             new_item = result.item[0]
             if category_ids:
-                new_item.categories = (
-                    self.repo.db.query(Categories)
-                    .filter(Categories.id.in_(category_ids))
-                    .all()
-                )
+                new_item.categories = (await self.repo.db.execute(
+                    select(Categories).filter(Categories.id.in_(category_ids))
+                )).scalars().all()
             if sub_category_ids:
-                new_item.sub_categories = (
-                    self.repo.db.query(Subcategory)
-                    .filter(Subcategory.id.in_(sub_category_ids))
-                    .all()
-                )
-            self.repo.db.commit()
-            self.repo.db.refresh(new_item)
+                new_item.sub_categories = (await self.repo.db.execute(
+                    select(Subcategory).filter(Subcategory.id.in_(sub_category_ids))
+                )).scalars().all()
+            await self.repo.db.commit()
+            await self.repo.db.refresh(new_item)
             if result.private == True:
                 for p in participants:
                     await self.create_participants(
@@ -109,7 +106,7 @@ class AuctionServices(BaseService):
             )
             # Serialize before releasing the connection so Redis publish has no DB dependency
             validated_result = GetAuctionSchema.model_validate(result)
-            self.repo.db.close()
+            await self.repo.db.close()
             await publ.publish_create_auction(
                 {
                     'email': data.get('users_email'),
@@ -247,7 +244,7 @@ class AuctionServices(BaseService):
     async def close(
         self,
         id: str,
-        db: Session = None,
+        db: AsyncSession = None,
         caller: str = "create",
         existing_amount: float = 0.0,
     ):
@@ -435,7 +432,7 @@ class AuctionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def finalize_payment(self, auction_id, buyer_id: str, db: Session = None):
+    async def finalize_payment(self, auction_id, buyer_id: str, db: AsyncSession = None):
         try:
             payment = await self.payment_repo.attachDB(db).get_by_attr(
                 {"auction_id": auction_id}
@@ -593,7 +590,7 @@ class AuctionServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
-    async def auto_complete_refund(self, auction_id: str, db: Session = None):
+    async def auto_complete_refund(self, auction_id: str, db: AsyncSession = None):
         """Called by the scheduler when a seller has not confirmed a refund within the deadline."""
         try:
             payment = await self.payment_repo.attachDB(db).get_by_attr(

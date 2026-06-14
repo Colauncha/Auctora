@@ -147,11 +147,14 @@ class GetUserSchema(GetUsersSchemaPublic):
     bank_code: Optional[str]
     bank_name: Optional[str]
     recipient_code: Optional[str]
-    auctions: Optional[list[GetAuctionSchema]] = Field(default=None)
-    bids: Optional[list[GetBidSchemaExt]] = Field(default=[])
+    # NOTE: nested auctions/bids/chats intentionally removed. The Users.*
+    # relationships stay lazy (kept off the async eager-load graph), so
+    # serializing them here would trigger MissingGreenlet under async — and
+    # eagerly loading a user's entire auction/bid/chat tree on every login is
+    # an N+1 explosion. These are served by the dedicated paginated endpoints
+    # GET /users/auctions, /users/bids, /users/chats instead.
     # referred_by: Optional[str] = Field(default='')
     # referred_users: Optional[dict] = Field(default={})
-    chats: Optional[list[GetChatSchema]] = Field(default=[])
 
     wallet: float = Field(
         description="User's wallet balance",

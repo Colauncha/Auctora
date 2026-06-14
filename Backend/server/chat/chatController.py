@@ -56,8 +56,7 @@ async def connect(
     wsmanager: WSManager = Depends(get_wsmanager),
     chatServices: ChatServices = Depends(get_chat_service)
 ):
-    user, db = await AuthServices.get_ws_user(ws)
-    db.close()
+    user = await AuthServices.get_ws_user(ws)
     chat = await chatServices.get_chat_by_id(chat_id)
     await wsmanager.create_chatroom(
         str(chat.id), str(chat.buyer_id), str(chat.seller_id)

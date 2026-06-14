@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 
-from server.config.database import get_db, SessionLocal
+from server.config.database import get_db, AsyncSessionLocal
 from server.config.app_configs import app_configs
 from server.repositories import get_db_repo, Repository
 from server.utils.ex_inspect import ExtInspect
@@ -15,7 +15,7 @@ class BaseService:
 
     @classmethod
     async def get_ownership(cls, model, id, user_id) -> bool:
-        db = SessionLocal()
+        db = AsyncSessionLocal()
         try:
             repo: Repository = get_db_repo()
             repo = repo(model)
@@ -44,4 +44,4 @@ class BaseService:
                 ExcRaiser500(e)
             ExcRaiser500(e)
         finally:
-            db.close()
+            await db.close()

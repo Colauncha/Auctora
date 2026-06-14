@@ -1,4 +1,5 @@
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.config import app_configs
 from server.middlewares.exception_handler import ExcRaiser404
@@ -14,7 +15,7 @@ from server.schemas.payment_schema import (
 
 
 class PaymentRepository(Repository):
-    def __init__(self, db: Session =None):
+    def __init__(self, db: AsyncSession =None):
         super().__init__(Payments)
         if db:
             super().attachDB(db)
@@ -28,13 +29,13 @@ class PaymentRepository(Repository):
         existing_amount: float = 0.0
     ) -> GetPaymentSchema:
         try:
-            with self.db.begin(nested=True):
-                buyer = self.db.query(Users).filter(
-                    Users.id == data.from_id
-                ).first()
-                seller = self.db.query(Users).filter(
-                    Users.id == data.to_id
-                ).first()
+            async with self.db.begin_nested():
+                buyer = (await self.db.execute(
+                    select(Users).filter(Users.id == data.from_id)
+                )).scalars().first()
+                seller = (await self.db.execute(
+                    select(Users).filter(Users.id == data.to_id)
+                )).scalars().first()
                 if not buyer:
                     raise ExcRaiser404(message="Payer not found")
                 if not seller:
@@ -67,16 +68,16 @@ class PaymentRepository(Repository):
         # MAX_COMMISIONS = app_configs.MAX_COMMISIONS_COUNT
         # refered_by = None
         try:
-            with self.db.begin(nested=True):
-                buyer = self.db.query(Users).filter(
-                    Users.id == data.from_id
-                ).first()
-                seller = self.db.query(Users).filter(
-                    Users.id == data.to_id
-                ).first()
-                entity = self.db.query(Payments).filter(
-                    Payments.auction_id == data.auction_id
-                ).first()
+            async with self.db.begin_nested():
+                buyer = (await self.db.execute(
+                    select(Users).filter(Users.id == data.from_id)
+                )).scalars().first()
+                seller = (await self.db.execute(
+                    select(Users).filter(Users.id == data.to_id)
+                )).scalars().first()
+                entity = (await self.db.execute(
+                    select(Payments).filter(Payments.auction_id == data.auction_id)
+                )).scalars().first()
 
                 if not buyer:
                     raise ExcRaiser404(message="Payer not found")
@@ -132,13 +133,13 @@ class PaymentRepository(Repository):
         data: GetPaymentSchema
     ):
         try:
-            with self.db.begin(nested=True):
-                buyer = self.db.query(Users).filter(
-                    Users.id == data.from_id
-                ).first()
-                entity = self.db.query(Payments).filter(
-                    Payments.auction_id == data.auction_id
-                ).first()
+            async with self.db.begin_nested():
+                buyer = (await self.db.execute(
+                    select(Users).filter(Users.id == data.from_id)
+                )).scalars().first()
+                entity = (await self.db.execute(
+                    select(Payments).filter(Payments.auction_id == data.auction_id)
+                )).scalars().first()
 
                 if not buyer:
                     raise ExcRaiser404(message="Payer not found")

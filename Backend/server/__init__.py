@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import close_all_sessions
-from server.config import app_configs, init_db, init_db_async, recreate_db, engine, async_engine
+from server.config import app_configs, init_db, recreate_db, engine, async_engine
 from server.controllers import routes
 from server.middlewares.multipart_large_file import LargeFileMiddleware
 from server.middlewares.exception_handler import (
@@ -28,10 +28,11 @@ from server.middlewares.exception_handler import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if async_engine is not None:
-        await init_db_async()
-    else:
-        init_db()
+    # Schema DDL is a one-time operation — run it on the sync engine to avoid
+    # binding asyncpg connections to the startup event loop (which breaks under
+    # TestClient's per-request loops). The async engine is reserved for request
+    # handling and is created lazily on first use.
+    init_db()
     yield
     if async_engine is not None:
         await async_engine.dispose()

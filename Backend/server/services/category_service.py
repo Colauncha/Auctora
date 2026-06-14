@@ -54,7 +54,7 @@ class CategoryServices(BaseService):
 
     async def list_categories(self):
         try:
-            categories = self.cat_repo.all()
+            categories = await self.cat_repo.all()
             if not categories:
                 raise ExcRaiser404("No categories found")
             valid_categories = [
@@ -129,7 +129,7 @@ class CategoryServices(BaseService):
 
     async def list_sub_categories(self):
         try:
-            sub_categories = self.sub_cat_repo.all()
+            sub_categories = await self.sub_cat_repo.all()
             if not sub_categories:
                 raise ExcRaiser404("No sub categories found")
             valid_sub_categories = [

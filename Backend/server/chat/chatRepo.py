@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from server.middlewares.exception_handler import ExcRaiser, ExcRaiser500
@@ -7,7 +7,7 @@ from server.chat.chat import Chats
 
 
 class ChatRepository(Repository):
-    def __init__(self, db: Session =None):
+    def __init__(self, db: AsyncSession =None):
         super().__init__(Chats)
         if db:
             super().attachDB(db)
@@ -35,15 +35,15 @@ class ChatRepository(Repository):
             chat.conversation = updated
             flag_modified(chat, 'conversation')
 
-            self.db.commit()
-            self.db.refresh(chat)
+            await self.db.commit()
+            await self.db.refresh(chat)
             return chat
 
         except ExcRaiser as e:
-            self.db.rollback()
+            await self.db.rollback()
             raise e
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             if self.configs.DEBUG:
                 self._inspect.info()
                 raise ExcRaiser500(detail=str(e), exception=e)

@@ -57,26 +57,34 @@ class Auctions(BaseModel):
     )
 
     # Add relationships
-    user = relationship('Users', back_populates='auctions')
+    # lazy="selectin": eagerly loaded so GetAuctionSchema.model_validate works
+    # under async (no implicit lazy IO). The back-reference sides (Items.auction,
+    # Bids.auction, Payments.auction, Chats.auction) stay lazy to avoid cycles.
+    user = relationship('Users', back_populates='auctions', lazy='selectin')
     item = relationship(
         'Items', back_populates='auction',
-        cascade='all, delete-orphan'
+        cascade='all, delete-orphan',
+        lazy='selectin'
     )
     participants = relationship(
         'AuctionParticipants', back_populates='auction',
-        cascade='all, delete-orphan'
+        cascade='all, delete-orphan',
+        lazy='selectin'
     )
     bids = relationship(
         'Bids', back_populates='auction',
         cascade='all, delete-orphan',
-        order_by=Bids.amount
+        order_by=Bids.amount,
+        lazy='selectin'
     )
     payment = relationship(
         'Payments', back_populates='auction',
-        uselist=False
+        uselist=False,
+        lazy='selectin'
     )
     chat = relationship(
-        'Chats', back_populates='auction', uselist=False
+        'Chats', back_populates='auction', uselist=False,
+        lazy='selectin'
     )
 
     def __str__(self):

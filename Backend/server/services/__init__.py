@@ -2,7 +2,8 @@ from typing import Annotated
 from fastapi import Depends, Request, WebSocket, WebSocketException, status
 from jose import ExpiredSignatureError
 from jose.exceptions import JWTError, JWTClaimsError
-from server.config.database import get_db, SessionLocal
+from sqlalchemy.ext.asyncio import AsyncSession
+from server.config.database import get_db, get_async_db, SessionLocal, AsyncSessionLocal
 from server.services.auction_service import AuctionServices
 from server.services.bid_services import BidServices
 from server.services.misc_service import ContactUsService
@@ -181,49 +182,52 @@ class AuthServices:
     #         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
     @staticmethod
-    async def get_ws_user(ws: WebSocket):
-        db = SessionLocal()
-        try:
-            token = None
-            protocols = ws.headers.get('sec-websocket-protocol').split(",")
-            if len(protocols) > 1:
-                token = protocols[1].strip()
-            else:
-                token = ws.headers.get('Authorization', None)
-                token = token.split(' ')[-1]
+    async def get_ws_user(ws: WebSocket, token: str = None):
+        # The session is owned here via `async with`, so it is always returned
+        # to the pool — on success or on any error path. Returning only the
+        # validated user (expire_on_commit=False keeps its attributes usable
+        # after close) means callers never have to manage a session lifecycle.
+        async with AsyncSessionLocal() as db:
+            try:
+                if not token:
+                    protocols = ws.headers.get('sec-websocket-protocol')
+                    protocols = protocols.split(",") if protocols else []
+                    if len(protocols) > 1:
+                        token = protocols[1].strip()
+                    else:
+                        auth = ws.headers.get('Authorization', None)
+                        token = auth.split(' ')[-1] if auth else None
 
-            await ws.accept(subprotocol="auth")
-            if not token:
+                await ws.accept(subprotocol="auth")
+                if not token:
+                    raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+
+                claims = jwt.decode(
+                    token,
+                    app_configs.security.JWT_SECRET_KEY,
+                    algorithms=[app_configs.security.ALGORITHM]
+                )
+
+                user_repo = get_user_repo()
+                user = await user_repo.attachDB(db).get_by_attr({'id': claims["id"]})
+
+                if not user:
+                    raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+
+                return GetUserSchema.model_validate(user)
+
+            except WebSocketException:
+                raise
+            except Exception as e:
+                print(e)
                 raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
-
-            claims = jwt.decode(
-                token,
-                app_configs.security.JWT_SECRET_KEY,
-                algorithms=[app_configs.security.ALGORITHM]
-            )
-
-            user_repo = get_user_repo()
-            user = await user_repo.attachDB(db).get_by_attr({'id': claims["id"]})
-
-            if not user:
-                raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
-
-            return GetUserSchema.model_validate(user), db
-
-        except WebSocketException:
-            db.close()
-            raise
-        except Exception as e:
-            db.close()
-            print(e)
-            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
 
     @staticmethod
     async def _get_current_user(
         token: Annotated[str, Depends(oauth_bearer), Depends(get_from_cookie)],
         user_repo: UserRepository = Depends(get_user_repo),
-        db: Session = Depends(get_db),
+        db: AsyncSession = Depends(get_async_db),
     ) -> GetUserSchema:
         repo = user_repo
         try:

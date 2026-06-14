@@ -1,10 +1,9 @@
 import math
-from sqlalchemy import String
-from sqlalchemy.orm import Session
+from sqlalchemy import String, select, func
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.config import app_configs
 from server.utils.helpers import paginator
-from server.config.database import get_db
 from server.repositories.repository import Repository, no_db_error
 from server.models.users import Users, Notifications, WalletTransactions
 from server.schemas import GetUserSchema, PagedResponse, WalletTransactionSchema
@@ -18,14 +17,14 @@ from server.chat.chat import Chats
 
 
 class WalletTranscationRepository(Repository):
-    def __init__(self, db: Session = None):
+    def __init__(self, db: AsyncSession = None):
         super().__init__(WalletTransactions)
         if db:
             super().attachDB(db)
 
 
 class UserRepository(Repository):
-    def __init__(self, wallet_transaction: WalletTranscationRepository, db: Session = None):
+    def __init__(self, wallet_transaction: WalletTranscationRepository, db: AsyncSession = None):
         super().__init__(Users)
         self.rewards_config = app_configs.rewards
         if db:
@@ -70,8 +69,10 @@ class UserRepository(Repository):
             - amount <float>: Transaction amount
         """
         try:
-            with self.db.begin(nested=True):
-                user = self.db.query(Users).filter(Users.id == id).first()
+            async with self.db.begin_nested():
+                user = (await self.db.execute(
+                    select(Users).filter(Users.id == id)
+                )).scalars().first()
                 user.available_balance -= amount
                 user.auctioned_amount += amount
             DESCRIPTION = f'{amount} placed on bid'
@@ -84,7 +85,7 @@ class UserRepository(Repository):
             }
             await self.wallet_transaction.attachDB(self.db).add(data)
         except (Exception, SQLAlchemyError) as e:
-            self.db.rollback()
+            await self.db.rollback()
             raise ExcRaiser(
                 status_code=500,
                 message='Transaction failed',
@@ -105,8 +106,10 @@ class UserRepository(Repository):
             - amount <float>: Transaction amount
         """
         try:
-            with self.db.begin(nested=True):
-                user = self.db.query(Users).filter(Users.id == id).first()
+            async with self.db.begin_nested():
+                user = (await self.db.execute(
+                    select(Users).filter(Users.id == id)
+                )).scalars().first()
                 user.auctioned_amount -= amount
                 user.available_balance += amount
             DESCRIPTION = f'{amount} placed on bid'
@@ -119,7 +122,7 @@ class UserRepository(Repository):
             }
             await self.wallet_transaction.attachDB(self.db).add(data)
         except (Exception, SQLAlchemyError) as e:
-            self.db.rollback()
+            await self.db.rollback()
             raise ExcRaiser(
                 status_code=500,
                 message='Transaction failed',
@@ -130,9 +133,13 @@ class UserRepository(Repository):
     async def intra_payment(self, payer_id: str, recipient_id: str, amount: float):
         """Intra payment"""
         try:
-            with self.db.begin(nested=True):
-                buyer = self.db.query(Users).filter(Users.id == payer_id).first()
-                seller = self.db.query(Users).filter(Users.id == recipient_id).first()
+            async with self.db.begin_nested():
+                buyer = (await self.db.execute(
+                    select(Users).filter(Users.id == payer_id)
+                )).scalars().first()
+                seller = (await self.db.execute(
+                    select(Users).filter(Users.id == recipient_id)
+                )).scalars().first()
                 if not buyer:
                     raise ExcRaiser404(message="Payer not found")
                 if not seller:
@@ -160,7 +167,7 @@ class UserRepository(Repository):
             await self.wallet_transaction.attachDB(self.db).add(sellers_data)
             await self.wallet_transaction.attachDB(self.db).add(buyer_data)
         except (Exception, SQLAlchemyError) as e:
-            self.db.rollback()
+            await self.db.rollback()
             raise ExcRaiser(
                 status_code=500,
                 message='Transaction failed',
@@ -175,7 +182,7 @@ class UserRepository(Repository):
             exist: WalletTransactions = None
     ):
         try:
-            with self.db.begin(nested=True):
+            async with self.db.begin_nested():
                 user = await self.get_by_id(transaction.user_id)
                 if not user:
                     raise ExcRaiser404(message="User not found")
@@ -192,7 +199,7 @@ class UserRepository(Repository):
                     transaction.model_dump(exclude_none=True)
                 )
         except (Exception, SQLAlchemyError) as e:
-            self.db.rollback()
+            await self.db.rollback()
             raise ExcRaiser(
                 status_code=500,
                 message='Transaction failed',
@@ -213,7 +220,6 @@ class UserRepository(Repository):
         """
         try:
             user: Users = await self.get_by_id(user_id)
-            # user = self.db.query(Users).filter(Users.id == user_id).first()
             if not user:
                 raise ExcRaiser404(message="User not found")
             if reverse == True:
@@ -222,8 +228,8 @@ class UserRepository(Repository):
                     or user.withdrawable_amount < amount
                 ):
                     user.withdrawable_amount = 0.0
-                    self.db.commit()
-                    self.db.refresh(user)
+                    await self.db.commit()
+                    await self.db.refresh(user)
                     raise ExcRaiser(
                         status_code=400, message="Insufficient withdrawable balance"
                     )
@@ -241,11 +247,11 @@ class UserRepository(Repository):
                     user.withdrawable_amount = 0.0
                 user.withdrawable_amount += amount
 
-            self.db.commit()
-            self.db.refresh(user)
+            await self.db.commit()
+            await self.db.refresh(user)
             return True
         except (Exception, SQLAlchemyError) as e:
-            self.db.rollback()
+            await self.db.rollback()
             raise ExcRaiser(
                 status_code=500, message="Transaction failed", detail=str(e)
             )
@@ -258,7 +264,7 @@ class UserRepository(Repository):
         exist: WalletTransactions = None
     ):
         try:
-            with self.db.begin(nested=True):
+            async with self.db.begin_nested():
                 user: Users = await self.get_by_id(transaction.user_id)
                 if not user:
                     raise ExcRaiser404(message="User not found")
@@ -273,7 +279,7 @@ class UserRepository(Repository):
                     transaction.model_dump(exclude_none=True)
                 )
         except (Exception, SQLAlchemyError) as e:
-            self.db.rollback()
+            await self.db.rollback()
             raise ExcRaiser(
                 status_code=500,
                 message='Transaction failed',
@@ -289,11 +295,11 @@ class UserRepository(Repository):
             if user.bid_point is None:
                 user.bid_point = 0
             user.bid_point += points
-            self.db.commit()
-            self.db.refresh(user)
+            await self.db.commit()
+            await self.db.refresh(user)
             return user
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             if self.configs.DEBUG:
                 self._inspect.info()
                 raise e
@@ -315,11 +321,11 @@ class UserRepository(Repository):
             redeem_amount = points * self.rewards_config.REDEEM_RATE
             user.wallet += redeem_amount
             user.available_balance += redeem_amount
-            self.db.commit()
-            self.db.refresh(user)
+            await self.db.commit()
+            await self.db.refresh(user)
             return user
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             if self.configs.DEBUG:
                 self._inspect.info()
                 raise e
@@ -337,19 +343,23 @@ class UserRepository(Repository):
 
         try:
             search_term = filter_.get("q", "").strip()
-            query = self.db.query(QueryModel)
+            stmt = select(QueryModel)
 
             if search_term:
-                query = query.filter(
+                stmt = stmt.filter(
                     QueryModel.first_name.ilike(f"%{search_term}%") |
                     QueryModel.last_name.ilike(f"%{search_term}%") |
                     QueryModel.username.ilike(f"%{search_term}%") |
                     QueryModel.email.ilike(f"%{search_term}%") |
-                    QueryModel.id.cast(String).ilike(f"%{search_term}%") 
+                    QueryModel.id.cast(String).ilike(f"%{search_term}%")
                 )
 
-            total = query.count()
-            results = query.limit(limit).offset(offset).all()
+            total = (await self.db.execute(
+                select(func.count()).select_from(stmt.subquery())
+            )).scalar() or 0
+            results = (await self.db.execute(
+                stmt.limit(limit).offset(offset)
+            )).scalars().all()
 
         except Exception as e:
             print(f"[Search Error] {e}")
@@ -382,19 +392,23 @@ class UserRepository(Repository):
             QueryModel = relations_map.get(model, None)[0] if model else Auctions
 
             if model == 'chats':
-                query = self.db.query(QueryModel).filter(
+                stmt = select(QueryModel).filter(
                     (relations_map.get(model, None)[1][0] == id) |
                     (relations_map.get(model, None)[1][1] == id)
                 )
             else:
-                query = self.db.query(QueryModel).filter(
+                stmt = select(QueryModel).filter(
                     relations_map.get(model, None)[1].in_([id])
                 )
-            query = query.order_by(QueryModel.created_at.desc()
+            stmt = stmt.order_by(QueryModel.created_at.desc()
                 if order == 'desc' else QueryModel.created_at.asc()
             )
-            total = query.count()
-            result = query.offset(offset).limit(limit).all()
+            total = (await self.db.execute(
+                select(func.count()).select_from(stmt.subquery())
+            )).scalar() or 0
+            result = (await self.db.execute(
+                stmt.offset(offset).limit(limit)
+            )).scalars().all()
 
             pages = max(math.ceil(total / limit), 1)
             return PagedResponse(
@@ -412,7 +426,7 @@ class UserRepository(Repository):
             raise e
 
 class UserNotificationRepository(Repository):
-    def __init__(self, db: Session = None):
+    def __init__(self, db: AsyncSession = None):
         super().__init__(Notifications)
         if db:
             super().attachDB(db)

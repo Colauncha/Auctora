@@ -3,13 +3,13 @@ import logging
 from datetime import datetime, timezone
 from server.utils.datetime_utils import now_utc
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from sqlalchemy import create_engine
+from sqlalchemy import select
 from sqlalchemy.pool import NullPool
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
 from ..models.auction import Auctions
 from ..models.payment import Payments
-from ..config.database import get_db, app_configs
+from ..config.database import app_configs, _async_url
 from ..enums.auction_enums import AuctionStatus
 from ..enums.payment_enums import PaymentStatus
 from ..services import (
@@ -21,13 +21,16 @@ from ..services import (
 )
 
 
-# TODO: Create local DB engine and session for this script to avoid conflicts with main app
-engine = create_engine(
-    app_configs.DB.DATABASE_URL,
+# Separate process: its own async engine. NullPool avoids holding idle
+# connections between scheduler ticks.
+engine = create_async_engine(
+    _async_url(app_configs.DB.DATABASE_URL),
     poolclass=NullPool,
     pool_pre_ping=True,
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = async_sessionmaker(
+    engine, class_=AsyncSession, autoflush=False, expire_on_commit=False
+)
 
 # Configure logging
 LOG_FILE_PATH = '/var/log/biddius-logs/auction_updater.log'\
@@ -44,16 +47,17 @@ logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
 
 async def update_status(auctionServices: AuctionServices):
-    session: Session = SessionLocal()  # next(get_db())
-    count = 1
+    session: AsyncSession = SessionLocal()
     try:
         update = False
         # Query events where the status needs updating
         _now = now_utc()
-        events = session.query(Auctions).filter(
-            (Auctions.status == AuctionStatus.PENDING) & (Auctions.start_date <= _now) |
-            (Auctions.status == AuctionStatus.ACTIVE) & (Auctions.end_date <= _now)
-        ).with_for_update().all()
+        events = (await session.execute(
+            select(Auctions).filter(
+                (Auctions.status == AuctionStatus.PENDING) & (Auctions.start_date <= _now) |
+                (Auctions.status == AuctionStatus.ACTIVE) & (Auctions.end_date <= _now)
+            ).with_for_update()
+        )).scalars().all()
 
         for event in events:
             current_time = datetime.now(timezone.utc)
@@ -70,30 +74,29 @@ async def update_status(auctionServices: AuctionServices):
 
         # Commit changes
         if update:
-            session.commit()
+            await session.commit()
             logger.info("🔄 Status updated successfully")
-        else:
-            pass
-            # logger.info("🔄 No events to update")
 
     except Exception as e:
         logger.error(f"Error updating status: {e}")
     finally:
-        session.close()
+        await session.close()
 
 
 async def process_intra_payment(auctionServices: AuctionServices):
-    session: Session = SessionLocal()
+    session: AsyncSession = SessionLocal()
     update = False
 
     try:
         current_time = now_utc()
 
         # Auto-finalize PENDING and INSPECTING payments that have passed their due date
-        finalize_events = session.query(Payments).filter(
-            Payments.status.in_([PaymentStatus.PENDING.value, PaymentStatus.INSPECTING.value]),
-            Payments.due_data <= current_time
-        ).with_for_update().all()
+        finalize_events = (await session.execute(
+            select(Payments).filter(
+                Payments.status.in_([PaymentStatus.PENDING.value, PaymentStatus.INSPECTING.value]),
+                Payments.due_data <= current_time
+            ).with_for_update()
+        )).scalars().all()
 
         for event in finalize_events:
             logger.info(
@@ -106,10 +109,12 @@ async def process_intra_payment(auctionServices: AuctionServices):
             update = True
 
         # Auto-confirm REFUNDING payments the seller has not responded to within the deadline
-        refund_events = session.query(Payments).filter(
-            Payments.status == PaymentStatus.REFUNDING.value,
-            Payments.due_data <= current_time
-        ).with_for_update().all()
+        refund_events = (await session.execute(
+            select(Payments).filter(
+                Payments.status == PaymentStatus.REFUNDING.value,
+                Payments.due_data <= current_time
+            ).with_for_update()
+        )).scalars().all()
 
         for event in refund_events:
             logger.info(
@@ -120,12 +125,12 @@ async def process_intra_payment(auctionServices: AuctionServices):
             update = True
 
         if update:
-            session.commit()
+            await session.commit()
             logger.info("🔄 Payment status updated successfully")
     except Exception as e:
         logger.error(f"Error processing intra payment: {e}")
     finally:
-        session.close()
+        await session.close()
 
 # Keep the script running
 async def main():

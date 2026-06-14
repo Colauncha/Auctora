@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, File, UploadFile
-from server.config import get_db
+from server.config import get_async_db
 # from server.services.user_service import current_user
 from server.middlewares.auth import permissions, Permissions
 from server.services import current_user, get_item_service, ItemServices
@@ -10,7 +10,7 @@ from server.schemas import (
     UpdateItemSchema
 )
 from server.enums import ServiceKeys
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 route = APIRouter(prefix='/items', tags=['Items'])
@@ -33,7 +33,7 @@ async def create(
 @permissions(permission_level=Permissions.ALL)
 async def get_items(
     user: current_user,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_async_db)
 ):
     ...
 

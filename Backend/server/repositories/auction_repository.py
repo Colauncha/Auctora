@@ -1,6 +1,7 @@
 import math
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.models.auction import Auctions, AuctionParticipants
 from server.models.items import Items, Categories, Subcategory
@@ -11,14 +12,14 @@ from server.utils import paginator
 
 
 class AuctionParticipantRepository(Repository):
-    def __init__(self, db: Session = None):
+    def __init__(self, db: AsyncSession = None):
         super().__init__(AuctionParticipants)
         if db:
             super().attachDB(db)
 
 
 class AuctionRepository(Repository):
-    def __init__(self, auction_participant: AuctionParticipantRepository, db: Session = None):
+    def __init__(self, auction_participant: AuctionParticipantRepository, db: AsyncSession = None):
         super().__init__(Auctions)
         if db:
             super().attachDB(db)
@@ -67,43 +68,46 @@ class AuctionRepository(Repository):
         QueryModel: Auctions = Auctions
 
         try:
-            query = self.db.query(QueryModel)
+            stmt = select(QueryModel)
 
             for key, value in filter_.items():
                 if hasattr(QueryModel, key):
-                    query = query.filter(getattr(QueryModel, key) == value)
+                    stmt = stmt.filter(getattr(QueryModel, key) == value)
 
             if hasattr(QueryModel, sort):
-                query = query.order_by(getattr(QueryModel, sort).desc())
+                stmt = stmt.order_by(getattr(QueryModel, sort).desc())
 
             if cat_id:
-                query = query.filter(
+                stmt = stmt.filter(
                     QueryModel.item.any(Items.categories.any(Categories.id == cat_id))
                 )
             if subcat_id:
-                query = query.filter(
+                stmt = stmt.filter(
                     QueryModel.item.any(Items.sub_categories.any(Subcategory.id == subcat_id))
                 )
 
             if start_price:
-                query = query.filter(
+                stmt = stmt.filter(
                     QueryModel.start_price >= start_price[0],
                     QueryModel.start_price <= start_price[1]
                 )
             if current_price:
-                query = query.filter(
+                stmt = stmt.filter(
                     QueryModel.current_price >= current_price[0],
                     QueryModel.current_price <= current_price[1]
                 )
             if buy_now_price:
-                query = query.filter(
+                stmt = stmt.filter(
                     QueryModel.buy_now_price >= buy_now_price[0],
                     QueryModel.buy_now_price <= buy_now_price[1]
                 )
 
-            total = query.count()
-            query = query.limit(limit).offset(offset)
-            results = query.all()
+            total = (await self.db.execute(
+                select(func.count()).select_from(stmt.subquery())
+            )).scalar() or 0
+            results = (await self.db.execute(
+                stmt.limit(limit).offset(offset)
+            )).scalars().all()
         except Exception as e:
             print(f"Error in get_all: {e}")
             raise e
@@ -130,18 +134,22 @@ class AuctionRepository(Repository):
 
         try:
             search_term = filter_.get("q", "").strip()
-            query = self.db.query(QueryModel)
+            stmt = select(QueryModel)
 
             if search_term:
-                query = query.filter(
+                stmt = stmt.filter(
                     QueryModel.item.any(
                         (Items.name.ilike(f"%{search_term}%")) |
                         (Items.description.ilike(f"%{search_term}%"))
                     )
                 )
 
-            total = query.count()
-            results = query.limit(limit).offset(offset).all()
+            total = (await self.db.execute(
+                select(func.count()).select_from(stmt.subquery())
+            )).scalar() or 0
+            results = (await self.db.execute(
+                stmt.limit(limit).offset(offset)
+            )).scalars().all()
 
         except Exception as e:
             print(f"[Search Error] {e}")
@@ -159,18 +167,26 @@ class AuctionRepository(Repository):
 
     @no_db_error
     async def count(self) -> dict[str, int]:
+        async def _count(**flt) -> int:
+            stmt = select(func.count()).select_from(self._Model)
+            if flt:
+                stmt = select(func.count()).select_from(
+                    select(self._Model).filter_by(**flt).subquery()
+                )
+            return (await self.db.execute(stmt)).scalar() or 0
+
         try:
-            total = self.db.query(self._Model).count()
+            total = await _count()
             if total == 0:
                 return {
                     'total': 0, 'active': 0, 'completed': 0,
                     'cancelled': 0, 'pending': 0, 'private': 0
                 }
-            active = self.db.query(self._Model).filter_by(status=AuctionStatus.ACTIVE).count()
-            completed = self.db.query(self._Model).filter_by(status=AuctionStatus.COMPLETED).count()
-            cancelled = self.db.query(self._Model).filter_by(status=AuctionStatus.CANCLED).count()
-            pending = self.db.query(self._Model).filter_by(status=AuctionStatus.PENDING).count()
-            private = self.db.query(self._Model).filter_by(private=True).count()
+            active = await _count(status=AuctionStatus.ACTIVE)
+            completed = await _count(status=AuctionStatus.COMPLETED)
+            cancelled = await _count(status=AuctionStatus.CANCLED)
+            pending = await _count(status=AuctionStatus.PENDING)
+            private = await _count(private=True)
             return {
                 'total': total,
                 'active': active,
