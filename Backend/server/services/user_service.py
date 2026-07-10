@@ -630,7 +630,9 @@ class UserServices(BaseService):
             result = await self.repo.get_all(filter.model_dump(exclude_unset=True))
             if result:
                 valid_users = [
-                    GetUsers.model_validate(user).model_dump(include={'__all__'})
+                    GetUsersNoAuction.model_validate(user).model_dump(
+                        include={"__all__"}
+                    )
                     for user in result.data
                 ]
                 return PagedResponse(
