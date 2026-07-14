@@ -250,7 +250,9 @@ class AuctionServices(BaseService):
     ):
         try:
             # Get the auction, bids and winner's details
-            auction = await self.repo.attachDB(db).get_by_id(id)
+            if db:
+                self.repo.attachDB(db)
+            auction = await self.repo.get_by_id(id)
             bids: list = auction.bids
             winner = None
             if len(bids) > 0:
@@ -278,7 +280,9 @@ class AuctionServices(BaseService):
                         "Your auction has been closed",
                     )
                     for bid in bids:
-                        _ = await self.user_repo.attachDB(db).abtw(bid.user_id, bid.amount)
+                        if db:
+                            self.user_repo.attachDB(db)
+                        _ = await self.user_repo.abtw(bid.user_id, bid.amount)
                         await self.notify(
                             bid.user_id,
                             "Auction Lost",
@@ -292,7 +296,9 @@ class AuctionServices(BaseService):
                 await self.notify(
                     auction.users_id, "Auction Closed", "Your auction has been closed"
                 )
-                await self.payment_repo.attachDB(db).add(
+                if db:
+                    self.payment_repo.attachDB(db)
+                await self.payment_repo.add(
                     CreatePaymentSchema(
                         from_id=winner.user_id,
                         to_id=auction.users_id,
@@ -434,7 +440,9 @@ class AuctionServices(BaseService):
 
     async def finalize_payment(self, auction_id, buyer_id: str, db: AsyncSession = None):
         try:
-            payment = await self.payment_repo.attachDB(db).get_by_attr(
+            if db:
+                self.payment_repo.attachDB(db)
+            payment = await self.payment_repo.get_by_attr(
                 {"auction_id": auction_id}
             )
 
@@ -593,7 +601,9 @@ class AuctionServices(BaseService):
     async def auto_complete_refund(self, auction_id: str, db: AsyncSession = None):
         """Called by the scheduler when a seller has not confirmed a refund within the deadline."""
         try:
-            payment = await self.payment_repo.attachDB(db).get_by_attr(
+            if db:
+                self.payment_repo.attachDB(db)
+            payment = await self.payment_repo.get_by_attr(
                 {"auction_id": auction_id}
             )
             if not payment or payment.status != PaymentStatus.REFUNDING.value:

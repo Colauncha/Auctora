@@ -2,6 +2,7 @@ from fastapi import WebSocket
 from functools import lru_cache
 from pydantic import BaseModel
 from fastapi import WebSocket, WebSocketException, status
+from starlette.websockets import WebSocketState
 
 
 class WSManager:
@@ -10,7 +11,12 @@ class WSManager:
         self.chatroom: dict[str, dict[str, dict[str, str] | WebSocket]] = {}
 
     async def connect(self, auction_id: str, websocket: WebSocket):
-        await websocket.accept()
+        # Callers (e.g. bid_controller.ws_create) may have already accepted
+        # the socket during auth (AuthServices.get_ws_user), so guard against
+        # sending a second "websocket.accept" — that's an ASGI protocol
+        # violation once the socket is CONNECTED and kills the connection.
+        if websocket.application_state != WebSocketState.CONNECTED:
+            await websocket.accept()
         if auction_id not in self.active_connections:
             self.active_connections[auction_id] = []
         self.active_connections[auction_id].append(websocket)

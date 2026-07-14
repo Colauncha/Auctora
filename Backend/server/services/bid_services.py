@@ -385,10 +385,13 @@ class BidServices(BaseService):
             links = [f'{app_configs.FRONTEND_URL}/product-details/{auction.id}']
 
             # phb: previous highest bidder
-            bids = sorted(auction.bids, key=lambda x: x.amount)
-            phb = bids[0].user_id
-            if phb == current_id:
+            if len(auction.bids) <= 0:
                 return
+            bids = sorted(auction.bids, key=lambda x: x.amount, reverse=True)
+            phb_bid = next((b for b in bids if b.user_id != current_id), None)
+            if not phb_bid:
+                return
+            phb = phb_bid.user_id
             await self.notify(phb, NOTIF_TITLE, NOTIF_BODY, links=links)
             await publish_outbid(
                 {
