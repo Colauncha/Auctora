@@ -110,14 +110,18 @@ class WSManager:
                 print(e)
 
     async def disconnect(self, auction_id: str, websocket: WebSocket):
-        self.active_connections[auction_id].remove(websocket)
-        if len(self.active_connections[auction_id]) <= 0:
+        connections = self.active_connections.get(auction_id)
+        # broadcast() may have already pruned this socket after a failed send
+        if not connections or websocket not in connections:
+            return
+        connections.remove(websocket)
+        if len(connections) <= 0:
             del self.active_connections[auction_id]
         else:
             await self.count(auction_id)
 
     async def count(self, id: str):
-        count = len(self.active_connections[id])
+        count = len(self.active_connections.get(id, []))
         await self.broadcast(id, {"type": "count", "Watchers": count})
 
     async def send_message(self, message: str, websocket: WebSocket):
@@ -127,8 +131,22 @@ class WSManager:
         await websocket.send_json({'type': 'bids', 'payload': data})
 
     async def broadcast(self, auction_id: str, data: any):
-        for connection in self.active_connections[auction_id]:
-            await connection.send_json(data)
+        connections = self.active_connections.get(auction_id, [])
+        dead = []
+        for connection in connections:
+            try:
+                await connection.send_json(data)
+            except Exception:
+                # Client already gone (e.g. disconnected mid-handshake) —
+                # don't let one dead socket break broadcasting to everyone
+                # else, and don't leave it stuck in the list forever.
+                dead.append(connection)
+        if not dead:
+            return
+        for connection in dead:
+            connections.remove(connection)
+        if not connections:
+            self.active_connections.pop(auction_id, None)
 
 
 

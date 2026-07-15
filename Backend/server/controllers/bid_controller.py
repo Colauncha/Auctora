@@ -97,16 +97,17 @@ async def ws_create(
     token: str,
     bidServices: BidServices = Depends(get_bid_service),
 ):
-    _user = await AuthServices.get_ws_user(ws, token)
-    await wsmanager.connect(id, ws)
-    redis = await redis_store.get_async_redis()
-    prev_bids = await redis.get(f'auction:{id}')
-    if prev_bids:
-        await wsmanager.send_data(json.loads(prev_bids), ws)
-    else:
-        prev_bids = await bidServices.list_ws(id)
-        await wsmanager.send_data(prev_bids, ws)
     try:
+        _user = await AuthServices.get_ws_user(ws, token)
+        await wsmanager.connect(id, ws)
+        redis = await redis_store.get_async_redis()
+        prev_bids = await redis.get(f"auction:{id}")
+        if prev_bids:
+            await wsmanager.send_data(json.loads(prev_bids), ws)
+        else:
+            prev_bids = await bidServices.list_ws(id)
+            await wsmanager.send_data(prev_bids, ws)
+
         watcher = ws.client.host
         await bidServices.add_watcher(id, watcher)
         while True:
@@ -119,12 +120,14 @@ async def ws_create(
                 )
                 if bids:
                     await wsmanager.broadcast(id, {'type': 'new_bid', 'payload': bids})
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, RuntimeError):
         await wsmanager.disconnect(id, ws)
     except WebSocketException as wse:
-        await ws.close(code=status.WS_1003_UNSUPPORTED_DATA)
-        raise WebSocketException(code=status.WS_1003_UNSUPPORTED_DATA) from wse
+        await wsmanager.disconnect(id, ws)
+        await ws.close(code=wse.code)
+        raise
     except Exception as e:
+        await wsmanager.disconnect(id, ws)
         await ws.close(code=status.WS_1011_INTERNAL_ERROR)
         raise WebSocketException(code=status.WS_1011_INTERNAL_ERROR) from e
 

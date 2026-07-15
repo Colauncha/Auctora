@@ -272,7 +272,13 @@ class BidServices(BaseService):
     async def add_watcher(self, auction_id: str, watcher: str):
         try:
             auction = await self.auction_repo.get_by_id(auction_id)
-            if auction.status in [AuctionStatus.COMPLETED, AuctionStatus.CANCLED]:
+            if not auction:
+                return False
+
+            if auction.status in [
+                AuctionStatus.COMPLETED,
+                AuctionStatus.CANCLED,
+            ]:
                 return False
             watchers: list = auction.watchers or []
 

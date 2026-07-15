@@ -154,7 +154,7 @@ class AuthServices:
     def get_from_cookie(request: Request):
         token = request.cookies.get('access_token', None)
         return token
-    
+
     # @staticmethod
     # async def get_ws_user(
     #     ws: WebSocket,
@@ -189,16 +189,25 @@ class AuthServices:
         # after close) means callers never have to manage a session lifecycle.
         async with AsyncSessionLocal() as db:
             try:
+                requested_protocols = ws.headers.get('sec-websocket-protocol')
+                requested_protocols = (
+                    [p.strip() for p in requested_protocols.split(",")]
+                    if requested_protocols else []
+                )
+
                 if not token:
-                    protocols = ws.headers.get('sec-websocket-protocol')
-                    protocols = protocols.split(",") if protocols else []
-                    if len(protocols) > 1:
-                        token = protocols[1].strip()
+                    if len(requested_protocols) > 1:
+                        token = requested_protocols[1].strip()
                     else:
                         auth = ws.headers.get('Authorization', None)
                         token = auth.split(' ')[-1] if auth else None
 
-                await ws.accept(subprotocol="auth")
+                # Only echo back a subprotocol the client actually offered —
+                # per RFC 6455 §4.2.2, selecting one it never requested forces
+                # spec-compliant clients (browsers included) to abort the
+                # connection right after the handshake.
+                subprotocol = "auth" if "auth" in requested_protocols else None
+                await ws.accept(subprotocol=subprotocol)
                 if not token:
                     raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
@@ -221,7 +230,6 @@ class AuthServices:
             except Exception as e:
                 print(e)
                 raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
-
 
     @staticmethod
     async def _get_current_user(
