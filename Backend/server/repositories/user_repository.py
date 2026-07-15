@@ -56,7 +56,7 @@ class UserRepository(Repository):
         return None
 
     @no_db_error
-    async def wtab(self, id: str, amount: float):
+    async def wtab(self, id: str, amount: float, commit: bool = True):
         """
         WALLET/AVAILABLE_BALANCE TO AUCTION_BALANCE\n
         Transfer of fund from a users available_balance to the same users\
@@ -67,12 +67,22 @@ class UserRepository(Repository):
         Args:
             - id <str>: user's id
             - amount <float>: Transaction amount
+            - commit <bool>: pass False to flush without committing, so a
+              caller holding a `for_update` lock elsewhere in the same
+              transaction (e.g. the auction row) can commit everything
+              together.
+
+        Locks the user row with `SELECT ... FOR UPDATE` and re-checks the
+        balance after acquiring the lock, since a caller-side balance check
+        made before the lock could be stale by the time it's applied.
         """
         try:
             async with self.db.begin_nested():
                 user = (await self.db.execute(
-                    select(Users).filter(Users.id == id)
+                    select(Users).filter(Users.id == id).with_for_update()
                 )).scalars().first()
+                if user.available_balance < amount:
+                    raise ExcRaiser400('Insufficient wallet balance')
                 user.available_balance -= amount
                 user.auctioned_amount += amount
             DESCRIPTION = f'{amount} placed on bid'
@@ -83,7 +93,10 @@ class UserRepository(Repository):
                 'transaction_type': TransactionTypes.DEBIT,
                 'status': TransactionStatus.COMPLETED
             }
-            await self.wallet_transaction.attachDB(self.db).add(data)
+            await self.wallet_transaction.attachDB(self.db).add(data, commit=commit)
+        except ExcRaiser:
+            await self.db.rollback()
+            raise
         except (Exception, SQLAlchemyError) as e:
             await self.db.rollback()
             raise ExcRaiser(

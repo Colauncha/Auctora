@@ -24,7 +24,8 @@ class BidRepository(Repository):
     async def update(
             self,
             entity: GetBidSchema,
-            data: dict = None
+            data: dict = None,
+            commit: bool = True,
         ) -> GetBidSchema:
         """Updates entity"""
         try:
@@ -34,7 +35,10 @@ class BidRepository(Repository):
                 .values(**data)
                 .execution_options(synchronize_session="fetch")
             )
-            await self.db.commit()
+            if commit:
+                await self.db.commit()
+            else:
+                await self.db.flush()
             return (await self.db.execute(
                 select(self._Model).filter_by(id=entity.id)
             )).scalars().first()

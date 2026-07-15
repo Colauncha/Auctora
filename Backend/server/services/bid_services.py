@@ -61,7 +61,10 @@ class BidServices(BaseService):
     async def buy_now(self, data: CreateBidSchema) -> GetBidSchema:
         try:
             user = await self.user_repo.get_by_id(data.user_id)
-            auction = await self.auction_repo.get_by_id(data.auction_id)
+            # Lock the auction row for the rest of this transaction so a
+            # concurrent bid/buy_now on the same auction has to wait instead
+            # of racing on current_price / buy_now.
+            auction = await self.auction_repo.get_by_id(data.auction_id, for_update=True)
             date = now_utc()
             data.amount = auction.buy_now_price
 
@@ -100,10 +103,16 @@ class BidServices(BaseService):
             if user.available_balance < amount:
                 raise ExcRaiser400('Insufficient wallet balance')
             if exist:
-                bid = await self.repo.update(exist, {"amount": data.amount})
+                bid = await self.repo.update(exist, {"amount": data.amount}, commit=False)
             else:
-                bid = await self.repo.add(data.model_dump())
-            await self.auction_repo.update(auction, {"current_price": data.amount})
+                bid = await self.repo.add(data.model_dump(), commit=False)
+            await self.auction_repo.update(
+                auction, {"current_price": data.amount}, commit=False
+            )
+            # Single commit releases the auction row lock together with
+            # every write made under it.
+            await self.repo.db.commit()
+
             if exist:
                 await self.auctions_services.close(
                     id=data.auction_id,
@@ -118,7 +127,8 @@ class BidServices(BaseService):
                 )
             return bid
         except Exception as e:
-            raise e         
+            await self.repo.db.rollback()
+            raise e
 
     async def create(self, data: CreateBidSchema) -> GetBidSchema:
         try:
@@ -128,7 +138,10 @@ class BidServices(BaseService):
                 f"{data.auction_id}"
             )
             user = await self.user_repo.get_by_id(data.user_id)
-            auction = await self.auction_repo.get_by_id(data.auction_id)
+            # Lock the auction row up front so two concurrent bids on the
+            # same auction serialize instead of both reading the same
+            # current_price and racing to write it back.
+            auction = await self.auction_repo.get_by_id(data.auction_id, for_update=True)
             date = now_utc()
 
             if auction.status != AuctionStatus.ACTIVE:
@@ -148,7 +161,9 @@ class BidServices(BaseService):
             # Check if price is within 10% of buy_now_price
             if auction.buy_now:
                 if data.amount >= auction.buy_now_price * 0.9:
-                    await self.auction_repo.update(auction, {"buy_now": False})
+                    await self.auction_repo.update(
+                        auction, {"buy_now": False}, commit=False
+                    )
 
             prev_bids = sorted(
                 auction.bids, key=lambda x: x.amount, reverse=True
@@ -178,13 +193,21 @@ class BidServices(BaseService):
             if exist:
                 return await self.update(exisiting_bid=exist, amount=data.amount)
 
-            # Check available balance against bid amount
+            # Check available balance against bid amount (fast-path check;
+            # wtab re-checks under lock since this read isn't locked)
             if user.available_balance < data.amount:
                 raise ExcRaiser400('Insufficient wallet balance')
 
             # Move funds from users wallet to users auctioned_amount
-            _ = await self.user_repo.wtab(user.id, data.amount)
-            bid = await self.repo.add(data.model_dump())
+            _ = await self.user_repo.wtab(user.id, data.amount, commit=False)
+            bid = await self.repo.add(data.model_dump(), commit=False)
+            await self.auction_repo.update(
+                auction, {"current_price": data.amount}, commit=False
+            )
+            # Single commit releases the auction/user row locks together
+            # with every write made under them.
+            await self.repo.db.commit()
+
             if bid:
                 await self.notify(
                     user.id,
@@ -204,9 +227,9 @@ class BidServices(BaseService):
                 _ = await self.reward_service.save_reward_history(
                     user.id, reward_type="PLACE_BID"
                 )
-            await self.auction_repo.update(auction, {"current_price": data.amount})
             return bid
         except Exception as e:
+            await self.repo.db.rollback()
             raise e
 
     async def list_ws(
@@ -305,10 +328,14 @@ class BidServices(BaseService):
             user__id = user_id if user_id else exisiting_bid.user_id
             auc__id = auction_id if auction_id else exisiting_bid.auction_id
             user = await self.user_repo.get_by_id(user__id)
+            # Lock the auction row up front — same reasoning as create():
+            # serialize concurrent writers instead of racing on current_price.
+            auction = await self.auction_repo.get_by_id(auc__id, for_update=True)
 
             NOTIF_TITLE = 'Bid Placed'
             NOTIF_BODY = f'Bid submitted successfully in auction: {auc__id}'
 
+            is_direct_update = False
             if exisiting_bid:
                 amount_ = amount - exisiting_bid.amount
 
@@ -316,11 +343,10 @@ class BidServices(BaseService):
                     raise ExcRaiser400('Insufficient wallet balance')
 
                 # Move funds from users wallet to users auctioned_amount
-                _ = await self.user_repo.wtab(user.id, amount_)
-                bid = await self.repo.update(exisiting_bid, {"amount": amount})
-                if bid:
-                    await self.notify(user.id, NOTIF_TITLE, NOTIF_BODY)
-                    await self.nphb(bid.auction_id, user.id)
+                _ = await self.user_repo.wtab(user.id, amount_, commit=False)
+                bid = await self.repo.update(
+                    exisiting_bid, {"amount": amount}, commit=False
+                )
             elif user_id and auction_id:
                 exists = await self.repo.exists(
                     {"auction_id": auction_id, "user_id": user_id}
@@ -334,31 +360,42 @@ class BidServices(BaseService):
                     raise ExcRaiser400('Insufficient wallet balance')
 
                 # Move funds from users wallet to users auctioned_amount
-                _ = await self.user_repo.wtab(user.id, amount_)
-                bid = await self.repo.update(exists, {"amount": amount})
-                if bid:
-                    await self.notify(
-                        user.id,
-                        NOTIF_TITLE,
-                        NOTIF_BODY,
-                        links=[
-                            f"{app_configs.FRONTEND_URL}/product-details/{auction.id}"
-                        ],
-                    )
-                    await self.nphb(bid.auction_id, user.id)
-                    await publish_bid_placed({
-                        "auction_id": auc__id,
-                        "bid_user": user.id,
-                        "amount": amount,
-                        "link": f'{app_configs.FRONTEND_URL}/product-details/{auc__id}',
-                        "email": user.email
-                    })
+                _ = await self.user_repo.wtab(user.id, amount_, commit=False)
+                bid = await self.repo.update(exists, {"amount": amount}, commit=False)
+                is_direct_update = True
             else:
                 raise ExcRaiser400(message='Bid not found')
-            auction = await self.auction_repo.get_by_id(auc__id)
-            await self.auction_repo.update(auction, {"current_price": amount})
+
+            await self.auction_repo.update(
+                auction, {"current_price": amount}, commit=False
+            )
+            # Single commit releases the auction/user row locks together
+            # with every write made under them.
+            await self.repo.db.commit()
+
+            if bid and not is_direct_update:
+                await self.notify(user.id, NOTIF_TITLE, NOTIF_BODY)
+                await self.nphb(bid.auction_id, user.id)
+            elif bid:
+                await self.notify(
+                    user.id,
+                    NOTIF_TITLE,
+                    NOTIF_BODY,
+                    links=[
+                        f"{app_configs.FRONTEND_URL}/product-details/{auction.id}"
+                    ],
+                )
+                await self.nphb(bid.auction_id, user.id)
+                await publish_bid_placed({
+                    "auction_id": auc__id,
+                    "bid_user": user.id,
+                    "amount": amount,
+                    "link": f'{app_configs.FRONTEND_URL}/product-details/{auc__id}',
+                    "email": user.email
+                })
             return bid
         except Exception as e:
+            await self.repo.db.rollback()
             raise e
 
     async def delete(self, id: str):

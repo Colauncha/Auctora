@@ -56,14 +56,22 @@ class Repository:
         return self
 
     @no_db_error
-    async def add(self, entity: dict):
-        """Creates a new entity and persists it in the database"""
+    async def add(self, entity: dict, commit: bool = True):
+        """Creates a new entity and persists it in the database.
+
+        `commit=False` flushes the insert without ending the transaction,
+        so callers can keep a `for_update` lock held across several writes
+        and commit them all atomically.
+        """
         try:
             new_entity = self._Model(**entity)
 
             self.db.add(new_entity)
-            await self.db.commit()
-            await self.db.refresh(new_entity)
+            if commit:
+                await self.db.commit()
+                await self.db.refresh(new_entity)
+            else:
+                await self.db.flush()
             return new_entity
         except Exception as e:
             await self.db.rollback()
@@ -92,13 +100,22 @@ class Repository:
             raise e
 
     @no_db_error
-    async def get_by_id(self, id: str):
+    async def get_by_id(self, id: str, for_update: bool = False):
+        """
+        `for_update=True` issues `SELECT ... FOR UPDATE`, taking a row lock
+        that is held until the current transaction commits or rolls back.
+        Use it to serialize concurrent read-check-write sequences (e.g. bid
+        placement) against the same row.
+        """
         try:
-            result = await self.db.execute(
+            stmt = (
                 select(self._Model)
                 .filter(self._Model.id == id)
                 .order_by(self._Model.id)
             )
+            if for_update:
+                stmt = stmt.with_for_update()
+            result = await self.db.execute(stmt)
             return result.scalars().first()
         except Exception as e:
             if self.configs.DEBUG:
@@ -125,9 +142,15 @@ class Repository:
     async def update(
             self,
             entity: T,
-            data: dict = None
+            data: dict = None,
+            commit: bool = True,
         ) -> T:
-        """Updates entity"""
+        """Updates entity.
+
+        `commit=False` flushes the update without ending the transaction,
+        letting callers batch several writes under one lock and commit
+        them together.
+        """
         try:
             _id = entity.id or str(entity.id)
             exists = (await self.db.execute(
@@ -141,7 +164,10 @@ class Repository:
                 .values(**data)
                 .execution_options(synchronize_session="fetch")
             )
-            await self.db.commit()
+            if commit:
+                await self.db.commit()
+            else:
+                await self.db.flush()
             refreshed = await self.db.execute(
                 select(self._Model).filter_by(id=_id)
             )
