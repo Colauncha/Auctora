@@ -1,6 +1,9 @@
+import traceback
+
 from typing import Any
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
+
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import (
     IntegrityError, DataError, OperationalError
@@ -12,6 +15,8 @@ settings = app_configs
 
 class ExcRaiser(Exception):
     def __init__(self, status_code: int, message: str, detail: str | Any):
+        if settings.DEBUG:
+            print(detail)
         self.status_code = status_code
         self.message = message
         self.detail = detail
@@ -46,7 +51,8 @@ class ExcRaiser500(ExcRaiser):
 
 
 async def exception_handler(request: Request, exc: ExcRaiser | BaseException):
-    print(exc)
+    if settings.DEBUG:
+        traceback.print_exc()
     status_code = 500
     message = 'Internal server error'
     detail = 'An unexpected error occurred while processing your request'
@@ -67,7 +73,8 @@ async def exception_handler(request: Request, exc: ExcRaiser | BaseException):
 
 
 async def db_exception_handler(request: Request, exc: OperationalError):
-    print(exc)
+    if settings.DEBUG:
+        traceback.print_exc()
     detail = "An error occurred while processing your request"
     if settings.DEBUG:
         detail = str(exc)
@@ -81,7 +88,8 @@ async def db_exception_handler(request: Request, exc: OperationalError):
     )
 
 async def integrity_error_handler(request: Request, exc: IntegrityError | DataError):
-    print(exc)
+    if settings.DEBUG:
+        traceback.print_exc()
     detail = "An error occurred due to data integrity issues"
     if settings.DEBUG:
         detail = str(exc)
@@ -99,6 +107,8 @@ async def request_validation_error_handler(
         request: Request,
         exc: RequestValidationError
     ):
+    if settings.DEBUG:
+        traceback.print_exc()
     return JSONResponse(
         status_code=422,
         content={
@@ -110,6 +120,8 @@ async def request_validation_error_handler(
 
 
 async def HTTP_error_handler(request: Request, exc: HTTPException):
+    if settings.DEBUG:
+        traceback.print_exc()
     status_code = exc.status_code
     content = {"status_code": status_code}
     if status_code >= 500:

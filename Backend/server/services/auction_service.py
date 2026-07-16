@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
 from server.utils.datetime_utils import now_utc
 import inspect
+import traceback
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import WebSocket
 
@@ -74,18 +76,39 @@ class AuctionServices(BaseService):
             sub_category_ids = item.pop('sub_category_ids', [])
             data['item'] = [Items(**item)]
             data['status'] = AuctionStatus(data.get('status'))
+
             result = await self.repo.add(data)
 
+            print(data)
+            print("Category ids: ", category_ids)
+            print("Sub category ids: ", sub_category_ids)
+
             # Assign M2M categories to the item after the auction row is committed
-            new_item = result.item[0]
+            new_item: Items = result.item[0]
+
+            # Force-load the current state of these two relationships before
+            # overwriting them. `new_item` was constructed in-process (not
+            # loaded via a query), so SQLAlchemy has no record of an "eager
+            # loading strategy" for these attributes; refresh() only reloads
+            # relationships it recognizes as already eagerly loaded. Naming
+            # them explicitly in attribute_names guarantees a real reload
+            # instead of relying on that ambiguous state.
+            await self.repo.db.refresh(
+                new_item, attribute_names=["categories", "sub_categories"]
+            )
+
             if category_ids:
-                new_item.categories = (await self.repo.db.execute(
+                categories_res = await self.repo.db.execute(
                     select(Categories).filter(Categories.id.in_(category_ids))
-                )).scalars().all()
+                )
+                new_item.categories = categories_res.scalars().all()
+
             if sub_category_ids:
-                new_item.sub_categories = (await self.repo.db.execute(
+                sub_res = await self.repo.db.execute(
                     select(Subcategory).filter(Subcategory.id.in_(sub_category_ids))
-                )).scalars().all()
+                )
+                new_item.sub_categories = sub_res.scalars().all()
+
             await self.repo.db.commit()
             await self.repo.db.refresh(new_item)
             if result.private == True:
@@ -109,11 +132,15 @@ class AuctionServices(BaseService):
             await self.repo.db.close()
             await publ.publish_create_auction(
                 {
-                    'email': data.get('users_email'),
-                    'link': f'{app_configs.FRONTEND_URL}/product-details/{validated_result.id}',
-                    'auction': validated_result,
-                    'item': item,
-                    'item_image': item.get('image_link').get('link') if item.get('image_link') else None,
+                    "email": data.get("users_email"),
+                    "link": f"{app_configs.FRONTEND_URL}/product-details/{validated_result.id}",
+                    "auction": validated_result.model_dump(),
+                    "item": item,
+                    "item_image": (
+                        item.get("image_link").get("link")
+                        if item.get("image_link")
+                        else None
+                    ),
                 }
             )
             return validated_result
@@ -128,7 +155,6 @@ class AuctionServices(BaseService):
     async def retrieve(self, id: str):
         try:
             result = await self.repo.get_by_id(id)
-            # print(result.chat)
             if not result:
                 raise ExcRaiser404("Auction not found")
             return GetAuctionSchema.model_validate(result)

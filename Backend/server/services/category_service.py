@@ -55,17 +55,23 @@ class CategoryServices(BaseService):
     async def list_categories(self):
         try:
             categories = await self.cat_repo.all()
+
             if not categories:
                 raise ExcRaiser404("No categories found")
+
+            sub_cat = await self.list_sub_categories(full=True)
+            if sub_cat:
+                valid_categories = [
+                    GetCategorySchema.model_validate(cat).set_subcategories(
+                        [sc for sc in sub_cat if sc.parent_id == cat.id]
+                    )
+                    for cat in categories
+                ]
+                return valid_categories
             valid_categories = [
-                GetCategorySchema.model_validate(cat).set_subcategories(
-                    [
-                        {'name': sub.name, 'id': sub.id}
-                        for sub in cat.sub_categories
-                    ]
-                )
-                for cat in categories
+                GetCategorySchema.model_validate(cat) for cat in categories
             ]
+            print(valid_categories)
             return valid_categories
         except Exception as e:
             raise ExcRaiser(
@@ -127,11 +133,16 @@ class CategoryServices(BaseService):
                 detail=repr(e)
             )
 
-    async def list_sub_categories(self):
+    async def list_sub_categories(self, full: bool = True):
         try:
             sub_categories = await self.sub_cat_repo.all()
             if not sub_categories:
-                raise ExcRaiser404("No sub categories found")
+                return []
+            if not full:
+                return [
+                    GetSubCategorySchema.model_validate(sub_cat)
+                    for sub_cat in sub_categories
+                ]
             valid_sub_categories = [
                 GetSubCategorySchema.model_validate(sub_cat).set_parent_details(
                     sub_cat.parent.name,
