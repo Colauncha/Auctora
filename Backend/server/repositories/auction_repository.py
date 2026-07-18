@@ -1,6 +1,8 @@
 import math
+import uuid
 
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.models.auction import Auctions, AuctionParticipants
@@ -30,6 +32,26 @@ class AuctionRepository(Repository):
             id = f'{auction_id}:{participant}'
             confirmed_participant = await self.auction_P.get_by_id(id)
             return True if confirmed_participant else False
+        except Exception as e:
+            raise e
+
+    async def get_with_bids(
+        self, auction_id: str, with_parent: bool = True, for_update: bool = False
+    ):
+        try:
+            stmt = (
+                select(Auctions)
+                .where(Auctions.id == auction_id)
+                .options(selectinload(Auctions.bids))
+                .execution_options(populate_existing=True)
+            )
+            if for_update:
+                stmt = stmt.with_for_update()
+            result = await self.db.execute(stmt)
+            auction = result.scalars().first()
+            if with_parent:
+                return auction
+            return auction.bids
         except Exception as e:
             raise e
 

@@ -70,7 +70,7 @@ async def update(
     return result
 
 
-@route.get('/')
+@route.get("/list")
 @permissions(permission_level=Permissions.AUTHENTICATED)
 async def list(
     user: current_user,

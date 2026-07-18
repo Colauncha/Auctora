@@ -16,7 +16,8 @@ settings = app_configs
 class ExcRaiser(Exception):
     def __init__(self, status_code: int, message: str, detail: str | Any):
         if settings.DEBUG:
-            print(detail)
+            if status_code != 401:
+                print(detail)
         self.status_code = status_code
         self.message = message
         self.detail = detail

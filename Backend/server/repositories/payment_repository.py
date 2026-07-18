@@ -44,7 +44,7 @@ class PaymentRepository(Repository):
                 if caller == 'create':
                     buyer.auctioned_amount -= data.amount
                 elif caller == 'buy_now':
-                    buyer.auctioned_amount -= existing_amount
+                    # buyer.auctioned_amount -= existing_amount
                     buyer.available_balance -= (data.amount - existing_amount)
                     buyer.wallet -= data.amount
 

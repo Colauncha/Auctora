@@ -147,7 +147,7 @@ class Users(BaseModel):
         return context.hash(password)
 
     def __str__(self):
-        return f'Name: {self.username}, Email: {self.email}, referrals: {self.referred_users}'
+        return f"Name: {self.username}, Email: {self.email}"
 
 
 class Notifications(BaseModel):

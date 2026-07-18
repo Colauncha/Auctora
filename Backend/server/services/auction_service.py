@@ -278,12 +278,15 @@ class AuctionServices(BaseService):
             # Get the auction, bids and winner's details
             if db:
                 self.repo.attachDB(db)
-            auction = await self.repo.get_by_id(id)
+            auction = await self.repo.get_with_bids(id)
             bids: list = auction.bids
             winner = None
             if len(bids) > 0:
                 winner = max(bids, key=lambda x: x.amount)
 
+            print("Auction: ", auction.to_dict())
+            print("Bids: ", bids)
+            print("Winner: ", winner)
             # If auction exists
             if auction:
                 # Cancel if no bids were placed
