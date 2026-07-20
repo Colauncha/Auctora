@@ -10,6 +10,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import close_all_sessions
 from server.config import app_configs, init_db, recreate_db, engine, async_engine
 from server.controllers import routes
+from server.middlewares.logs_middleware import RequestLogger
 from server.middlewares.multipart_large_file import LargeFileMiddleware
 from server.middlewares.exception_handler import (
     ExcRaiser,
@@ -24,7 +25,7 @@ from server.middlewares.exception_handler import (
     exception_handler,
     db_exception_handler,
 )
-
+from server.utils.logs import setup_logging
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -60,6 +61,7 @@ def create_app(app_name: str = "temporary") -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(LargeFileMiddleware)
+    app.add_middleware(RequestLogger)
 
     @app.get("/", include_in_schema=False)
     def redirect():
@@ -105,6 +107,8 @@ def create_app(app_name: str = "temporary") -> FastAPI:
             "status": "running",
             "message": "Database schema recreated successfully!",
         }
+
+    setup_logging()
 
     return app
 
