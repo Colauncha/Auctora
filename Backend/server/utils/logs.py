@@ -11,7 +11,7 @@ FILE_PATH = 'biddius.log' if env == 'development' else '/var/log/biddius-logs/bi
 
 def setup_logging():
     handler = ConcurrentRotatingFileHandler(
-        "biddius.log", maxBytes=10*1024*1024, backupCount=5
+        FILE_PATH, maxBytes=10 * 1024 * 1024, backupCount=5
     )
     handler.setFormatter(jsonlogger.JsonFormatter(
         "%(asctime)s %(process)d %(levelname)s %(name)s: %(message)s"
@@ -28,7 +28,7 @@ def setup_logging():
         # uv_logger.handlers = []          # remove Uvicorn's default stdout handler if you don't want duplicate output
         uv_logger.addHandler(handler)
         uv_logger.propagate = False
-    
+
     request_logger = logging.getLogger('biddius.request')
     request_logger.setLevel(logging.INFO)
     request_logger.addHandler(handler)
