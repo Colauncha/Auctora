@@ -41,12 +41,14 @@ class PaymentRepository(Repository):
                 if not seller:
                     raise ExcRaiser404(message="Recipient not found")
 
-                if caller == 'create':
+                buyer.wallet -= data.amount
+                if caller == "create":
                     buyer.auctioned_amount -= data.amount
-                elif caller == 'buy_now':
-                    # buyer.auctioned_amount -= existing_amount
-                    buyer.available_balance -= (data.amount - existing_amount)
-                    buyer.wallet -= data.amount
+                elif caller == "buy_now":
+                    buyer.available_balance -= data.amount - existing_amount
+                    buyer.auctioned_amount -= existing_amount
+                    # buyer.available_balance -= (data.amount - existing_amount)
+                    # buyer.wallet -= data.amount
 
                 entity = self._Model(
                     from_id=buyer.id, to_id=seller.id,

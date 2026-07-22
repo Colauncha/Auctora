@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.models.auction import Auctions, AuctionParticipants
+from server.models.bids import Bids
 from server.models.items import Items, Categories, Subcategory
 from server.repositories.repository import Repository, no_db_error
 from server.enums.auction_enums import AuctionStatus
@@ -42,7 +43,7 @@ class AuctionRepository(Repository):
             stmt = (
                 select(Auctions)
                 .where(Auctions.id == auction_id)
-                .options(selectinload(Auctions.bids))
+                .options(selectinload(Auctions.bids).selectinload(Bids.user))
                 .execution_options(populate_existing=True)
             )
             if for_update:

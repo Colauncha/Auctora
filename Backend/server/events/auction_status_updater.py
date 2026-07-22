@@ -93,7 +93,7 @@ async def process_intra_payment(auctionServices: AuctionServices):
         # Auto-finalize PENDING and INSPECTING payments that have passed their due date
         finalize_events = (await session.execute(
             select(Payments).filter(
-                Payments.status.in_([PaymentStatus.PENDING.value, PaymentStatus.INSPECTING.value]),
+                Payments.status.in_([PaymentStatus.PENDING, PaymentStatus.INSPECTING]),
                 Payments.due_data <= current_time
             ).with_for_update()
         )).scalars().all()
@@ -111,7 +111,7 @@ async def process_intra_payment(auctionServices: AuctionServices):
         # Auto-confirm REFUNDING payments the seller has not responded to within the deadline
         refund_events = (await session.execute(
             select(Payments).filter(
-                Payments.status == PaymentStatus.REFUNDING.value,
+                Payments.status == PaymentStatus.REFUNDING,
                 Payments.due_data <= current_time
             ).with_for_update()
         )).scalars().all()
@@ -137,17 +137,21 @@ async def main():
     # Services and Repos
     factory = DBAdaptor().factory()
 
+    user_repo = factory.user_repo(factory.wallet_repo())
     notif_service = UserNotificationServices(factory.notif_repo())
     chat_service = ChatServices(factory.chat_repo())
+    reward_service = RewardHistoryService(
+        factory.rewardhistory_repo(), user_repo, notif_service
+    )
 
     auction_service = AuctionServices(
         auction_p_repo=factory.auction_p_repo(),
         auction_repo=factory.auction_repo(factory.auction_p_repo()),
-        user_repo=factory.user_repo(factory.wallet_repo()),
+        user_repo=user_repo,
         payment_repo=factory.payment_repo(),
         notif_service=notif_service,
         chat_service=chat_service,
-        reward_service=RewardHistoryService,
+        reward_service=reward_service,
     )
 
     scheduler.add_job(

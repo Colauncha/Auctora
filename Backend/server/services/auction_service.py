@@ -276,17 +276,24 @@ class AuctionServices(BaseService):
     ):
         try:
             # Get the auction, bids and winner's details
+            # `db` is only passed by callers outside a normal HTTP request
+            # (e.g. the scheduler's long-lived AuctionServices singleton),
+            # whose repos are constructed without a session. Every repo this
+            # method touches needs the fresh session, not just self.repo.
             if db:
                 self.repo.attachDB(db)
+                self.payment_repo.attachDB(db)
+                self.user_repo.attachDB(db)
+                self.notification.repo.attachDB(db)
+                self.chat_service.chat_repo.attachDB(db)
+                self.reward_service.repo.attachDB(db)
             auction = await self.repo.get_with_bids(id)
             bids: list = auction.bids
             winner = None
             if len(bids) > 0:
                 winner = max(bids, key=lambda x: x.amount)
 
-            print("Auction: ", auction.to_dict())
-            print("Bids: ", bids)
-            print("Winner: ", winner)
+            print(winner.to_dict())
             # If auction exists
             if auction:
                 # Cancel if no bids were placed
@@ -309,8 +316,6 @@ class AuctionServices(BaseService):
                         "Your auction has been closed",
                     )
                     for bid in bids:
-                        if db:
-                            self.user_repo.attachDB(db)
                         _ = await self.user_repo.abtw(bid.user_id, bid.amount)
                         await self.notify(
                             bid.user_id,
@@ -325,8 +330,6 @@ class AuctionServices(BaseService):
                 await self.notify(
                     auction.users_id, "Auction Closed", "Your auction has been closed"
                 )
-                if db:
-                    self.payment_repo.attachDB(db)
                 await self.payment_repo.add(
                     CreatePaymentSchema(
                         from_id=winner.user_id,
@@ -339,6 +342,11 @@ class AuctionServices(BaseService):
                     caller=caller,
                     existing_amount=existing_amount,
                 )
+                # payment_repo.add() only flushes a SAVEPOINT; commit here so
+                # the buyer/seller balance update is durable on its own,
+                # instead of riding on whatever writes the rest of this
+                # method happens to make afterward.
+                await self.payment_repo.db.commit()
                 await self.notify(
                     winner.user_id,
                     "Auction Won",
@@ -346,16 +354,16 @@ class AuctionServices(BaseService):
                     links=[f"{app_configs.FRONTEND_URL}/product/finalize/{id}"],
                     class_name=NotificationClasses.AUCTION.value,
                 )
-                await publ.publish_win_auction(
-                    {
-                        'auction_id': id,
-                        'winner': winner.user_id,
-                        'user': winner.user,
-                        'email': winner.user.email,
-                        'amount': winner.amount,
-                        'link': f'{app_configs.FRONTEND_URL}/product/finalize/{id}'
-                    }
-                )
+                # await publ.publish_win_auction(
+                #     {
+                #         'auction_id': id,
+                #         'winner': winner.user_id,
+                #         'user': winner.user,
+                #         'email': winner.user.email,
+                #         'amount': winner.amount,
+                #         'link': f'{app_configs.FRONTEND_URL}/product/finalize/{id}'
+                #     }
+                # )
                 await self.chat_service.create_chat(
                     {
                         'auctions_id': auction.id,
@@ -372,7 +380,7 @@ class AuctionServices(BaseService):
                 bids = sorted(bids, key=lambda x: x.amount)
                 bids = bids[:-1]
                 for bid in bids:
-                    _ = await self.user_repo.abtw(bid.user_id, bid.amount)
+                    await self.user_repo.abtw(bid.user_id, bid.amount)
                     await self.notify(
                         bid.user_id,
                         "Auction Lost",
@@ -389,6 +397,9 @@ class AuctionServices(BaseService):
                 method_name = inspect.stack()[0].frame.f_code.co_name
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
+        finally:
+            redis = await redis_store.get_async_redis()
+            await redis.delete(f"auction:{id}")
 
     async def restart(self, id: str, data: RestartAuctionSchema):
         try:
@@ -471,6 +482,7 @@ class AuctionServices(BaseService):
         try:
             if db:
                 self.payment_repo.attachDB(db)
+                self.notification.repo.attachDB(db)
             payment = await self.payment_repo.get_by_attr(
                 {"auction_id": auction_id}
             )
@@ -632,6 +644,7 @@ class AuctionServices(BaseService):
         try:
             if db:
                 self.payment_repo.attachDB(db)
+                self.notification.repo.attachDB(db)
             payment = await self.payment_repo.get_by_attr(
                 {"auction_id": auction_id}
             )

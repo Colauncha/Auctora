@@ -14,5 +14,5 @@ class Bids(BaseModel):
     amount = Column(Float, nullable=False)
 
     # relationships
-    auction = relationship('Auctions', back_populates='bids')
-    user = relationship('Users', back_populates='bids')
+    auction = relationship("Auctions", back_populates="bids", lazy="selectin")
+    user = relationship("Users", back_populates="bids", lazy="selectin")
