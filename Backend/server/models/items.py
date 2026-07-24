@@ -91,8 +91,8 @@ class Items(BaseModel):
         Seller: {self.users_id}\n\
         '
 
-    def to_dict(self):
-        return super().to_dict()
+    # def to_dict(self):
+    #     return super().to_dict()
 
 
 class Categories(BaseModel):

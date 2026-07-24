@@ -14,6 +14,7 @@ from server.schemas import (
     CreateBidSchema, GetBidSchema, UpdateBidSchema,
     APIResponse, BidQuery, PagedResponse
 )
+from server.schemas.bid_schema import GetBidSchemaWUser
 from server.utils.ws_manager import WSManager
 from server.services import (
     current_user,
@@ -27,17 +28,27 @@ route = APIRouter(prefix='/bids', tags=['bids'])
 wsmanager = WSManager()
 
 
+async def broadcast_bids(bidServices: BidServices, auction_id: str):
+    """Push the refreshed bid list to any clients already in this auction's WS room."""
+    prev_bids = await bidServices.list_ws(str(auction_id))
+    await wsmanager.broadcast(
+        str(auction_id), {"type": "new_bid", "payload": prev_bids}
+    )
+
+
 @route.post('/')
 @permissions(permission_level=Permissions.CLIENT)
 async def create(
     user: current_user,
     data: CreateBidSchema,
     bidServices: BidServices = Depends(get_bid_service),
-) -> APIResponse[GetBidSchema]:
+) -> APIResponse[GetBidSchemaWUser]:
     data = data.model_dump()
     data["user_id"] = user.id
     data["username"] = user.username
     result = await bidServices.create(CreateBidSchema(**data))
+    result = GetBidSchemaWUser.model_validate(result)
+    await broadcast_bids(bidServices, result.auction_id)
     return APIResponse(data=result)
 
 
@@ -52,6 +63,7 @@ async def buy_now(
     data["user_id"] = user.id
     data["username"] = user.username
     result = await bidServices.buy_now(CreateBidSchema(**data))
+    await broadcast_bids(bidServices, result.auction_id)
     return APIResponse(data=result)
 
 
@@ -67,6 +79,8 @@ async def update(
     result = await bidServices.update(
         amount.amount, exisiting_bid=existing_bid
     )
+    result = GetBidSchemaWUser.model_validate(result)
+    await broadcast_bids(bidServices, existing_bid.auction_id)
     return result
 
 
@@ -77,7 +91,9 @@ async def list(
     query: BidQuery = Depends(BidQuery),
     bidServices: BidServices = Depends(get_bid_service),
 ) -> PagedResponse:
-    result = await bidServices.list(query.model_dump(exclude_unset=True))
+    result = await bidServices.list(
+        query.model_dump(exclude_unset=True), with_users=True
+    )
     return result
 
 

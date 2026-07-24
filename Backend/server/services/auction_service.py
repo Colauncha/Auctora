@@ -157,7 +157,7 @@ class AuctionServices(BaseService):
             result = await self.repo.get_by_id(id)
             if not result:
                 raise ExcRaiser404("Auction not found")
-            return GetAuctionSchema.model_validate(result)
+            return GetAuctionSchema.model_validate(result.to_dict())
         except ExcRaiser as e:
             raise
         except Exception as e:
@@ -174,9 +174,10 @@ class AuctionServices(BaseService):
             filter['private'] = False
             if extra:
                 filter.update(extra)
-            print(filter)
             result = await self.repo.get_all(filter)
-            result.data = [GetAuctionSchema.model_validate(r) for r in result.data]
+            result.data = [
+                GetAuctionSchema.model_validate(r.to_dict()) for r in result.data
+            ]
             return result
         except ExcRaiser as e:
             raise

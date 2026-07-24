@@ -69,13 +69,11 @@ class NotificationMessages:
 
     # Payment related notifications
     PAYMENT_SUCCESSFUL = NotificationObject(
-        message="Payment completed successfully.",
-        link=["/payments/history/"]
+        message="Payment completed successfully.", link=["/dashboard/wallet-history/"]
     )
 
     PAYMENT_FAILED = NotificationObject(
-        message="Payment failed. Please try again.",
-        link=["/payments/retry/"]
+        message="Payment failed. Please try again.", link=["/dashboard/wallet-history/"]
     )
 
     # Account related notifications

@@ -1,9 +1,9 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import Optional, Union
+from typing import Optional, Union, Any
 from uuid import UUID, uuid4
 from server.config import app_configs
-
+from server.models.users import Users
 
 class CreateBidSchema(BaseModel):
     auction_id: Union[UUID, str] = Field(example=uuid4(), description="Auction ID")
@@ -17,6 +17,10 @@ class GetBidSchema(CreateBidSchema):
     id: Union[UUID, str]
     created_at: Optional[datetime] = Field(default=None)
     updated_at: Optional[datetime] = Field(default=None)
+
+
+class GetBidSchemaWUser(GetBidSchema):
+    user: Optional[Any] = Field(default=None)
 
 
 class UpdateBidSchema(BaseModel):
