@@ -23,6 +23,10 @@ class GetBidSchemaWUser(GetBidSchema):
     user: Optional[Any] = Field(default=None)
 
 
+class GetBidSchemaWAuction(GetBidSchema):
+    auction: Optional[Any] = Field(default=None)
+
+
 class UpdateBidSchema(BaseModel):
     model_config = {'from_attributes': True}
     amount: float = Field(example=100.00, description="Amount to place on bid")

@@ -46,7 +46,7 @@ from server.schemas import (
     GetBidSchema,
     GetChatSchema,
 )
-from server.schemas.bid_schema import GetBidSchemaWUser
+from server.schemas.bid_schema import GetBidSchemaWUser, GetBidSchemaWAuction
 from server.services.base_service import BaseService
 from server.middlewares.exception_handler import (
     ExcRaiser, ExcRaiser404, ExcRaiser500, ExcRaiser400
@@ -1063,7 +1063,7 @@ class UserServices(BaseService):
             )
             if bids:
                 bids.data = [
-                    GetBidSchemaWUser.model_validate(bid.to_dict(exclude=["user"]))
+                    GetBidSchemaWAuction.model_validate(bid.to_dict(exclude=["user"]))
                     for bid in bids.data
                 ]
             return bids

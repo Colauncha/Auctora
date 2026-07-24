@@ -34,7 +34,8 @@ class BaseModel(Base):
     def to_dict(self, exclude: list = None, _seen: set = None) -> dict:
         try:
             _seen = _seen if _seen is not None else set()
-            _seen.add((type(self), self.id))
+            key = (type(self), self.id)
+            _seen.add(key)
             result = {}
             for attr, vals in self.__dict__.items():
                 if attr.startswith("_") or attr == "hash_password":
@@ -43,6 +44,7 @@ class BaseModel(Base):
                     continue
                 else:
                     result[attr] = self._to_dict_value(vals, _seen)
+            _seen.discard(key)
             return result
         except Exception as e:
             logger.error(f"Error serializing {type(self).__name__}: {e}")

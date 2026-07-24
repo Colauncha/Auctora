@@ -157,6 +157,7 @@ class AuctionServices(BaseService):
             result = await self.repo.get_by_id(id)
             if not result:
                 raise ExcRaiser404("Auction not found")
+            # print(result.to_dict())
             return GetAuctionSchema.model_validate(result.to_dict())
         except ExcRaiser as e:
             raise
