@@ -204,13 +204,13 @@ async def login(
 ) -> APIResponse[LoginOutput]:
     token, user = await userServices.authenticate(credentials)
     response.set_cookie(
-        key='access_token',
+        key="access_token",
         value=token.access_token,
         httponly=True,
-        max_age=app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
-        expires=app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
-        secure=True if app_configs.ENV == 'production' else False,
-        samesite="None" if app_configs.ENV == 'production' else "lax",
+        max_age=app_configs.security.ACCESS_TOKEN_EXPIRES * 3600,
+        expires=app_configs.security.ACCESS_TOKEN_EXPIRES * 3600,
+        secure=True if app_configs.ENV == "production" else False,
+        samesite="None" if app_configs.ENV == "production" else "lax",
     )
     response.set_cookie(
         key='refresh_token',
@@ -235,13 +235,13 @@ async def refresh_token(
 ) -> APIResponse:
     token = await userServices.refresh_access_token(data.refresh_token)
     response.set_cookie(
-        key='access_token',
+        key="access_token",
         value=token.access_token,
         httponly=True,
-        max_age=app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
-        expires=app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
-        secure=True if app_configs.ENV == 'production' else False,
-        samesite="None" if app_configs.ENV == 'production' else "lax",
+        max_age=app_configs.security.ACCESS_TOKEN_EXPIRES * 3600,
+        expires=app_configs.security.ACCESS_TOKEN_EXPIRES * 3600,
+        secure=True if app_configs.ENV == "production" else False,
+        samesite="None" if app_configs.ENV == "production" else "lax",
     )
     return APIResponse(data={'token': token})
 
@@ -290,22 +290,21 @@ async def callback(
 
     redirect_response = RedirectResponse(url=url)
     redirect_response.set_cookie(
-        key='access_token',
+        key="access_token",
         value=token.access_token,
         httponly=True,
-        max_age=app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
-        secure=True if app_configs.ENV == 'production' else False,
-        samesite="None" if app_configs.ENV == 'production' else "lax",
+        max_age=app_configs.security.ACCESS_TOKEN_EXPIRES * 3600,
+        secure=True if app_configs.ENV == "production" else False,
+        samesite="None" if app_configs.ENV == "production" else "lax",
     )
     redirect_response.set_cookie(
-        key='refresh_token',
+        key="refresh_token",
         value=token.refresh_token,
         httponly=True,
         max_age=app_configs.security.REFRESH_TOKEN_EXPIRES * 24 * 3600,
-        secure=True if app_configs.ENV == 'production' else False,
-        samesite="None" if app_configs.ENV == 'production' else "lax",
+        secure=True if app_configs.ENV == "production" else False,
+        samesite="None" if app_configs.ENV == "production" else "lax",
     )
-    print(redirect_response)
     return redirect_response
 
 
@@ -318,8 +317,8 @@ async def logout(request: Request, response: Response, user: current_user = None
 
     await async_redis.setex(
         f"blacklist_{token}",
-        app_configs.security.ACCESS_TOKEN_EXPIRES * 60,
-        cache_obj_format({"token": token})
+        app_configs.security.ACCESS_TOKEN_EXPIRES * 3600,
+        cache_obj_format({"token": token}),
     )
 
     if user:

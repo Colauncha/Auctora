@@ -49,14 +49,15 @@ async def message(
     return APIResponse(data=chat)
 
 
-@route.websocket('/ws/{chat_id}')
+@route.websocket("/ws/{chat_id}/{token}")
 async def connect(
     chat_id: str,
     ws: WebSocket,
+    token: str,
     wsmanager: WSManager = Depends(get_wsmanager),
-    chatServices: ChatServices = Depends(get_chat_service)
+    chatServices: ChatServices = Depends(get_chat_service),
 ):
-    user = await AuthServices.get_ws_user(ws)
+    user = await AuthServices.get_ws_user(ws, token)
     chat = await chatServices.get_chat_by_id(chat_id)
     await wsmanager.create_chatroom(
         str(chat.id), str(chat.buyer_id), str(chat.seller_id)
@@ -93,4 +94,3 @@ async def connect(
     except Exception:
         await ws.close(code=1011)
         await wsmanager.leave_chatroom(chat_id, str(user.id))
-
