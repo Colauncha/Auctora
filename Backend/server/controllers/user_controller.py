@@ -285,7 +285,6 @@ async def callback(
     )
 
     token, url = await userServices.google_auth(id_info)
-    print(token)
     if token is None:
         raise ExcRaiser400(detail="Failed to authenticate user")
 
@@ -306,6 +305,7 @@ async def callback(
         secure=True if app_configs.ENV == 'production' else False,
         samesite="None" if app_configs.ENV == 'production' else "lax",
     )
+    print(redirect_response)
     return redirect_response
 
 

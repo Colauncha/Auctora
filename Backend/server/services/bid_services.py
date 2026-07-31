@@ -261,7 +261,11 @@ class BidServices(BaseService):
                     "username": b.username,
                     "amount": b.amount,
                     "created_at": str(b.created_at),
-                    "avatar": b.user.get("image_link").get("link"),
+                    "avatar": (
+                        b.user.get("image_link", None).get("link", None)
+                        if b.user.get("image_link")
+                        else ""
+                    ),
                 }
                 for b in prev_bids
             ]
