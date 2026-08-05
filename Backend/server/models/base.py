@@ -1,3 +1,4 @@
+import enum
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -28,6 +29,12 @@ class BaseModel(Base):
             return vals.to_dict(_seen=_seen)
         elif isinstance(vals, list):
             return [self._to_dict_value(item, _seen) for item in vals]
+        elif isinstance(vals, enum.Enum):
+            return vals.value
+        elif isinstance(vals, uuid.UUID):
+            return str(vals)
+        elif isinstance(vals, datetime):
+            return str(vals)
         else:
             return vals
 

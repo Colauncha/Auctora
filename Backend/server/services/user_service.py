@@ -1084,8 +1084,7 @@ class UserServices(BaseService):
             )
             if chats:
                 chats.data = [
-                    GetChatSchema.model_validate(chat)
-                    for chat in chats.data
+                    GetChatSchema.model_validate(chat.to_dict()) for chat in chats.data
                 ]
             return chats
         except ExcRaiser as e:

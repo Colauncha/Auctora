@@ -1,16 +1,32 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from server.middlewares.exception_handler import ExcRaiser, ExcRaiser500
 from server.repositories.repository import Repository
 from server.chat.chat import Chats
-
+from server.models.auction import Auctions
 
 class ChatRepository(Repository):
     def __init__(self, db: AsyncSession =None):
         super().__init__(Chats)
         if db:
             super().attachDB(db)
+
+    async def get_with_extra(self, chat_id: str) -> Chats:
+        try:
+            stmt = (
+                select(Chats)
+                .where(Chats.id == chat_id)
+                .options(selectinload(Chats.auction).selectinload(Auctions.item))
+                .execution_options(populate_existing=True)
+            )
+            result = await self.db.execute(stmt)
+            chat = result.scalars().first()
+            return chat
+        except Exception as e:
+            raise e
 
     async def update_convo(
         self,

@@ -1,3 +1,5 @@
+import json
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -65,12 +67,26 @@ async def connect(
     await wsmanager.enter_chatroom(str(chat.id), str(user.id), ws)
     try:
         if chat:
-            await ws.send_json({'type': 'chat' ,'payload': chat.model_dump()})
+            try:
+                chat_payload = chat.model_dump(
+                    exclude={"buyer", "seller"}, warnings=False
+                )
+            except Exception as e:
+                raise e
+
+            await ws.send_json(
+                {
+                    "type": "chat",
+                    "payload": chat_payload,
+                }
+            )
         while True:
             data = await ws.receive_json()
-            data_type = data.get('type')
-            if data_type == 'send_message':
-                data = ConversationSchema.model_validate(data.get('payload'))
+            data_type = data.get("type")
+            if data_type == "send_message":
+                data = ConversationSchema.model_validate(
+                    data.get("payload"), strict=False
+                )
                 data.sender_id = str(user.id)
                 new_convo = await chatServices.update_chat(chat_id, data)
                 if new_convo:

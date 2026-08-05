@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field, field_serializer
 from uuid import UUID
 from typing import Optional
 
+# from server.models.auction import Auctions
 
 class ConversationSchema(BaseModel):
     model_config = {
@@ -38,6 +39,8 @@ class GetChatSchema(CreateChatSchema):
     buyer_id: UUID
     seller_id: UUID
     convo_len: int = Field(default=0)
+
+    auction: Optional[dict] = None
 
     def __init__(self, **data):
         super().__init__(**data)

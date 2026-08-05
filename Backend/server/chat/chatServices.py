@@ -20,7 +20,26 @@ class ChatServices(BaseService):
     async def create_chat(self, chat_data: CreateChatSchema) -> GetChatSchema:
         try:
             new_chat = await self.chat_repo.add(chat_data)
-            return GetChatSchema.model_validate(new_chat)
+            auction = (
+                new_chat.auction.to_dict(
+                    exclude=[
+                        "user",
+                        "payment",
+                        "participants",
+                        "chat",
+                        "bids",
+                        "created_at",
+                        "updated_at",
+                    ]
+                )
+                if new_chat.auction
+                else None
+            )
+            chat = GetChatSchema.model_validate(
+                new_chat.to_dict(exclude=["buyer", "seller", "auction"])
+            )
+            chat.auction = auction
+            return chat
         except ExcRaiser as e:
             raise e
         except Exception as e:
@@ -31,8 +50,28 @@ class ChatServices(BaseService):
 
     async def get_chat_by_id(self, id: str) -> GetChatSchema:
         try:
-            chat = await self.chat_repo.get_by_attr({'id': id})
-            return GetChatSchema.model_validate(chat)
+            # chat = await self.chat_repo.get_by_attr({'id': id})
+            chat = await self.chat_repo.get_with_extra(id)
+            auction = (
+                chat.auction.to_dict(
+                    exclude=[
+                        "user",
+                        "payment",
+                        "participants",
+                        "chat",
+                        "bids",
+                        "created_at",
+                        "updated_at",
+                    ]
+                )
+                if chat.auction
+                else None
+            )
+            chat = GetChatSchema.model_validate(
+                chat.to_dict(exclude=["buyer", "seller", "auction"])
+            )
+            chat.auction = auction
+            return chat
         except ExcRaiser as e:
             raise e
         except Exception as e:
@@ -55,7 +94,26 @@ class ChatServices(BaseService):
                 model=Chats,
                 attr='conversation'
             )
-            return GetChatSchema.model_validate(updated_chat)
+            auction = (
+                updated_chat.auction.to_dict(
+                    exclude=[
+                        "user",
+                        "payment",
+                        "participants",
+                        "chat",
+                        "bids",
+                        "created_at",
+                        "updated_at",
+                    ]
+                )
+                if updated_chat.auction
+                else None
+            )
+            chat = GetChatSchema.model_validate(
+                updated_chat.to_dict(exclude=["buyer", "seller", "auction"])
+            )
+            chat.auction = auction
+            return chat
         except ExcRaiser as e:
             raise e
         except Exception as e:
@@ -81,7 +139,6 @@ class ChatServices(BaseService):
                 self.inspect()
                 raise ExcRaiser500(detail=str(e), exception=e)
             raise ExcRaiser500(detail=str(e))
-
 
     async def hide_msg(
         self,
