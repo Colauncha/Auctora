@@ -1042,7 +1042,11 @@ class UserServices(BaseService):
             )
             if auctions:
                 auctions.data = [
-                    GetAuctionSchema.model_validate(auction)
+                    GetAuctionSchema.model_validate(
+                        auction.to_dict(
+                            exclude=["user", "bids", "chats", "payment", "participants"]
+                        )
+                    )
                     for auction in auctions.data
                 ]
             return auctions
