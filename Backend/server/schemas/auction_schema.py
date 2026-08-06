@@ -38,6 +38,7 @@ class CreateAuctionSchema(BaseModel):
     use_reserve_price: Optional[bool] = Field(default=False)
     reserve_price: Optional[float] = Field(default=None)
     refundable: Optional[bool] = Field(default=False)
+    pickup_address: Optional[str] = Field(default=None)
     pickup_latitude: Optional[float] = Field(default=None)
     pickup_longitude: Optional[float] = Field(default=None)
     participants: Optional[list[str]] = Field(
@@ -104,10 +105,7 @@ class GetAuctionSchema(CreateAuctionSchema):
 
 
 class RestartAuctionSchema(BaseModel):
-    model_config = {
-        'from_attributes'
-        'extra': 'ignore'
-    }
+    model_config = {"from_attributes": True, "extra": "ignore"}
     start_date: Optional[datetime] = Field(default=None)
     end_date: Optional[datetime] = Field(default=None)
     start_price: Optional[float] = Field(default=None)

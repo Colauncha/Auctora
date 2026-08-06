@@ -123,7 +123,7 @@ class PaymentRepository(Repository):
 
             #     await self.update_jsonb(refered_by.id, ref_users, new_slot=False)
 
-            entity_data = entity.to_dict(exclude=['buyer', 'seller'])
+            entity_data = entity.to_dict(exclude=["buyer", "seller"], for_update=True)
             await self.update(entity, entity_data)
             return entity
         except Exception as e:

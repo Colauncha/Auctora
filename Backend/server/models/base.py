@@ -21,24 +21,34 @@ class BaseModel(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
 
-    def _to_dict_value(self, vals, _seen: set):
+    def _to_dict_value(self, vals, _seen: set, for_update: bool = False):
         if isinstance(vals, BaseModel):
             key = (type(vals), vals.id)
             if key in _seen:
                 return {"id": vals.id}
-            return vals.to_dict(_seen=_seen)
+            return vals.to_dict(_seen=_seen, for_update=for_update)
         elif isinstance(vals, list):
-            return [self._to_dict_value(item, _seen) for item in vals]
+            return [
+                self._to_dict_value(item, _seen, for_update=for_update) for item in vals
+            ]
         elif isinstance(vals, enum.Enum):
+            if for_update:
+                return vals
             return vals.value
         elif isinstance(vals, uuid.UUID):
+            if for_update:
+                return vals
             return str(vals)
         elif isinstance(vals, datetime):
+            if for_update:
+                return vals
             return str(vals)
         else:
             return vals
 
-    def to_dict(self, exclude: list = None, _seen: set = None) -> dict:
+    def to_dict(
+        self, exclude: list = None, _seen: set = None, for_update: bool = False
+    ) -> dict:
         try:
             _seen = _seen if _seen is not None else set()
             key = (type(self), self.id)
@@ -50,7 +60,9 @@ class BaseModel(Base):
                 elif exclude and attr in exclude:
                     continue
                 else:
-                    result[attr] = self._to_dict_value(vals, _seen)
+                    result[attr] = self._to_dict_value(
+                        vals, _seen, for_update=for_update
+                    )
             _seen.discard(key)
             return result
         except Exception as e:
