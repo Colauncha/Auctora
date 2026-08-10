@@ -30,6 +30,7 @@ from server.schemas import (
     SearchQuery,
     GetPaymentSchema,
     RestartAuctionSchema,
+    GetPayments,
 )
 
 from server.services.base_service import BaseService
@@ -295,7 +296,6 @@ class AuctionServices(BaseService):
             if len(bids) > 0:
                 winner = max(bids, key=lambda x: x.amount)
 
-            print(winner.to_dict())
             # If auction exists
             if auction:
                 # Cancel if no bids were placed
@@ -474,6 +474,19 @@ class AuctionServices(BaseService):
             return True
         except ExcRaiser as e:
             raise
+        except Exception as e:
+            if self.debug:
+                method_name = inspect.stack()[0].frame.f_code.co_name
+                print(f"Unexpected error in {method_name}: {e}")
+            raise ExcRaiser500(detail=str(e))
+
+    async def get_payments(self, user_id, filter: GetPayments):
+        try:
+            filter.from_id = user_id
+            filter = filter.model_dump(exclude_unset=True, exclude_none=True)
+            payments = await self.payment_repo.get_all(filter)
+            payments.data = [GetPaymentSchema.model_validate(p) for p in payments.data]
+            return payments
         except Exception as e:
             if self.debug:
                 method_name = inspect.stack()[0].frame.f_code.co_name

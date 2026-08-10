@@ -136,6 +136,11 @@ class GetUsersNoAuction(GetUsersSchemaPublic):
     model_config = {"from_attributes": True}    
 
 
+class GetPayments(PagedQuery):
+    from_id: Optional[str] = Query(default=None, description="From user ID")
+    status: Optional[PaymentStatus] = Query(default=None, description="Payment status")
+
+
 class GetUsers(GetUsersSchemaPublic):
     model_config = {"from_attributes": True}
     auctions: Optional[list[GetAuctionSchema]] = Field(default=[])

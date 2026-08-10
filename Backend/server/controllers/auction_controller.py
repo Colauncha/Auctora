@@ -3,9 +3,14 @@ from sqlalchemy.orm import Session
 from server.middlewares.exception_handler import ExcRaiser400
 from server.config import get_db
 from server.schemas import (
-    APIResponse, UpdateAuctionSchema,
-    GetAuctionSchema, CreateAuctionSchema,
-    RestartAuctionSchema, PagedResponse, AuctionQueryScalar,
+    APIResponse,
+    UpdateAuctionSchema,
+    GetAuctionSchema,
+    CreateAuctionSchema,
+    RestartAuctionSchema,
+    PagedResponse,
+    AuctionQueryScalar,
+    GetPayments,
 )
 from server.services import current_user, AuctionServices, get_auction_service
 from server.middlewares.auth import (
@@ -86,6 +91,17 @@ async def finalize(
         )
     result = await auctionServices.finalize_payment(auction.id, user.id)
     return APIResponse(data=result)
+
+
+@route.get("/get/payments")
+@permissions(permission_level=Permissions.CLIENT)
+async def get_payments(
+    user: current_user,
+    filter: GetPayments = Depends(),
+    auctionServices: AuctionServices = Depends(get_auction_service),
+) -> PagedResponse:
+    result = await auctionServices.get_payments(user.id, filter)
+    return result
 
 
 @route.put('/set_inspecting/{auction_id}')
