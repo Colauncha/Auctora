@@ -69,7 +69,7 @@ class ItemServices(BaseService):
     async def upload_images(self, item, uploads: list[UploadFile]) -> GetItemSchema:
         try:
             cloudn_resp = {}
-            folder_path = f"biddius/items/{item.name}"
+            folder_path = f"biddius/items/{(item.name).strip().replace(' ', '_')}"
             for idx, content in enumerate(uploads, 1):
                 if content is None:
                     continue
