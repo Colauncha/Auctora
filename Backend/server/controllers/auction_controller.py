@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends
+from typing import Optional
+from fastapi import APIRouter, Depends, File, Form, UploadFile
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
-from server.middlewares.exception_handler import ExcRaiser400
+from server.middlewares.exception_handler import ExcRaiser, ExcRaiser400
 from server.config import get_db
 from server.schemas import (
     APIResponse,
@@ -12,7 +14,11 @@ from server.schemas import (
     AuctionQueryScalar,
     GetPayments,
 )
-from server.services import current_user, AuctionServices, get_auction_service
+from server.services import (
+    current_user, AuctionServices, get_auction_service,
+    ItemServices, get_item_service
+)
+from server.services.item_service import ALLOWED_IMAGE_TYPES
 from server.middlewares.auth import (
     RequirePermission, permissions, Permissions,
     ServiceKeys
@@ -32,6 +38,55 @@ async def create(
     data = data.model_dump(exclude_unset=True)
     data["users_id"] = user.id
     result = await auctionServices.create(data)
+    return APIResponse(status_code=201, data=result)
+
+
+@route.post('/with-images')
+@permissions(permission_level=Permissions.CLIENT)
+async def create_with_images(
+    user: current_user,
+    data: str = Form(..., description="CreateAuctionSchema as a JSON string"),
+    image1: Optional[UploadFile] = File(None),
+    image2: Optional[UploadFile] = File(None),
+    image3: Optional[UploadFile] = File(None),
+    image4: Optional[UploadFile] = File(None),
+    image5: Optional[UploadFile] = File(None),
+    auctionServices: AuctionServices = Depends(get_auction_service),
+    itemServices: ItemServices = Depends(get_item_service),
+) -> APIResponse[GetAuctionSchema]:
+    try:
+        parsed = CreateAuctionSchema.model_validate_json(data)
+    except ValidationError as e:
+        raise ExcRaiser(
+            status_code=422,
+            message='Invalid auction data',
+            detail=e.errors(include_url=False, include_context=False)
+        )
+
+    images = [image1, image2, image3, image4, image5]
+    for idx, image in enumerate(images, 1):
+        if image and image.content_type not in ALLOWED_IMAGE_TYPES:
+            raise ExcRaiser400(
+                detail=f"image{idx} has unsupported type '{image.content_type}'"
+            )
+
+    payload = parsed.model_dump(exclude_unset=True)
+    payload["users_id"] = user.id
+
+    # Upload first so the item is created with its image links already set
+    links = await itemServices.upload_to_cloudinary(
+        payload["item"]["name"],
+        [image.file if image else None for image in images]
+    )
+    payload["item"].update(links)
+
+    try:
+        result = await auctionServices.create(payload)
+    except Exception:
+        await itemServices.delete_from_cloudinary(
+            [link["public_id"] for link in links.values()]
+        )
+        raise
     return APIResponse(status_code=201, data=result)
 
 

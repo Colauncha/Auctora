@@ -4,6 +4,7 @@ from server.config import get_async_db
 # from server.services.user_service import current_user
 from server.middlewares.auth import permissions, Permissions
 from server.services import current_user, get_item_service, ItemServices
+from server.services.item_service import ALLOWED_IMAGE_TYPES
 from server.schemas import (
     APIResponse,
     CreateItemSchema, GetItemSchema,
@@ -63,14 +64,10 @@ async def upload_images(
     item = await itemServices.repo.get_by_attr({"id": item_id})
 
     images = [image1, image2, image3, image4, image5]
-    content_type = [
-        "image/jpeg", "image/png", "image/webp",
-        "image/bmp", "image/avif"
-    ]
 
     uploads = [
         image.file
-        if image and image.content_type in content_type else None 
+        if image and image.content_type in ALLOWED_IMAGE_TYPES else None
         for image in images
     ]
 
