@@ -79,11 +79,19 @@ class Items(BaseModel):
             users_id: UUID,
             name: str,
             description: str,
+            **kwargs,
         ):
         self.id = uuid4()
         self.users_id = users_id
         self.name = name
         self.description = description
+        # Optional columns (image_link*, dimensions, ...). Unknown keys still
+        # raise, matching SQLAlchemy's default constructor behaviour.
+        columns = self.__table__.columns.keys()
+        for key, value in kwargs.items():
+            if key not in columns:
+                raise TypeError(f"{key!r} is an invalid keyword argument for Items")
+            setattr(self, key, value)
 
     def __str__(self):
         return f'\
