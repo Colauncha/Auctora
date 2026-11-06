@@ -780,7 +780,7 @@ class UserServices(BaseService):
             user = await self.repo.get_by_email(email)
             if not user:
                 raise ExcRaiser404("User not found")
-            token = uuid4().hex
+            token = otp_generator()  # uuid4().hex
             async_redis = await redis_store.get_async_redis()
             _ = await async_redis.set(f'reset_password:{email}', token, ex=1800)
             data = {'email': email, 'token': token}

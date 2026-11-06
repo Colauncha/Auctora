@@ -344,6 +344,21 @@ async def update_user(
     return APIResponse(data=result)
 
 
+@route.patch("/update")
+@permissions
+async def patch_user(
+    user: current_user,
+    data: UpdateUserSchema,
+    id: str = None,
+    userServices: get_user_service = Depends(get_user_service),
+) -> APIResponse[bool]:
+    id = id if (user.role == UserRoles.ADMIN and id) else user.id
+    user_ = await userServices.retrieve(id)
+    valid_user = GetUserSchema.model_validate(user_)
+    result = await userServices.update_user(valid_user, data)
+    return APIResponse(data=result)
+
+
 @route.put('/update_address')
 @permissions
 async def update_address(
