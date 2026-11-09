@@ -49,6 +49,7 @@ from server.schemas import (
     GetUsersNoAuction,
     RewardHistoryQuery,
     RefreshTokenSchema,
+    GoogleMobileAuthSchema,
 )
 from server.services import (
     current_user,
@@ -262,50 +263,99 @@ def login_with_google() -> APIResponse:
 
 @route.get("/auth/callback")
 async def callback(
-    code: str, userServices: get_user_service = Depends(get_user_service)
+    code: str,
+    redirect_uri: str,
+    _response: Response,
+    userServices: get_user_service = Depends(get_user_service),
 ) -> APIResponse:
-    # Exchange the code for a token
-    async with httpx.AsyncClient() as client:
-        token_data = {
-            "client_id": app_configs.GOOGLE_CLIENT_ID,
-            "client_secret": app_configs.GOOGLE_CLIENT_SECRET,
-            "code": code,
-            "grant_type": "authorization_code",
-            "redirect_uri": app_configs.GOOGLE_REDIRECT_URI,
-        }
-        response = await client.post(app_configs.GOOGLE_TOKEN_URI, data=token_data)
-        response_data = response.json()
+    try:
+        # Exchange the code for a token
+        async with httpx.AsyncClient() as client:
+            token_data = {
+                "client_id": app_configs.GOOGLE_CLIENT_ID,
+                "client_secret": app_configs.GOOGLE_CLIENT_SECRET,
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": redirect_uri,
+            }
+            response = await client.post(app_configs.GOOGLE_TOKEN_URI, data=token_data)
+            response_data = response.json()
 
-    if "error" in response_data:
-        raise ExcRaiser400(detail="Failed to get token")
+        if "error" in response_data:
+            raise ExcRaiser400(detail="Failed to get token")
 
-    # Validate the ID token
-    id_info = id_token.verify_oauth2_token(
-        response_data["id_token"], google_requests.Request(), app_configs.GOOGLE_CLIENT_ID
-    )
+        # Validate the ID token
+        id_info = id_token.verify_oauth2_token(
+            response_data["id_token"],
+            google_requests.Request(),
+            app_configs.GOOGLE_CLIENT_ID,
+        )
 
-    token, url = await userServices.google_auth(id_info)
-    if token is None:
-        raise ExcRaiser400(detail="Failed to authenticate user")
+        token = await userServices.google_auth(id_info)
+        if token is None:
+            raise ExcRaiser400(detail="Failed to authenticate user")
 
-    redirect_response = RedirectResponse(url=url)
-    redirect_response.set_cookie(
-        key="access_token",
-        value=token.access_token,
-        httponly=True,
-        max_age=app_configs.security.ACCESS_TOKEN_EXPIRES * 3600,
-        secure=True if app_configs.ENV == "production" else False,
-        samesite="None" if app_configs.ENV == "production" else "lax",
-    )
-    redirect_response.set_cookie(
-        key="refresh_token",
-        value=token.refresh_token,
-        httponly=True,
-        max_age=app_configs.security.REFRESH_TOKEN_EXPIRES * 24 * 3600,
-        secure=True if app_configs.ENV == "production" else False,
-        samesite="None" if app_configs.ENV == "production" else "lax",
-    )
-    return redirect_response
+        _response.set_cookie(
+            key="access_token",
+            value=token.access_token,
+            httponly=True,
+            max_age=app_configs.security.ACCESS_TOKEN_EXPIRES * 3600,
+            secure=True if app_configs.ENV == "production" else False,
+            samesite="None" if app_configs.ENV == "production" else "lax",
+        )
+        _response.set_cookie(
+            key="refresh_token",
+            value=token.refresh_token,
+            httponly=True,
+            max_age=app_configs.security.REFRESH_TOKEN_EXPIRES * 24 * 3600,
+            secure=True if app_configs.ENV == "production" else False,
+            samesite="None" if app_configs.ENV == "production" else "lax",
+        )
+        return APIResponse(data={"token": token})
+    except Exception as e:
+        print(f"Error during Google OAuth callback: {e}")
+        raise ExcRaiser400(detail="Google authentication failed")
+
+
+@route.post("/auth/google/mobile")
+async def google_mobile_auth(
+    data: GoogleMobileAuthSchema,
+    userServices: get_user_service = Depends(get_user_service),
+) -> APIResponse:
+    """
+    Sign in from a native mobile app using a Google ID token obtained via
+    the Google Sign-In SDK. No redirect_uri/code exchange is involved.
+    Tokens are returned in the body (no cookies) for Bearer auth.
+    """
+    try:
+        try:
+            # Verifies signature, expiry and issuer; audience checked below
+            # since Android/iOS/web each have their own client ID.
+            id_info = id_token.verify_oauth2_token(
+                data.id_token, google_requests.Request(), audience=None
+            )
+        except ValueError:
+            raise ExcRaiser(
+                status_code=401,
+                message="Unauthenticated",
+                detail="Invalid Google ID token",
+            )
+
+        if id_info.get("aud") not in app_configs.google_allowed_audiences:
+            raise ExcRaiser400(detail="ID token was not issued for this app")
+        if not id_info.get("email_verified"):
+            raise ExcRaiser400(detail="Google email is not verified")
+
+        token = await userServices.google_auth(id_info)
+        if token is None:
+            raise ExcRaiser400(detail="Failed to authenticate user")
+
+        return APIResponse(data={"token": token})
+    except ExcRaiser:
+        raise
+    except Exception as e:
+        print(f"Error during Google mobile auth: {e}")
+        raise ExcRaiser400(detail="Google authentication failed")
 
 
 @route.post('/logout')

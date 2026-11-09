@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from fastapi.openapi.utils import get_openapi
 from sqlalchemy.orm import close_all_sessions
 from server.config import app_configs, init_db, recreate_db, engine, async_engine
 from server.controllers import routes
@@ -108,6 +109,88 @@ def create_app(app_name: str = "temporary") -> FastAPI:
             "message": "Database schema recreated successfully!",
         }
 
+    def custom_openapi():
+        # If the schema is already cached, return it
+        if app.openapi_schema:
+            return app.openapi_schema
+
+        # Generate the default OpenAPI schema first
+        openapi_schema = get_openapi(
+            title="Biddius API Documentation",
+            version="2.1.0",
+            description="This API supports both HTTP and WebSockets.",
+            routes=app.routes,
+        )
+
+        # Manually append the WebSocket endpoint documentation
+        openapi_schema["paths"]["/bids/ws/{id}/{token}"] = {
+            "get": {  # Swagger UI uses HTTP methods; "get" maps cleanly visually
+                "summary": "Bids WebSocket Connection Endpoint",
+                "description": "Establishes a bi-directional WebSocket connection. Enables user to see live auction updates as they happen.",
+                "tags": ["WebSockets"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": True,
+                        "schema": {"type": "string"},
+                        "description": "Unique identifier for the connecting client.",
+                    },
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "required": True,
+                        "schema": {"type": "string"},
+                        "description": "Authentication token.",
+                    },
+                ],
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols (Successfully upgraded to WebSocket)"
+                    },
+                    "403": {
+                        "description": "Forbidden (Invalid token or missing authorization)"
+                    },
+                },
+            },
+        }
+
+        openapi_schema["paths"]["/chat/ws/{chat_id}/{token}"] = {
+            "get": {
+                "summary": "Chat WebSocket Connection Endpoint",
+                "description": "Establishes a bi-directional WebSocket connection. Enables user to send and receive messages in real-time.",
+                "tags": ["WebSockets"],
+                "parameters": [
+                    {
+                        "name": "chat_id",
+                        "in": "path",
+                        "required": True,
+                        "schema": {"type": "string"},
+                        "description": "Unique identifier for the chat room.",
+                    },
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "required": True,
+                        "schema": {"type": "string"},
+                        "description": "Authentication token.",
+                    },
+                ],
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols (Successfully upgraded to WebSocket)"
+                    },
+                    "403": {
+                        "description": "Forbidden (Invalid token or missing authorization)"
+                    },
+                },
+            },
+        }
+
+        app.openapi_schema = openapi_schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi
     setup_logging()
 
     return app

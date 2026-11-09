@@ -1,4 +1,6 @@
 from uuid import uuid4
+import secrets
+from sqlalchemy.exc import IntegrityError
 from jose import jwt
 from jose.exceptions import JWTError, JWTClaimsError, ExpiredSignatureError
 from datetime import datetime, timezone, timedelta
@@ -967,44 +969,73 @@ class UserServices(BaseService):
                 print(f"Unexpected error in {method_name}: {e}")
             raise ExcRaiser500(detail=str(e))
 
+    async def __create_google_user(self, data: dict) -> Users:
+        new_user_dict = {
+            'email': data.get('email'),
+            'first_name': data.get('given_name'),
+            'last_name': data.get('family_name'),
+            'username': data.get('email'),
+            'email_verified': True,
+            'image_link': data.get('picture'),
+            # Unusable random password: Google users sign in via Google;
+            # they can set a real one through password reset.
+            'password': secrets.token_urlsafe(32),
+            'role': UserRoles.CLIENT,
+            'google_id': data.get('sub'),
+        }
+        try:
+            new_user = await self.repo.add(new_user_dict)
+        except IntegrityError:
+            # A concurrent sign-in created the user first; use that row.
+            new_user = await self.repo.get_by_email(data.get('email'))
+        if not new_user:
+            raise ExcRaiser400(detail='Unable to create user')
+
+        try:
+            await self.notification.create(
+                CreateNotificationSchema(
+                    title="Welcome to Biddius",
+                    message=(
+                        "Thank you for signing up with Biddius. "
+                        "We are glad to have you on board"
+                    ),
+                    user_id=new_user.id,
+                )
+            )
+        except Exception as e:
+            # Don't fail sign-up because the welcome notification failed.
+            print(f"Failed to create welcome notification: {e}")
+        return new_user
+
     async def google_auth(self, data: dict):
         try:
-            user = await self.repo.get_by_email(data.get('email'))
-            if not user:
-                NOTIF_TITLE = "Welcome to Biddius"
-                NOTIF_MESSAGE = (
-                    "Thank you for signing up with Biddius. "
-                    "We are glad to have you on board"
-                )
-                new_user_dict = {
-                    'email': data.get('email'),
-                    'first_name': data.get('given_name'),
-                    'last_name': data.get('family_name'),
-                    'username': data.get('email'),
-                    'email_verified': True,
-                    'image_link': data.get('picture'),
-                    'password': data.get('sub'),
-                    'role': UserRoles.CLIENT,
-                    'google_id': data.get('sub'),
-                }
-                new_user = await self.repo.add(new_user_dict)
-                if not new_user:
-                    raise ExcRaiser400(detail='Unable to create user')
+            sub = data.get('sub')
+            email = data.get('email')
+            if not sub or not email:
+                raise ExcRaiser400(detail='Incomplete Google profile')
 
-                token = await self.__generate_token(new_user)
-                url = f"{app_configs.FRONTEND_URL}/oauth-success"
-                new_user = GetUserSchema.model_validate(new_user)
-                # Create a notification for the new user
-                _ = await self.notification.create(
-                    CreateNotificationSchema(
-                        title=NOTIF_TITLE, message=NOTIF_MESSAGE, user_id=new_user.id
+            # Prefer the stable Google ID; fall back to email for first link.
+            user = await self.repo.get_by_attr({'google_id': sub})
+            if not user:
+                user = await self.repo.get_by_email(email)
+
+            if user and user.google_id != sub:
+                # Link an existing account to this Google identity.
+                updates = {'google_id': sub, 'email_verified': True}
+                if not user.email_verified:
+                    # Email ownership was never proven, so a password set at
+                    # registration may belong to someone else. Invalidate it;
+                    # the real owner can set one via password reset.
+                    updates['hash_password'] = self.pwd_context.hash(
+                        secrets.token_urlsafe(32)
                     )
-                )
-                return token, url
+                user = await self.repo.save(user, updates)
+
+            elif not user:
+                user = await self.__create_google_user(data)
 
             token = await self.__generate_token(user)
-            url = f"{app_configs.FRONTEND_URL}/oauth-success"
-            return token, url
+            return token
         except ExcRaiser as e:
             raise
         except Exception as e:

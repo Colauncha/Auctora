@@ -115,8 +115,24 @@ class AppConfig(BaseSettings):
     # Google OAuth
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
-    GOOGLE_REDIRECT_URI: str
+    GOOGLE_REDIRECT_URI: str = (
+        "https://biddius.com/auth/google/callback"
+        if ENV == "production"
+        else "http://localhost:5173/auth/google/callback"
+    )
     GOOGLE_TOKEN_URI: str
+    GOOGLE_ANDROID_CLIENT_ID: str | None = None
+    GOOGLE_IOS_CLIENT_ID: str | None = None
+
+    @property
+    def google_allowed_audiences(self) -> list[str]:
+        return [
+            cid for cid in (
+                self.GOOGLE_CLIENT_ID,
+                self.GOOGLE_ANDROID_CLIENT_ID,
+                self.GOOGLE_IOS_CLIENT_ID,
+            ) if cid
+        ]
 
     # Payment
     COMPANY_TAX: float = 0.05

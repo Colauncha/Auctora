@@ -152,7 +152,12 @@ class AuthServices:
 
     @staticmethod
     def get_from_cookie(request: Request):
+        # Cookie first (web); fall back to Authorization: Bearer (mobile).
         token = request.cookies.get('access_token', None)
+        if not token:
+            auth = request.headers.get('Authorization', '')
+            if auth.lower().startswith('bearer '):
+                token = auth[7:].strip() or None
         return token
 
     # @staticmethod
@@ -303,7 +308,7 @@ class AuthServices:
         request: Request,
     ) -> bool:
         try:
-            token = request.cookies.get('access_token', None)
+            token = AuthServices.get_from_cookie(request)
             if not token:
                 return False
 

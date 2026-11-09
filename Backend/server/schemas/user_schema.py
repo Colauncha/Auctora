@@ -141,6 +141,10 @@ class RefreshTokenSchema(BaseModel):
     refresh_token: str
 
 
+class GoogleMobileAuthSchema(BaseModel):
+    id_token: str
+
+
 class VerifyOtpSchema(BaseModel):
     otp: str
     email: str
